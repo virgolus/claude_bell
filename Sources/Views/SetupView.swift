@@ -7,8 +7,6 @@ struct SetupView: View {
     @State private var showSuccess = false
     @State private var isRecording = false
     @State private var shortcutLabel = GlobalShortcut.shared.shortcutDescription
-    @State private var accessibilityGranted = false
-    private let accessibilityTimer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ScrollView {
@@ -102,36 +100,11 @@ struct SetupView: View {
                                 .font(.caption)
                                 .foregroundStyle(.orange)
                         }
-
-                        HStack(spacing: 6) {
-                            Image(systemName: accessibilityGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                                .foregroundStyle(accessibilityGranted ? .green : .orange)
-                            Text(accessibilityGranted ? "Accessibility granted" : "Accessibility not granted")
-                                .font(.caption)
-                                .foregroundStyle(accessibilityGranted ? Color.secondary : Color.orange)
-
-                            if !accessibilityGranted {
-                                Button("Open Settings") {
-                                    let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
-                                    NSWorkspace.shared.open(url)
-                                    // Timer will auto-detect when granted
-                                }
-                                .font(.caption)
-                            }
-                        }
                     }
                     .padding(4)
                 }
             }
             .padding()
-        }
-        .onAppear { accessibilityGranted = AXIsProcessTrusted() }
-        .onReceive(accessibilityTimer) { _ in
-            let trusted = AXIsProcessTrusted()
-            if trusted != accessibilityGranted {
-                accessibilityGranted = trusted
-                if trusted { GlobalShortcut.shared.restart() }
-            }
         }
         .background(ShortcutRecorder(isRecording: $isRecording, onRecord: { keyCode, modifiers in
             GlobalShortcut.shared.keyCode = keyCode
@@ -140,7 +113,6 @@ struct SetupView: View {
             shortcutLabel = GlobalShortcut.shared.shortcutDescription
         }))
     }
-
 }
 
 struct ShortcutRecorder: NSViewRepresentable {

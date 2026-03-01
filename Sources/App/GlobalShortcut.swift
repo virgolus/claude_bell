@@ -1,12 +1,20 @@
 import AppKit
 import Carbon.HIToolbox
 
+// C callback for Carbon hot key event
+private func hotKeyHandler(nextHandler: EventHandlerCallRef?, event: EventRef?, userData: UnsafeMutableRawPointer?) -> OSStatus {
+    DispatchQueue.main.async {
+        GlobalShortcut.shared.onTrigger?()
+    }
+    return noErr
+}
+
 final class GlobalShortcut {
     static let shared = GlobalShortcut()
 
-    private var globalMonitor: Any?
-    private var localMonitor: Any?
     var onTrigger: (() -> Void)?
+    private var hotKeyRef: EventHotKeyRef?
+    private var eventHandler: EventHandlerRef?
 
     var keyCode: Int {
         get { UserDefaults.standard.object(forKey: "shortcutKeyCode") as? Int ?? kVK_ANSI_B }
@@ -33,39 +41,65 @@ final class GlobalShortcut {
     }
 
     func start() {
-        let relevantMods: NSEvent.ModifierFlags = [.command, .shift, .option, .control]
+        stop()
 
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self else { return }
-            let currentMods = event.modifierFlags.intersection(relevantMods)
-            let requiredMods = self.modifierFlags.intersection(relevantMods)
-            if Int(event.keyCode) == self.keyCode && currentMods == requiredMods {
-                DispatchQueue.main.async { self.onTrigger?() }
-            }
-        }
+        // Install Carbon event handler
+        var eventType = EventTypeSpec(
+            eventClass: OSType(kEventClassKeyboard),
+            eventKind: UInt32(kEventHotKeyPressed)
+        )
 
-        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self else { return event }
-            let currentMods = event.modifierFlags.intersection(relevantMods)
-            let requiredMods = self.modifierFlags.intersection(relevantMods)
-            if Int(event.keyCode) == self.keyCode && currentMods == requiredMods {
-                DispatchQueue.main.async { self.onTrigger?() }
-                return nil
-            }
-            return event
-        }
+        let status1 = InstallEventHandler(
+            GetEventDispatcherTarget(),
+            hotKeyHandler,
+            1,
+            &eventType,
+            nil,
+            &eventHandler
+        )
+        print("InstallEventHandler: \(status1 == noErr ? "OK" : "failed (\(status1))")")
+
+        // Register the hot key (system-wide)
+        let carbonMods = carbonModifiers(from: modifierFlags)
+        let hotKeyID = EventHotKeyID(
+            signature: OSType(0x434C_424C),  // "CLBL"
+            id: 1
+        )
+
+        let status2 = RegisterEventHotKey(
+            UInt32(keyCode),
+            carbonMods,
+            hotKeyID,
+            GetEventDispatcherTarget(),
+            0,
+            &hotKeyRef
+        )
+        print("RegisterEventHotKey(\(shortcutDescription)): \(status2 == noErr ? "OK" : "failed (\(status2))")")
     }
 
     func stop() {
-        if let m = globalMonitor { NSEvent.removeMonitor(m) }
-        if let m = localMonitor { NSEvent.removeMonitor(m) }
-        globalMonitor = nil
-        localMonitor = nil
+        if let ref = hotKeyRef {
+            UnregisterEventHotKey(ref)
+            hotKeyRef = nil
+        }
+        if let handler = eventHandler {
+            RemoveEventHandler(handler)
+            eventHandler = nil
+        }
     }
 
     func restart() {
         stop()
         start()
+    }
+
+    private func carbonModifiers(from flags: NSEvent.ModifierFlags) -> UInt32 {
+        var mods: UInt32 = 0
+        if flags.contains(.command) { mods |= UInt32(cmdKey) }
+        if flags.contains(.shift) { mods |= UInt32(shiftKey) }
+        if flags.contains(.option) { mods |= UInt32(optionKey) }
+        if flags.contains(.control) { mods |= UInt32(controlKey) }
+        return mods
     }
 
     private func keyName(for code: Int) -> String {

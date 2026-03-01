@@ -20,5 +20,7 @@
     <true/>
     <key>NSSupportsAutomaticTermination</key>
     <false/>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Claude Bell needs to control Terminal.app to navigate to the correct tab.</string>
 </dict>
 </plist>

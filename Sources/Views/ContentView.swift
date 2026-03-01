@@ -162,9 +162,9 @@ struct ContentView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
 
-                    // Transcript context
-                    if !notification.transcriptPath.isEmpty {
-                        ConversationContextView(transcriptPath: notification.transcriptPath)
+                    // Transcript context (expanded by default, but skip for stop/session_end since message already shown above)
+                    if !notification.transcriptPath.isEmpty && !["stop", "session_end"].contains(notification.notificationType) {
+                        ConversationContextView(transcriptPath: notification.transcriptPath, startExpanded: true)
                     }
 
                     // Question options from transcript
@@ -222,12 +222,15 @@ struct ContentView: View {
         case "permission_prompt": return "lock.shield.fill"
         case "idle_prompt": return "questionmark.circle.fill"
         case "elicitation_dialog": return "text.bubble.fill"
+        case "stop": return "checkmark.circle.fill"
+        case "tool_error": return "exclamationmark.triangle.fill"
+        case "session_end": return "xmark.circle.fill"
         default: return "bell.fill"
         }
     }
 
     private func needsTextInput(_ notification: NotificationEntry) -> Bool {
-        true // All notification types may need user input
+        !["stop", "session_end", "tool_error"].contains(notification.notificationType)
     }
 
     private func autoSelectLatest() {

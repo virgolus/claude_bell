@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ConversationContextView: View {
     let transcriptPath: String
+    var startExpanded: Bool = false
     @State private var messages: [TranscriptMessage] = []
     @State private var isExpanded = false
 
@@ -27,19 +28,17 @@ struct ConversationContextView: View {
             .buttonStyle(.plain)
 
             if isExpanded {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(messages) { message in
-                            MessageBubble(message: message)
-                        }
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(messages) { message in
+                        MessageBubble(message: message)
                     }
-                    .padding(.vertical, 4)
                 }
-                .frame(maxHeight: 200)
+                .padding(.vertical, 4)
             }
         }
         .onAppear {
             messages = TranscriptParser.parseLastMessages(from: transcriptPath)
+            isExpanded = startExpanded
         }
     }
 }
@@ -58,10 +57,7 @@ private struct MessageBubble: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 if !message.textContent.isEmpty {
-                    let truncated = message.textContent.count > 500
-                        ? String(message.textContent.prefix(500)) + "..."
-                        : message.textContent
-                    MarkdownText(truncated, font: .caption)
+                    MarkdownText(message.textContent, font: .caption)
                 }
 
                 ForEach(message.toolUses) { tool in

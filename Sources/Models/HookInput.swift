@@ -14,6 +14,11 @@ struct HookInput: Codable, Sendable {
     let title: String?
     let message: String?
     let question: String?
+    // PostToolUseFailure fields
+    let error: String?
+    let toolResult: String?
+    // Stop/session fields
+    let lastAssistantMessage: String?
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
@@ -28,5 +33,8 @@ struct HookInput: Codable, Sendable {
         case title
         case message
         case question
+        case error
+        case toolResult = "tool_result"
+        case lastAssistantMessage = "last_assistant_message"
     }
 }

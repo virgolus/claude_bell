@@ -14,17 +14,10 @@ struct NotificationRowView: View {
                     .font(.body.weight(.medium))
                     .lineLimit(1)
 
-                if !notification.message.isEmpty {
-                    Text(notification.message)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                } else {
-                    Text(notification.projectName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
+                Text(notification.projectName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
 
             Spacer()
@@ -41,6 +34,7 @@ struct NotificationRowView: View {
         case "permission_prompt": return "lock.shield"
         case "idle_prompt": return "questionmark.circle"
         case "elicitation_dialog": return "text.bubble"
+        case "stop": return "checkmark.circle"
         default: return "bell"
         }
     }

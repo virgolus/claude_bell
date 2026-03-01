@@ -9,13 +9,13 @@ struct TextInputView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(notification.message)
-                .font(.body)
-                .textSelection(.enabled)
-                .padding(8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+            if !notification.message.isEmpty {
+                MarkdownText(notification.message)
+                    .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
 
             HStack(spacing: 8) {
                 TextField("Type your response...", text: $inputText, axis: .vertical)
@@ -33,14 +33,6 @@ struct TextInputView: View {
                 .tint(.blue)
                 .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-
-            Button {
-                onOpenTerminal()
-            } label: {
-                Label("Open in Terminal", systemImage: "terminal")
-                    .font(.caption)
-            }
-            .buttonStyle(.link)
         }
     }
 

@@ -46,6 +46,66 @@ enum HookInstaller {
         permArray.append(permHook)
         hooks["PermissionRequest"] = permArray
 
+        // Stop hook (agent finished)
+        let stopHook: [String: Any] = [
+            "matcher": "",
+            "hooks": [[
+                "type": "http",
+                "url": "http://localhost:19485/hooks/stop",
+                "timeout": 10
+            ] as [String: Any]]
+        ]
+
+        var stopArray = hooks["Stop"] as? [[String: Any]] ?? []
+        stopArray.removeAll { entry in
+            if let hooksList = entry["hooks"] as? [[String: Any]] {
+                return hooksList.contains { ($0["url"] as? String)?.contains("19485") == true }
+            }
+            return false
+        }
+        stopArray.append(stopHook)
+        hooks["Stop"] = stopArray
+
+        // PostToolUseFailure hook
+        let toolFailHook: [String: Any] = [
+            "matcher": "",
+            "hooks": [[
+                "type": "http",
+                "url": "http://localhost:19485/hooks/post-tool-use-failure",
+                "timeout": 10
+            ] as [String: Any]]
+        ]
+
+        var toolFailArray = hooks["PostToolUseFailure"] as? [[String: Any]] ?? []
+        toolFailArray.removeAll { entry in
+            if let hooksList = entry["hooks"] as? [[String: Any]] {
+                return hooksList.contains { ($0["url"] as? String)?.contains("19485") == true }
+            }
+            return false
+        }
+        toolFailArray.append(toolFailHook)
+        hooks["PostToolUseFailure"] = toolFailArray
+
+        // SessionEnd hook
+        let sessionEndHook: [String: Any] = [
+            "matcher": "",
+            "hooks": [[
+                "type": "http",
+                "url": "http://localhost:19485/hooks/session-end",
+                "timeout": 10
+            ] as [String: Any]]
+        ]
+
+        var sessionEndArray = hooks["SessionEnd"] as? [[String: Any]] ?? []
+        sessionEndArray.removeAll { entry in
+            if let hooksList = entry["hooks"] as? [[String: Any]] {
+                return hooksList.contains { ($0["url"] as? String)?.contains("19485") == true }
+            }
+            return false
+        }
+        sessionEndArray.append(sessionEndHook)
+        hooks["SessionEnd"] = sessionEndArray
+
         // Notification hook
         let notifHook: [String: Any] = [
             "matcher": "permission_prompt|idle_prompt|elicitation_dialog",
@@ -88,6 +148,51 @@ enum HookInstaller {
                 hooks.removeValue(forKey: "PermissionRequest")
             } else {
                 hooks["PermissionRequest"] = permArray
+            }
+        }
+
+        // Remove Claude Bell entries from Stop
+        if var stopArray = hooks["Stop"] as? [[String: Any]] {
+            stopArray.removeAll { entry in
+                if let hooksList = entry["hooks"] as? [[String: Any]] {
+                    return hooksList.contains { ($0["url"] as? String)?.contains("19485") == true }
+                }
+                return false
+            }
+            if stopArray.isEmpty {
+                hooks.removeValue(forKey: "Stop")
+            } else {
+                hooks["Stop"] = stopArray
+            }
+        }
+
+        // Remove Claude Bell entries from PostToolUseFailure
+        if var toolFailArray = hooks["PostToolUseFailure"] as? [[String: Any]] {
+            toolFailArray.removeAll { entry in
+                if let hooksList = entry["hooks"] as? [[String: Any]] {
+                    return hooksList.contains { ($0["url"] as? String)?.contains("19485") == true }
+                }
+                return false
+            }
+            if toolFailArray.isEmpty {
+                hooks.removeValue(forKey: "PostToolUseFailure")
+            } else {
+                hooks["PostToolUseFailure"] = toolFailArray
+            }
+        }
+
+        // Remove Claude Bell entries from SessionEnd
+        if var sessionEndArray = hooks["SessionEnd"] as? [[String: Any]] {
+            sessionEndArray.removeAll { entry in
+                if let hooksList = entry["hooks"] as? [[String: Any]] {
+                    return hooksList.contains { ($0["url"] as? String)?.contains("19485") == true }
+                }
+                return false
+            }
+            if sessionEndArray.isEmpty {
+                hooks.removeValue(forKey: "SessionEnd")
+            } else {
+                hooks["SessionEnd"] = sessionEndArray
             }
         }
 

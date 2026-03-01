@@ -20,6 +20,9 @@ struct NotificationEntry: Identifiable, Sendable {
         case "permission_prompt": return "Permission Prompt"
         case "idle_prompt": return "Waiting for Input"
         case "elicitation_dialog": return "Question"
+        case "stop": return "Task Completed"
+        case "tool_error": return "Tool Error"
+        case "session_end": return "Session Ended"
         default: return notificationType
         }
     }

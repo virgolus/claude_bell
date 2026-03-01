@@ -61,31 +61,15 @@ struct ClaudeBellApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Esc to close panel
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+        // Esc to close panel (simulate status button click for proper dismiss)
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 {
-                if let window = NSApp.keyWindow {
-                    window.orderOut(nil)
+                if let button = self?.findStatusButton() {
+                    button.performClick(nil)
                     return nil
                 }
             }
             return event
-        }
-
-        // Center panel whenever it becomes visible (delay to override MenuBarExtra positioning)
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.didBecomeKeyNotification,
-            object: nil,
-            queue: .main
-        ) { notification in
-            guard let window = notification.object as? NSWindow else { return }
-            let name = String(describing: type(of: window))
-            if name.contains("MenuBarExtra") || name.contains("StatusBar") {
-                // MenuBarExtra positions the window after didBecomeKey, so we need a delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    self.centerWindow(window)
-                }
-            }
         }
 
         // Global shortcut to toggle panel
@@ -93,55 +77,110 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.togglePanel()
         }
 
-        // Request Accessibility if not granted (opens system dialog)
-        let trusted = AXIsProcessTrusted()
-        print("AXIsProcessTrusted: \(trusted)")
-        if !trusted {
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
-            AXIsProcessTrustedWithOptions(options)
-        }
+        // Start global shortcut (uses Carbon RegisterEventHotKey — no Accessibility needed)
         GlobalShortcut.shared.start()
 
-        // Poll for accessibility grant
-        Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { timer in
-            if AXIsProcessTrusted() {
-                GlobalShortcut.shared.restart()
-                timer.invalidate()
-                print("Accessibility granted, shortcut active")
+        // Add right-click menu to the status bar icon
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            self.setupStatusItemMenu()
+        }
+
+        // Lower the panel window level so system dialogs appear on top
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didBecomeKeyNotification,
+            object: nil,
+            queue: .main
+        ) { notification in
+            if let window = notification.object as? NSWindow {
+                let name = String(describing: type(of: window))
+                if name.contains("MenuBarExtra") || name.contains("StatusItemWindow") || name.contains("_NSPopoverWindow") {
+                    window.level = .floating
+                }
             }
         }
     }
 
-    private func togglePanel() {
-        guard let window = findPanelWindow() else {
-            NSApp.activate(ignoringOtherApps: true)
+    private func setupStatusItemMenu() {
+        // Find the NSStatusItem button created by MenuBarExtra
+        guard let button = findStatusButton() else {
+            print("Could not find status bar button")
             return
         }
-        if window.isVisible {
-            window.orderOut(nil)
+
+        // Monitor right-click on the status bar button
+        NSEvent.addLocalMonitorForEvents(matching: .rightMouseUp) { [weak self] event in
+            guard let self else { return event }
+            // Check if the click is on the status bar button area
+            if let buttonWindow = button.window, event.window == buttonWindow {
+                self.showContextMenu(near: button)
+                return nil
+            }
+            return event
+        }
+    }
+
+    private func showContextMenu(near button: NSStatusBarButton) {
+        let menu = NSMenu()
+
+        let infoItem = NSMenuItem(title: "About Claude Bell", action: #selector(showAbout), keyEquivalent: "")
+        infoItem.target = self
+        menu.addItem(infoItem)
+
+        menu.addItem(.separator())
+
+        let quitItem = NSMenuItem(title: "Quit Claude Bell", action: #selector(quitApp), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
+
+        // Position the menu below the status bar button
+        if let event = NSApp.currentEvent {
+            NSMenu.popUpContextMenu(menu, with: event, for: button)
+        }
+    }
+
+    @objc private func showAbout() {
+        let alert = NSAlert()
+        alert.messageText = "Claude Bell"
+        alert.informativeText = "Menu bar app for Claude Code permission requests and notifications.\n\nVersion 1.0\nShortcut: \(GlobalShortcut.shared.shortcutDescription)\nServer: localhost:19485"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
+    @objc private func quitApp() {
+        NSApplication.shared.terminate(nil)
+    }
+
+    private func togglePanel() {
+        // Simulate clicking the status bar button — this properly toggles the MenuBarExtra panel
+        if let button = findStatusButton() {
+            button.performClick(nil)
         } else {
-            centerWindow(window)
-            window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
         }
     }
 
-    func findPanelWindow() -> NSWindow? {
+    func findStatusButton() -> NSStatusBarButton? {
         for window in NSApp.windows {
             let name = String(describing: type(of: window))
-            if name.contains("MenuBarExtra") || name.contains("StatusBar") {
-                return window
+            if name.contains("StatusBar") || name.contains("NSStatusBar") {
+                if let contentView = window.contentView {
+                    return findButtonInView(contentView)
+                }
             }
         }
         return nil
     }
 
-    private func centerWindow(_ window: NSWindow) {
-        guard let screen = NSScreen.main else { return }
-        let screenFrame = screen.visibleFrame
-        let windowSize = window.frame.size
-        let x = screenFrame.origin.x + (screenFrame.width - windowSize.width) / 2
-        let y = screenFrame.origin.y + (screenFrame.height - windowSize.height) / 2
-        window.setFrameOrigin(NSPoint(x: x, y: y))
+    private func findButtonInView(_ view: NSView) -> NSStatusBarButton? {
+        if let button = view as? NSStatusBarButton {
+            return button
+        }
+        for subview in view.subviews {
+            if let found = findButtonInView(subview) {
+                return found
+            }
+        }
+        return nil
     }
 }
