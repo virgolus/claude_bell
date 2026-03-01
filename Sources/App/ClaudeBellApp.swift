@@ -1,9 +1,16 @@
 import SwiftUI
 import Foundation
+import AppKit
 
 @main
 struct ClaudeBellApp: App {
     @StateObject private var store = RequestStore.shared
+
+    init() {
+        // Menu bar-only app: no dock icon, no main window
+        NSApplication.shared.setActivationPolicy(.accessory)
+        startServerIfNeeded()
+    }
 
     var body: some Scene {
         MenuBarExtra {
@@ -17,10 +24,6 @@ struct ClaudeBellApp: App {
             }
         }
         .menuBarExtraStyle(.window)
-    }
-
-    init() {
-        startServerIfNeeded()
     }
 
     private func startServerIfNeeded() {

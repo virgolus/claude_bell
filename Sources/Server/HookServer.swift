@@ -17,11 +17,14 @@ final class HookServer: Sendable {
         let router = Router()
 
         router.post("/hooks/permission-request") { request, context -> Response in
+            print("[HookServer] Received permission request")
             let body = try await request.body.collect(upTo: 1_048_576)
             let input = try JSONDecoder().decode(HookInput.self, from: body)
+            print("[HookServer] Decoded: tool=\(input.toolName ?? "nil"), session=\(input.sessionId)")
 
             let response = await withCheckedContinuation { (continuation: CheckedContinuation<HookResponse, Never>) in
                 Task { @MainActor in
+                    print("[HookServer] Creating PendingRequest on MainActor")
                     let pending = PendingRequest(
                         sessionId: input.sessionId,
                         cwd: input.cwd,
@@ -31,9 +34,11 @@ final class HookServer: Sendable {
                         continuation: continuation
                     )
                     store.addRequest(pending)
+                    print("[HookServer] Added to store, count=\(store.pendingRequests.count)")
                 }
             }
 
+            print("[HookServer] Got response, sending back")
             return response.toHTTPResponse()
         }
 
