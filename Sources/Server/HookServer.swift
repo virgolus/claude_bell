@@ -62,6 +62,7 @@ final class HookServer: Sendable {
                     createdAt: Date()
                 )
                 Task { @MainActor in
+                    store.sessionAdvanced(id: input.sessionId)
                     store.addNotification(entry)
                     Self.sendNativeNotification(for: entry)
                 }
@@ -83,8 +84,8 @@ final class HookServer: Sendable {
                 createdAt: Date()
             )
             Task { @MainActor in
+                store.sessionAdvanced(id: input.sessionId)
                 store.addNotification(entry)
-                store.removeSession(id: input.sessionId)
                 Self.sendNativeNotification(for: entry)
             }
 
@@ -106,6 +107,7 @@ final class HookServer: Sendable {
                 createdAt: Date()
             )
             Task { @MainActor in
+                store.sessionAdvanced(id: input.sessionId)
                 store.addNotification(entry)
                 Self.sendNativeNotification(for: entry, body: "\(toolName) failed")
             }
@@ -117,7 +119,8 @@ final class HookServer: Sendable {
             let input = try await Self.decodeInput(request, label: "SessionEnd")
 
             Task { @MainActor in
-                store.sessions.removeValue(forKey: input.sessionId)
+                store.sessionAdvanced(id: input.sessionId)
+                store.removeSession(id: input.sessionId)
 
                 let entry = NotificationEntry(
                     sessionId: input.sessionId,

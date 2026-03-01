@@ -96,7 +96,6 @@ struct ContentView: View {
         }
         .onChange(of: store.pendingRequests.count) { old, new in
             if new > old {
-                // New request arrived — always select the latest
                 if let last = store.pendingRequests.last {
                     selectedItem = .request(last.id)
                 }
@@ -106,7 +105,6 @@ struct ContentView: View {
         }
         .onChange(of: store.notifications.count) { old, new in
             if new > old {
-                // New notification arrived — select it if nothing else selected or current is stale
                 if let last = store.notifications.last {
                     if selectedItem == nil || !isSelectedItemValid {
                         selectedItem = .notification(last.id)
@@ -114,6 +112,11 @@ struct ContentView: View {
                 }
             } else {
                 autoSelectIfNone()
+            }
+        }
+        .onChange(of: selectedItem) { _, newValue in
+            if newValue == nil {
+                autoSelectLatest()
             }
         }
     }
@@ -219,6 +222,9 @@ struct ContentView: View {
         }
     }
 
+    @State private var renamingSessionId: String?
+    @State private var renameText = ""
+
     private var sessionsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Sessions")
@@ -230,12 +236,61 @@ struct ContentView: View {
                 .padding(.bottom, 4)
 
             ForEach(Array(store.sessions.values).sorted(by: { $0.lastSeen > $1.lastSeen })) { session in
-                SessionRowView(session: session)
+                if renamingSessionId == session.id {
+                    HStack(spacing: 8) {
+                        Circle().fill(.green).frame(width: 8, height: 8)
+                        TextField("Session name", text: $renameText)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.body.weight(.medium))
+                            .onSubmit { commitRename(session.id) }
+                            .onExitCommand { renamingSessionId = nil }
+                        Button {
+                            renamingSessionId = nil
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                    }
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 3)
+                    .padding(.vertical, 4)
+                } else {
+                    HStack(spacing: 4) {
+                        SessionRowView(session: session)
+
+                        Button {
+                            renameText = session.displayName
+                            renamingSessionId = session.id
+                        } label: {
+                            Image(systemName: "pencil")
+                                .foregroundStyle(.secondary)
+                                .font(.caption2)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            store.removeSession(id: session.id)
+                        } label: {
+                            Image(systemName: "xmark")
+                                .foregroundStyle(.secondary)
+                                .font(.caption2)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                }
             }
-            .padding(.bottom, 4)
+
+            Spacer().frame(height: 4)
         }
+    }
+
+    private func commitRename(_ sessionId: String) {
+        let name = renameText.trimmingCharacters(in: .whitespaces)
+        store.renameSession(id: sessionId, name: name.isEmpty ? nil : name)
+        renamingSessionId = nil
     }
 
     private var isSelectedItemValid: Bool {

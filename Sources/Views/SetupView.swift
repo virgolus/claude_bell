@@ -192,11 +192,12 @@ struct SetupView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .fill(Color(nsColor: .windowBackgroundColor).opacity(0.95))
+                    .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
+                    .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
             )
         }
     }

@@ -61,13 +61,11 @@ struct ClaudeBellApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Esc to close panel (simulate status button click for proper dismiss)
+        // Esc to close panel
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 {
-                if let button = self?.findStatusButton() {
-                    button.performClick(nil)
-                    return nil
-                }
+                self?.dismissPanel()
+                return nil
             }
             return event
         }
@@ -164,7 +162,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func dismissPanel() {
+    func dismissPanel() {
+        // Only dismiss if the panel is currently visible
+        let panelVisible = NSApp.windows.contains { window in
+            let name = String(describing: type(of: window))
+            return window.isVisible && (name.contains("MenuBarExtra") || name.contains("StatusItem") || name.contains("Popover"))
+        }
+        guard panelVisible else { return }
         if let button = findStatusButton() {
             button.performClick(nil)
         }

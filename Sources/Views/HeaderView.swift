@@ -31,7 +31,7 @@ struct HeaderView: View {
             .buttonStyle(.plain)
 
             Button {
-                dismissPanel()
+                store.onDismissPanel?()
             } label: {
                 Image(systemName: "xmark.circle")
                     .foregroundStyle(.secondary)
@@ -40,41 +40,5 @@ struct HeaderView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-    }
-
-    private func dismissPanel() {
-        // Click the status bar button to properly toggle the MenuBarExtra panel
-        // This deselects the icon correctly, unlike orderOut
-        if let button = findStatusButton() {
-            button.performClick(nil)
-        } else {
-            // Fallback
-            NSApp.keyWindow?.orderOut(nil)
-            NSApp.deactivate()
-        }
-    }
-
-    private func findStatusButton() -> NSStatusBarButton? {
-        for window in NSApp.windows {
-            let name = String(describing: type(of: window))
-            if name.contains("StatusBar") || name.contains("NSStatusBar") {
-                if let contentView = window.contentView {
-                    return findButtonIn(contentView)
-                }
-            }
-        }
-        return nil
-    }
-
-    private func findButtonIn(_ view: NSView) -> NSStatusBarButton? {
-        if let button = view as? NSStatusBarButton {
-            return button
-        }
-        for subview in view.subviews {
-            if let found = findButtonIn(subview) {
-                return found
-            }
-        }
-        return nil
     }
 }
