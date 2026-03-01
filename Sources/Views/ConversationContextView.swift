@@ -57,15 +57,15 @@ private struct MessageBubble: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 if !message.textContent.isEmpty {
-                    MarkdownText(message.textContent, font: .caption)
+                    MarkdownText(message.textContent, font: .callout)
                 }
 
                 ForEach(message.toolUses) { tool in
                     HStack(spacing: 4) {
                         Image(systemName: ToolIconMapper.icon(for: tool.name))
-                            .font(.caption2)
+                            .font(.caption)
                         Text(tool.name)
-                            .font(.caption.weight(.medium))
+                            .font(.callout.weight(.medium))
                     }
                     .foregroundStyle(.orange)
                 }

@@ -155,7 +155,7 @@ struct ContentView: View {
 
                     // Message
                     if !notification.message.isEmpty {
-                        MarkdownText(notification.message)
+                        MarkdownText(notification.message, font: .title3)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(10)
                             .background(Color.secondary.opacity(0.06))
@@ -200,9 +200,17 @@ struct ContentView: View {
             Divider()
 
             HStack {
-                Button("Dismiss") {
-                    store.removeNotification(id: notification.id)
-                    selectedItem = nil
+                if !needsTextInput(notification) {
+                    Button("Dismiss") {
+                        store.removeNotification(id: notification.id)
+                        selectedItem = nil
+                    }
+                    .keyboardShortcut(.return, modifiers: [])
+                } else {
+                    Button("Dismiss") {
+                        store.removeNotification(id: notification.id)
+                        selectedItem = nil
+                    }
                 }
 
                 Spacer()
