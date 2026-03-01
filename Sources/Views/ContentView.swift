@@ -96,10 +96,10 @@ struct ContentView: View {
         }
         .listStyle(.sidebar)
         .onChange(of: store.pendingRequests.count) { _, _ in
-            autoSelectLatest()
+            autoSelectIfNone()
         }
         .onChange(of: store.notifications.count) { _, _ in
-            autoSelectLatest()
+            autoSelectIfNone()
         }
     }
 
@@ -138,11 +138,11 @@ struct ContentView: View {
                         Image(systemName: notification.meta.icon)
                             .font(.title2)
                             .foregroundStyle(notification.meta.iconColor)
-                        VStack(alignment: .leading) {
-                            Text(notification.displayTitle)
-                                .font(.title3.weight(.semibold))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(notification.projectName)
+                                .font(.title.weight(.bold))
                             HStack(spacing: 4) {
-                                Text(notification.projectName)
+                                Text(notification.displayTitle)
                                 Text("·")
                                 Text(TimeAgoFormatter.format(notification.createdAt))
                             }
@@ -200,17 +200,14 @@ struct ContentView: View {
             Divider()
 
             HStack {
-                if notification.meta.isPassive {
-                    Button("Dismiss") {
-                        store.removeNotification(id: notification.id)
-                        selectedItem = nil
-                    }
-                    .keyboardShortcut(.return, modifiers: [])
-                } else {
-                    Button("Dismiss") {
-                        store.removeNotification(id: notification.id)
-                        selectedItem = nil
-                    }
+                Button("Dismiss") {
+                    store.removeNotification(id: notification.id)
+                    selectedItem = nil
+                }
+                .if(notification.meta.isPassive) {
+                    $0.keyboardShortcut(.return, modifiers: [])
+                        .buttonStyle(.borderedProminent)
+                        .tint(.blue)
                 }
 
                 Spacer()
@@ -231,5 +228,10 @@ struct ContentView: View {
         } else if let last = store.notifications.last {
             selectedItem = .notification(last.id)
         }
+    }
+
+    private func autoSelectIfNone() {
+        guard selectedItem == nil else { return }
+        autoSelectLatest()
     }
 }

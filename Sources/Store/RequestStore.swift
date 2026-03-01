@@ -31,6 +31,20 @@ final class RequestStore: ObservableObject {
     }
 
     func addNotification(_ notification: NotificationEntry) {
+        if !notification.meta.isPassive {
+            // Skip if session already has a pending permission request (avoids duplicate)
+            let sessionHasRequest = pendingRequests.contains {
+                $0.sessionId == notification.sessionId
+            }
+            if sessionHasRequest { return }
+
+            // Skip if session already has a "stop" notification (task finished)
+            let sessionHasStop = notifications.contains {
+                $0.sessionId == notification.sessionId && $0.notificationType == "stop"
+            }
+            if sessionHasStop { return }
+        }
+
         if notification.meta.deduplicate {
             notifications.removeAll {
                 $0.sessionId == notification.sessionId && $0.notificationType == notification.notificationType
@@ -68,8 +82,15 @@ final class RequestStore: ObservableObject {
         }
     }
 
+    static let availableSounds = ["Purr", "Blow", "Bottle", "Frog", "Funk", "Glass", "Hero", "Morse", "Ping", "Pop", "Sosumi", "Submarine", "Tink"]
+
+    static var selectedSound: String {
+        get { UserDefaults.standard.string(forKey: "notificationSound") ?? "Purr" }
+        set { UserDefaults.standard.set(newValue, forKey: "notificationSound") }
+    }
+
     private func playRequestSound() {
-        NSSound(named: "Purr")?.play()
+        NSSound(named: Self.selectedSound)?.play()
     }
 
     private func startTimeout(for request: PendingRequest) {

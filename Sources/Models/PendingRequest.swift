@@ -33,10 +33,14 @@ final class PendingRequest: Identifiable, ObservableObject {
         self.continuation = continuation
     }
 
-    func respond(allow: Bool) {
+    func respond(_ behavior: PermissionBehavior) {
         guard !hasResponded else { return }
         hasResponded = true
-        let response = HookResponse.permissionDecision(allow: allow)
+        let response = HookResponse.permissionDecision(behavior)
         continuation.resume(returning: response)
+    }
+
+    func respond(allow: Bool) {
+        respond(allow ? .allow : .deny)
     }
 }

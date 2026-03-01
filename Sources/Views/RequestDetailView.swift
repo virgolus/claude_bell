@@ -3,7 +3,16 @@ import AppKit
 
 enum ActionButton {
     case allow
+    case allowForSession
     case deny
+
+    var behavior: PermissionBehavior {
+        switch self {
+        case .allow: return .allow
+        case .allowForSession: return .allowForSession
+        case .deny: return .deny
+        }
+    }
 }
 
 struct RequestDetailView: View {
@@ -23,10 +32,10 @@ struct RequestDetailView: View {
                         Image(systemName: ToolIconMapper.icon(for: request.toolName))
                             .font(.title2)
                             .foregroundStyle(.orange)
-                        VStack(alignment: .leading) {
-                            Text(request.toolName)
-                                .font(.title3.weight(.semibold))
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(request.projectName)
+                                .font(.title.weight(.bold))
+                            Text(request.toolName)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -37,6 +46,10 @@ struct RequestDetailView: View {
                     }
 
                     Divider()
+
+                    Text(permissionDescription)
+                        .font(.callout)
+                        .foregroundStyle(.primary)
 
                     ToolInputView(toolInput: request.toolInput)
 
@@ -51,9 +64,10 @@ struct RequestDetailView: View {
             Divider()
 
             VStack(spacing: 8) {
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     actionButton(label: "Deny", icon: "xmark.circle", action: .deny, color: .red)
                     actionButton(label: "Allow", icon: "checkmark.circle", action: .allow, color: .orange)
+                    actionButton(label: "Always", icon: "checkmark.circle.fill", action: .allowForSession, color: .green)
                 }
 
                 HStack {
@@ -120,19 +134,24 @@ struct RequestDetailView: View {
     }
 
     private func confirm() {
-        let allow = focused == .allow
-        request.respond(allow: allow)
+        request.respond(focused.behavior)
         store.removeRequest(id: request.id)
     }
+
+    private static let buttonOrder: [ActionButton] = [.deny, .allow, .allowForSession]
 
     private func installKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             switch event.keyCode {
             case 123: // left arrow
-                focused = .deny
+                if let idx = Self.buttonOrder.firstIndex(of: focused), idx > 0 {
+                    focused = Self.buttonOrder[idx - 1]
+                }
                 return nil
             case 124: // right arrow
-                focused = .allow
+                if let idx = Self.buttonOrder.firstIndex(of: focused), idx < Self.buttonOrder.count - 1 {
+                    focused = Self.buttonOrder[idx + 1]
+                }
                 return nil
             case 36: // return
                 confirm()
@@ -147,6 +166,27 @@ struct RequestDetailView: View {
         if let monitor = keyMonitor {
             NSEvent.removeMonitor(monitor)
             keyMonitor = nil
+        }
+    }
+
+    private var permissionDescription: String {
+        switch request.toolName {
+        case "Bash":
+            return "Claude wants to run a shell command:"
+        case "Write":
+            return "Claude wants to create or overwrite a file:"
+        case "Edit":
+            return "Claude wants to edit a file:"
+        case "Read":
+            return "Claude wants to read a file:"
+        case "WebFetch":
+            return "Claude wants to fetch a URL:"
+        case "WebSearch":
+            return "Claude wants to search the web:"
+        case "NotebookEdit":
+            return "Claude wants to edit a notebook:"
+        default:
+            return "Claude wants to use \(request.toolName):"
         }
     }
 

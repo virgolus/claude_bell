@@ -8,6 +8,7 @@ struct SetupView: View {
     @State private var showSuccess = false
     @State private var isRecording = false
     @State private var shortcutLabel = GlobalShortcut.shared.shortcutDescription
+    @State private var selectedSound = RequestStore.selectedSound
 
     var body: some View {
         ScrollView {
@@ -100,6 +101,29 @@ struct SetupView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(.blue)
+                        }
+                    }
+                    .padding(4)
+                }
+
+                // Sound section
+                GroupBox("Notification Sound") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Sound played when a new permission request arrives.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        HStack {
+                            Picker("Sound:", selection: $selectedSound) {
+                                ForEach(RequestStore.availableSounds, id: \.self) { sound in
+                                    Text(sound).tag(sound)
+                                }
+                            }
+                            .frame(width: 200)
+                            .onChange(of: selectedSound) { _, newValue in
+                                RequestStore.selectedSound = newValue
+                                NSSound(named: newValue)?.play()
+                            }
                         }
                     }
                     .padding(4)
