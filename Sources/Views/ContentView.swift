@@ -213,28 +213,10 @@ struct ContentView: View {
                 .padding()
             }
 
-            Divider()
-
-            HStack {
-                Button("Dismiss") {
-                    store.removeNotification(id: notification.id)
-                    selectedItem = nil
-                }
-                .if(notification.meta.isPassive) {
-                    $0.keyboardShortcut(.return, modifiers: [])
-                        .buttonStyle(.borderedProminent)
-                        .tint(.blue)
-                }
-
-                Spacer()
-
-                Button {
-                    TerminalBridge.focusTerminalTab(forCwd: notification.cwd)
-                } label: {
-                    Label("Open in Terminal", systemImage: "terminal")
-                }
+            DetailFooterView(cwd: notification.cwd, isPassive: notification.meta.isPassive) {
+                store.removeNotification(id: notification.id)
+                selectedItem = nil
             }
-            .padding()
         }
     }
 

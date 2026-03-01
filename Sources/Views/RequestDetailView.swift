@@ -63,37 +63,19 @@ struct RequestDetailView: View {
 
             Divider()
 
-            VStack(spacing: 8) {
-                HStack(spacing: 10) {
-                    actionButton(label: "Deny", icon: "xmark.circle", action: .deny, color: .red)
-                    actionButton(label: "Allow", icon: "checkmark.circle", action: .allow, color: .orange)
-                    actionButton(label: "Always", icon: "checkmark.circle.fill", action: .allowAlways, color: .green)
-                }
-
-                HStack {
-                    Button {
-                        request.respond(allow: false)
-                        store.removeRequest(id: request.id)
-                    } label: {
-                        Label("Dismiss", systemImage: "xmark")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    Button {
-                        TerminalBridge.focusTerminalTab(forCwd: request.cwd)
-                    } label: {
-                        Label("Open in Terminal", systemImage: "terminal")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                }
+            HStack(spacing: 10) {
+                actionButton(label: "Deny", icon: "xmark.circle", action: .deny, color: .red)
+                actionButton(label: "Allow", icon: "checkmark.circle", action: .allow, color: .orange)
+                actionButton(label: "Always", icon: "checkmark.circle.fill", action: .allowAlways, color: .green)
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.top, 12)
+            .padding(.bottom, 4)
+
+            DetailFooterView(cwd: request.cwd) {
+                request.respond(allow: false)
+                store.removeRequest(id: request.id)
+            }
         }
         .onReceive(timer) { _ in
             let elapsed = Int(-request.createdAt.timeIntervalSinceNow)

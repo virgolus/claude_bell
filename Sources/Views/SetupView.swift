@@ -12,160 +12,150 @@ struct SetupView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Hooks section
-                GroupBox("Claude Code Hooks") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Image(systemName: installed ? "checkmark.circle.fill" : "xmark.circle")
-                                .foregroundStyle(installed ? .green : .secondary)
-                            Text(installed ? "Hooks installed" : "Hooks not installed")
-                                .font(.body.weight(.medium))
-                        }
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Settings")
+                    .font(.title.weight(.bold))
+                    .padding(.bottom, 4)
 
-                        Text("Intercept permission requests and notifications from Claude Code.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        if installed {
-                            Button("Remove Hooks") {
-                                do {
-                                    try HookInstaller.uninstall()
-                                    installed = false
-                                    showSuccess = true
-                                    errorMessage = nil
-                                } catch {
-                                    errorMessage = error.localizedDescription
-                                }
-                            }
-                        } else {
-                            Button("Install Hooks") {
-                                do {
-                                    try HookInstaller.install()
-                                    installed = true
-                                    showSuccess = true
-                                    errorMessage = nil
-                                } catch {
-                                    errorMessage = error.localizedDescription
-                                }
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.orange)
-                        }
-
-                        if let error = errorMessage {
-                            Text(error).font(.caption).foregroundStyle(.red)
-                        }
-                        if showSuccess {
-                            Text("Done! Changes apply to new Claude Code sessions.")
-                                .font(.caption).foregroundStyle(.green)
-                                .onAppear {
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { showSuccess = false }
-                                }
-                        }
+                // MARK: - Hooks
+                settingsSection(title: "Claude Code Hooks", icon: "link.circle.fill", iconColor: .orange) {
+                    HStack {
+                        Image(systemName: installed ? "checkmark.circle.fill" : "xmark.circle")
+                            .foregroundStyle(installed ? .green : .red)
+                        Text(installed ? "Hooks installed" : "Hooks not installed")
+                            .font(.body.weight(.medium))
                     }
-                    .padding(4)
+
+                    Text("Intercept permission requests and notifications from Claude Code.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    if installed {
+                        Button("Remove Hooks") {
+                            do {
+                                try HookInstaller.uninstall()
+                                installed = false
+                                showSuccess = true
+                                errorMessage = nil
+                            } catch {
+                                errorMessage = error.localizedDescription
+                            }
+                        }
+                    } else {
+                        Button("Install Hooks") {
+                            do {
+                                try HookInstaller.install()
+                                installed = true
+                                showSuccess = true
+                                errorMessage = nil
+                            } catch {
+                                errorMessage = error.localizedDescription
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.orange)
+                    }
+
+                    if let error = errorMessage {
+                        Text(error).font(.callout).foregroundStyle(.red)
+                    }
+                    if showSuccess {
+                        Text("Done! Changes apply to new Claude Code sessions.")
+                            .font(.callout).foregroundStyle(.green)
+                            .onAppear {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { showSuccess = false }
+                            }
+                    }
                 }
 
-                // Statusline section
-                GroupBox("Status Line") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Image(systemName: statuslineInstalled ? "checkmark.circle.fill" : "xmark.circle")
-                                .foregroundStyle(statuslineInstalled ? .green : .secondary)
-                            Text(statuslineInstalled ? "Status line active" : "Status line not configured")
-                                .font(.body.weight(.medium))
-                        }
-
-                        Text("Show model, context usage, duration and git branch in Claude Code's status line.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        if statuslineInstalled {
-                            Button("Remove Status Line") {
-                                do {
-                                    try StatuslineInstaller.uninstall()
-                                    statuslineInstalled = false
-                                } catch {
-                                    errorMessage = error.localizedDescription
-                                }
-                            }
-                        } else {
-                            Button("Install Status Line") {
-                                do {
-                                    try StatuslineInstaller.install()
-                                    statuslineInstalled = true
-                                } catch {
-                                    errorMessage = error.localizedDescription
-                                }
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.blue)
-                        }
+                // MARK: - Status Line
+                settingsSection(title: "Status Line", icon: "text.line.last.and.arrowtriangle.forward", iconColor: .blue) {
+                    HStack {
+                        Image(systemName: statuslineInstalled ? "checkmark.circle.fill" : "xmark.circle")
+                            .foregroundStyle(statuslineInstalled ? .green : .red)
+                        Text(statuslineInstalled ? "Status line active" : "Status line not configured")
+                            .font(.body.weight(.medium))
                     }
-                    .padding(4)
+
+                    Text("Show model, context usage, duration and git branch in Claude Code's status line.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    if statuslineInstalled {
+                        Button("Remove Status Line") {
+                            do {
+                                try StatuslineInstaller.uninstall()
+                                statuslineInstalled = false
+                            } catch {
+                                errorMessage = error.localizedDescription
+                            }
+                        }
+                    } else {
+                        Button("Install Status Line") {
+                            do {
+                                try StatuslineInstaller.install()
+                                statuslineInstalled = true
+                            } catch {
+                                errorMessage = error.localizedDescription
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.blue)
+                    }
                 }
 
-                // Sound section
-                GroupBox("Notification Sound") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Sound played when a new permission request arrives.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                // MARK: - Sound
+                settingsSection(title: "Notification Sound", icon: "speaker.wave.2.fill", iconColor: .purple) {
+                    Text("Sound played when a new permission request arrives.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
 
-                        HStack {
-                            Picker("Sound:", selection: $selectedSound) {
-                                ForEach(RequestStore.availableSounds, id: \.self) { sound in
-                                    Text(sound).tag(sound)
-                                }
-                            }
-                            .frame(width: 200)
-                            .onChange(of: selectedSound) { _, newValue in
-                                RequestStore.selectedSound = newValue
-                                NSSound(named: newValue)?.play()
-                            }
+                    Picker("Sound:", selection: $selectedSound) {
+                        ForEach(RequestStore.availableSounds, id: \.self) { sound in
+                            Text(sound).tag(sound)
                         }
                     }
-                    .padding(4)
+                    .frame(width: 220)
+                    .onChange(of: selectedSound) { _, newValue in
+                        RequestStore.selectedSound = newValue
+                        NSSound(named: newValue)?.play()
+                    }
                 }
 
-                // Shortcut section
-                GroupBox("Global Shortcut") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Press the shortcut to toggle the panel from anywhere.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                // MARK: - Shortcut
+                settingsSection(title: "Global Shortcut", icon: "keyboard.fill", iconColor: .orange) {
+                    Text("Press the shortcut to toggle the panel from anywhere.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
 
-                        HStack {
-                            Text("Current:")
-                                .font(.body)
+                    HStack {
+                        Text("Current:")
+                            .font(.body)
 
-                            Text(shortcutLabel)
-                                .font(.system(.body, design: .monospaced).weight(.medium))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(isRecording ? Color.orange.opacity(0.2) : Color.secondary.opacity(0.1))
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(isRecording ? Color.orange : Color.clear, lineWidth: 1)
-                                )
+                        Text(shortcutLabel)
+                            .font(.system(.body, design: .monospaced).weight(.medium))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(isRecording ? Color.orange.opacity(0.2) : Color.secondary.opacity(0.15))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(isRecording ? Color.orange : Color.clear, lineWidth: 1)
+                            )
 
-                            Button(isRecording ? "Press new shortcut..." : "Change") {
-                                isRecording = true
-                            }
-                            .disabled(isRecording)
+                        Button(isRecording ? "Press new shortcut..." : "Change") {
+                            isRecording = true
                         }
-
-                        if isRecording {
-                            Text("Press your desired key combination (must include Cmd or Ctrl)")
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                        }
+                        .disabled(isRecording)
                     }
-                    .padding(4)
+
+                    if isRecording {
+                        Text("Press your desired key combination (must include Cmd or Ctrl)")
+                            .font(.callout)
+                            .foregroundStyle(.orange)
+                    }
                 }
             }
             .padding()
@@ -176,6 +166,39 @@ struct SetupView: View {
             GlobalShortcut.shared.restart()
             shortcutLabel = GlobalShortcut.shared.shortcutDescription
         }))
+    }
+
+    // MARK: - Section builder
+
+    private func settingsSection<Content: View>(
+        title: String,
+        icon: String,
+        iconColor: Color,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .foregroundStyle(iconColor)
+                    .font(.body)
+                Text(title)
+                    .font(.headline)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                content()
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
+            )
+        }
     }
 }
 
