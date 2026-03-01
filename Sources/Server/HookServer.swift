@@ -84,6 +84,7 @@ final class HookServer: Sendable {
             )
             Task { @MainActor in
                 store.addNotification(entry)
+                store.removeSession(id: input.sessionId)
                 Self.sendNativeNotification(for: entry)
             }
 

@@ -40,61 +40,60 @@ struct ContentView: View {
     }
 
     private var sidebarList: some View {
-        List(selection: $selectedItem) {
-            if !store.pendingRequests.isEmpty {
-                Section("Pending Requests") {
-                    ForEach(store.pendingRequests) { request in
-                        HStack {
-                            RequestRowView(request: request)
-                            Button {
-                                request.respond(allow: false)
-                                store.removeRequest(id: request.id)
-                                if selectedItem == .request(request.id) {
-                                    selectedItem = nil
+        VStack(spacing: 0) {
+            List(selection: $selectedItem) {
+                if !store.pendingRequests.isEmpty {
+                    Section("Pending Requests") {
+                        ForEach(store.pendingRequests) { request in
+                            HStack {
+                                RequestRowView(request: request)
+                                Button {
+                                    request.respond(allow: false)
+                                    store.removeRequest(id: request.id)
+                                    if selectedItem == .request(request.id) {
+                                        selectedItem = nil
+                                    }
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                        .font(.caption)
                                 }
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
-                                    .font(.caption)
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
+                            .tag(SidebarItem.request(request.id))
                         }
-                        .tag(SidebarItem.request(request.id))
                     }
                 }
-            }
 
-            if !store.notifications.isEmpty {
-                Section("Notifications") {
-                    ForEach(store.notifications) { notification in
-                        HStack {
-                            NotificationRowView(notification: notification)
-                            Button {
-                                store.removeNotification(id: notification.id)
-                                if selectedItem == .notification(notification.id) {
-                                    selectedItem = nil
+                if !store.notifications.isEmpty {
+                    Section("Notifications") {
+                        ForEach(store.notifications) { notification in
+                            HStack {
+                                NotificationRowView(notification: notification)
+                                Button {
+                                    store.removeNotification(id: notification.id)
+                                    if selectedItem == .notification(notification.id) {
+                                        selectedItem = nil
+                                    }
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                        .font(.caption)
                                 }
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
-                                    .font(.caption)
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
+                            .tag(SidebarItem.notification(notification.id))
                         }
-                        .tag(SidebarItem.notification(notification.id))
                     }
                 }
             }
+            .listStyle(.sidebar)
 
             if !store.sessions.isEmpty {
-                Section("Active Sessions") {
-                    ForEach(Array(store.sessions.values).sorted(by: { $0.lastSeen > $1.lastSeen })) { session in
-                        SessionRowView(session: session)
-                    }
-                }
+                Divider()
+                sessionsSection
             }
         }
-        .listStyle(.sidebar)
         .onChange(of: store.pendingRequests.count) { old, new in
             if new > old {
                 // New request arrived — always select the latest
@@ -217,6 +216,25 @@ struct ContentView: View {
                 store.removeNotification(id: notification.id)
                 selectedItem = nil
             }
+        }
+    }
+
+    private var sessionsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Sessions")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+
+            ForEach(Array(store.sessions.values).sorted(by: { $0.lastSeen > $1.lastSeen })) { session in
+                SessionRowView(session: session)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 3)
+            }
+            .padding(.bottom, 4)
         }
     }
 

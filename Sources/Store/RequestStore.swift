@@ -28,8 +28,9 @@ final class RequestStore: ObservableObject {
     }
 
     func removeRequest(id: UUID) {
+        let willBeEmpty = pendingRequests.count <= 1 && notifications.isEmpty
+        if willBeEmpty { onDismissPanel?() }
         pendingRequests.removeAll { $0.id == id }
-        autoDismissIfEmpty()
     }
 
     func addNotification(_ notification: NotificationEntry) {
@@ -63,20 +64,17 @@ final class RequestStore: ObservableObject {
     }
 
     func removeNotification(id: UUID) {
+        let willBeEmpty = notifications.count <= 1 && pendingRequests.isEmpty
+        if willBeEmpty { onDismissPanel?() }
         notifications.removeAll { $0.id == id }
-        autoDismissIfEmpty()
-    }
-
-    private func autoDismissIfEmpty() {
-        if pendingRequests.isEmpty && notifications.isEmpty {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                self.onDismissPanel?()
-            }
-        }
     }
 
     func renameSession(id: String, name: String?) {
         sessions[id]?.customName = name
+    }
+
+    func removeSession(id: String) {
+        sessions.removeValue(forKey: id)
     }
 
     private func trackSession(id: String, cwd: String) {
