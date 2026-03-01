@@ -5,8 +5,8 @@ struct NotificationRowView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: notificationIcon)
-                .foregroundStyle(.blue)
+            Image(systemName: notification.meta.rowIcon)
+                .foregroundStyle(notification.meta.iconColor)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -27,15 +27,5 @@ struct NotificationRowView: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 2)
-    }
-
-    private var notificationIcon: String {
-        switch notification.notificationType {
-        case "permission_prompt": return "lock.shield"
-        case "idle_prompt": return "questionmark.circle"
-        case "elicitation_dialog": return "text.bubble"
-        case "stop": return "checkmark.circle"
-        default: return "bell"
-        }
     }
 }

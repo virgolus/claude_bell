@@ -135,9 +135,9 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     // Header
                     HStack {
-                        Image(systemName: notificationDetailIcon(notification))
+                        Image(systemName: notification.meta.icon)
                             .font(.title2)
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(notification.meta.iconColor)
                         VStack(alignment: .leading) {
                             Text(notification.displayTitle)
                                 .font(.title3.weight(.semibold))
@@ -162,8 +162,8 @@ struct ContentView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
 
-                    // Transcript context (expanded by default, but skip for stop/session_end since message already shown above)
-                    if !notification.transcriptPath.isEmpty && !["stop", "session_end"].contains(notification.notificationType) {
+                    // Transcript context (expanded by default, skip for passive types since message already shown above)
+                    if !notification.transcriptPath.isEmpty && !notification.meta.isPassive {
                         ConversationContextView(transcriptPath: notification.transcriptPath, startExpanded: true)
                     }
 
@@ -179,7 +179,7 @@ struct ContentView: View {
                                 selectedItem = nil
                             }
                         )
-                    } else if needsTextInput(notification) {
+                    } else if !notification.meta.isPassive {
                         // Fallback: free text input
                         TextInputView(
                             notification: notification,
@@ -200,7 +200,7 @@ struct ContentView: View {
             Divider()
 
             HStack {
-                if !needsTextInput(notification) {
+                if notification.meta.isPassive {
                     Button("Dismiss") {
                         store.removeNotification(id: notification.id)
                         selectedItem = nil
@@ -223,22 +223,6 @@ struct ContentView: View {
             }
             .padding()
         }
-    }
-
-    private func notificationDetailIcon(_ notification: NotificationEntry) -> String {
-        switch notification.notificationType {
-        case "permission_prompt": return "lock.shield.fill"
-        case "idle_prompt": return "questionmark.circle.fill"
-        case "elicitation_dialog": return "text.bubble.fill"
-        case "stop": return "checkmark.circle.fill"
-        case "tool_error": return "exclamationmark.triangle.fill"
-        case "session_end": return "xmark.circle.fill"
-        default: return "bell.fill"
-        }
-    }
-
-    private func needsTextInput(_ notification: NotificationEntry) -> Bool {
-        !["stop", "session_end", "tool_error"].contains(notification.notificationType)
     }
 
     private func autoSelectLatest() {

@@ -24,7 +24,6 @@ final class HookServer: Sendable {
 
             let response = await withCheckedContinuation { (continuation: CheckedContinuation<HookResponse, Never>) in
                 Task { @MainActor in
-                    print("[HookServer] Creating PendingRequest on MainActor")
                     let pending = PendingRequest(
                         sessionId: input.sessionId,
                         cwd: input.cwd,
@@ -34,59 +33,36 @@ final class HookServer: Sendable {
                         continuation: continuation
                     )
                     store.addRequest(pending)
-                    print("[HookServer] Added to store, count=\(store.pendingRequests.count)")
                 }
             }
 
-            print("[HookServer] Got response, sending back")
             return response.toHTTPResponse()
         }
 
         router.post("/hooks/notification") { request, context -> Response in
-            let body = try await request.body.collect(upTo: 1_048_576)
-            if let raw = String(buffer: body) as String? {
-                print("[HookServer] Notification raw body: \(raw)")
-            }
-            let input = try JSONDecoder().decode(HookInput.self, from: body)
+            let input = try await Self.decodeInput(request, label: "Notification")
 
             let notificationType = input.notificationType ?? "unknown"
             let relevantTypes = ["permission_prompt", "idle_prompt", "elicitation_dialog"]
 
             if relevantTypes.contains(notificationType) {
-                let rawMessage = input.notificationMessage ?? input.message ?? input.question ?? ""
-                // Filter out generic/redundant messages from Claude Code
-                let genericMessages = [
-                    "claude is waiting for your input",
-                    "claude needs your input",
-                    "waiting for input",
-                    "claude code needs your permission",
-                    "permission required",
-                ]
-                let displayMessage = genericMessages.contains(where: { rawMessage.lowercased().contains($0) }) ? "" : rawMessage
-                let rawTitle = input.title ?? ""
-                let displayTitle = genericMessages.contains(where: { rawTitle.lowercased().contains($0) }) ? "" : rawTitle
+                let message = Self.filterGenericMessage(
+                    input.notificationMessage ?? input.message ?? input.question ?? ""
+                )
+                let title = Self.filterGenericMessage(input.title ?? "")
+
                 let entry = NotificationEntry(
                     sessionId: input.sessionId,
                     cwd: input.cwd,
                     notificationType: notificationType,
-                    message: displayMessage,
-                    title: displayTitle,
+                    message: message,
+                    title: title,
                     transcriptPath: input.transcriptPath ?? "",
                     createdAt: Date()
                 )
                 Task { @MainActor in
                     store.addNotification(entry)
-                    let nativeBody: String
-                    switch notificationType {
-                    case "idle_prompt": nativeBody = "Waiting for your input"
-                    case "elicitation_dialog": nativeBody = "Has a question for you"
-                    case "permission_prompt": nativeBody = "Needs permission"
-                    default: nativeBody = notificationType
-                    }
-                    NotificationManager.sendNotification(
-                        title: "Claude Code — \(entry.projectName)",
-                        body: nativeBody
-                    )
+                    Self.sendNativeNotification(for: entry)
                 }
             }
 
@@ -94,39 +70,27 @@ final class HookServer: Sendable {
         }
 
         router.post("/hooks/stop") { request, context -> Response in
-            let body = try await request.body.collect(upTo: 1_048_576)
-            if let raw = String(buffer: body) as String? {
-                print("[HookServer] Stop raw body: \(raw)")
-            }
-            let input = try JSONDecoder().decode(HookInput.self, from: body)
+            let input = try await Self.decodeInput(request, label: "Stop")
 
-            let stopMessage = input.lastAssistantMessage ?? ""
             let entry = NotificationEntry(
                 sessionId: input.sessionId,
                 cwd: input.cwd,
                 notificationType: "stop",
-                message: stopMessage,
-                title: "Task Completed",
+                message: input.lastAssistantMessage ?? "",
+                title: "",
                 transcriptPath: input.transcriptPath ?? "",
                 createdAt: Date()
             )
             Task { @MainActor in
                 store.addNotification(entry)
-                NotificationManager.sendNotification(
-                    title: "Claude Code — \(entry.projectName)",
-                    body: "Task completed"
-                )
+                Self.sendNativeNotification(for: entry)
             }
 
             return Response(status: .ok)
         }
 
         router.post("/hooks/post-tool-use-failure") { request, context -> Response in
-            let body = try await request.body.collect(upTo: 1_048_576)
-            if let raw = String(buffer: body) as String? {
-                print("[HookServer] PostToolUseFailure raw body: \(raw)")
-            }
-            let input = try JSONDecoder().decode(HookInput.self, from: body)
+            let input = try await Self.decodeInput(request, label: "PostToolUseFailure")
 
             let toolName = input.toolName ?? "Unknown"
             let errorMsg = input.error ?? input.toolResult ?? "Unknown error"
@@ -135,46 +99,35 @@ final class HookServer: Sendable {
                 cwd: input.cwd,
                 notificationType: "tool_error",
                 message: "**\(toolName)** failed:\n\n\(errorMsg)",
-                title: "Tool Error",
+                title: "",
                 transcriptPath: input.transcriptPath ?? "",
                 createdAt: Date()
             )
             Task { @MainActor in
                 store.addNotification(entry)
-                NotificationManager.sendNotification(
-                    title: "Claude Code — \(entry.projectName)",
-                    body: "\(toolName) failed"
-                )
+                Self.sendNativeNotification(for: entry, body: "\(toolName) failed")
             }
 
             return Response(status: .ok)
         }
 
         router.post("/hooks/session-end") { request, context -> Response in
-            let body = try await request.body.collect(upTo: 1_048_576)
-            if let raw = String(buffer: body) as String? {
-                print("[HookServer] SessionEnd raw body: \(raw)")
-            }
-            let input = try JSONDecoder().decode(HookInput.self, from: body)
+            let input = try await Self.decodeInput(request, label: "SessionEnd")
 
             Task { @MainActor in
-                // Remove session from tracked sessions
                 store.sessions.removeValue(forKey: input.sessionId)
-                // Add notification
+
                 let entry = NotificationEntry(
                     sessionId: input.sessionId,
                     cwd: input.cwd,
                     notificationType: "session_end",
                     message: "",
-                    title: "Session Ended",
+                    title: "",
                     transcriptPath: input.transcriptPath ?? "",
                     createdAt: Date()
                 )
                 store.addNotification(entry)
-                NotificationManager.sendNotification(
-                    title: "Claude Code — \(entry.projectName)",
-                    body: "Session ended"
-                )
+                Self.sendNativeNotification(for: entry)
             }
 
             return Response(status: .ok)
@@ -193,5 +146,35 @@ final class HookServer: Sendable {
             configuration: .init(address: .hostname(hostname, port: port))
         )
         try await app.run()
+    }
+
+    // MARK: - Helpers
+
+    private static func decodeInput(_ request: Request, label: String) async throws -> HookInput {
+        let body = try await request.body.collect(upTo: 1_048_576)
+        if let raw = String(buffer: body) as String? {
+            print("[HookServer] \(label) raw body: \(raw)")
+        }
+        return try JSONDecoder().decode(HookInput.self, from: body)
+    }
+
+    private static let genericMessages = [
+        "claude is waiting for your input",
+        "claude needs your input",
+        "waiting for input",
+        "claude code needs your permission",
+        "permission required",
+    ]
+
+    private static func filterGenericMessage(_ text: String) -> String {
+        let lower = text.lowercased()
+        return genericMessages.contains(where: { lower.contains($0) }) ? "" : text
+    }
+
+    private static func sendNativeNotification(for entry: NotificationEntry, body: String? = nil) {
+        NotificationManager.sendNotification(
+            title: "Claude Code — \(entry.projectName)",
+            body: body ?? entry.meta.nativeBody
+        )
     }
 }

@@ -31,9 +31,7 @@ final class RequestStore: ObservableObject {
     }
 
     func addNotification(_ notification: NotificationEntry) {
-        let deduplicateTypes = ["stop", "session_end", "tool_error"]
-        if deduplicateTypes.contains(notification.notificationType) {
-            // Replace existing notification of same type from same session
+        if notification.meta.deduplicate {
             notifications.removeAll {
                 $0.sessionId == notification.sessionId && $0.notificationType == notification.notificationType
             }
