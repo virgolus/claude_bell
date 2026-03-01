@@ -4,6 +4,8 @@
 
 Claude Code espone **17 hook event types**. Claude Bell ne gestisce 5 (con endpoint HTTP dedicati) + intercetta le notifiche rilevanti.
 
+Ogni tipo di notifica è definito in `NotificationMeta` (`Sources/Models/NotificationEntry.swift`) che centralizza: titolo, icone, colore, testo notifica nativa, flag `isPassive` e `deduplicate`.
+
 ## Hook gestiti
 
 ### 1. `PermissionRequest` — Bloccante
@@ -59,22 +61,11 @@ Claude Code espone **17 hook event types**. Claude Bell ne gestisce 5 (con endpo
 
 | Tipo | Descrizione | Azione nell'app |
 |------|-------------|-----------------|
-| `permission_prompt` | Claude sta mostrando un prompt di permesso nel terminale | Mostra notifica con opzioni dal transcript |
+| `permission_prompt` | Claude sta mostrando un prompt di permesso nel terminale | Mostra notifica con contesto dal transcript |
 | `idle_prompt` | Claude è in attesa di input (idle da 60+ secondi) | Mostra notifica + campo testo per risposta |
 | `elicitation_dialog` | Claude sta ponendo una domanda interattiva (AskUserQuestion) | Mostra domanda con opzioni cliccabili |
 
-**Payload ricevuto:**
-```json
-{
-  "session_id": "abc123",
-  "cwd": "/path/to/project",
-  "hook_event_name": "Notification",
-  "notification_type": "idle_prompt",
-  "message": "Claude needs your input",
-  "title": "Waiting for input",
-  "transcript_path": "/path/to/transcript.jsonl"
-}
-```
+**Filtro messaggi generici:** I messaggi come "Claude is waiting for your input", "Claude needs your permission to use X" vengono filtrati per evitare testo ridondante — il contesto viene mostrato dal transcript.
 
 **Per AskUserQuestion:** le opzioni non sono nel payload della notifica. Claude Bell legge il transcript JSONL per trovare l'ultima `AskUserQuestion` e ne estrae domande e opzioni. Supporta:
 - Domande singole e multiple
@@ -89,7 +80,11 @@ Claude Code espone **17 hook event types**. Claude Bell ne gestisce 5 (con endpo
 
 **Endpoint:** `POST /hooks/stop`
 **Quando:** Claude Code ha finito di rispondere (il task è completato).
-**Comportamento:** Mostra una notifica "Task Completed" + notifica nativa macOS.
+**Comportamento:**
+- Mostra una notifica "Task Completed" con l'ultimo messaggio di Claude
+- Deduplica: una sola notifica per sessione
+- Auto-dismiss: rimuove eventuali notifiche interattive stale della stessa sessione
+- Notifica nativa macOS
 
 **Payload ricevuto:**
 ```json
@@ -108,7 +103,7 @@ Claude Code espone **17 hook event types**. Claude Bell ne gestisce 5 (con endpo
 
 **Endpoint:** `POST /hooks/post-tool-use-failure`
 **Quando:** Un tool di Claude Code fallisce con errore.
-**Comportamento:** Mostra una notifica con il nome del tool e il messaggio di errore.
+**Comportamento:** Mostra una notifica con il nome del tool e il messaggio di errore. Deduplica per sessione.
 
 **Payload ricevuto:**
 ```json
@@ -129,7 +124,10 @@ Claude Code espone **17 hook event types**. Claude Bell ne gestisce 5 (con endpo
 
 **Endpoint:** `POST /hooks/session-end`
 **Quando:** Una sessione di Claude Code termina.
-**Comportamento:** Rimuove la sessione dal tracking e mostra una notifica.
+**Comportamento:**
+- Rimuove la sessione dal tracking
+- Auto-dismiss: rimuove eventuali notifiche interattive stale della stessa sessione
+- Mostra notifica "Session Ended"
 
 **Payload ricevuto:**
 ```json
@@ -143,6 +141,12 @@ Claude Code espone **17 hook event types**. Claude Bell ne gestisce 5 (con endpo
 
 ---
 
+## Auto-dismiss delle notifiche stale
+
+Quando arriva un evento passivo (`Stop`, `SessionEnd`, `PostToolUseFailure`) per una sessione, tutte le notifiche interattive (`permission_prompt`, `idle_prompt`, `elicitation_dialog`) della stessa sessione vengono automaticamente rimosse. Questo gestisce il caso in cui l'utente risponde direttamente nel terminale: Claude procede, manda `Stop`, e Claude Bell pulisce le notifiche ora non più valide.
+
+---
+
 ## Hook NON gestiti
 
 Claude Code espone 17 hook events in totale. Quelli non gestiti da Claude Bell:
@@ -153,11 +157,9 @@ Claude Code espone 17 hook events in totale. Quelli non gestiti da Claude Bell:
 |------|--------|------------------------|
 | `PreToolUse` | Prima dell'esecuzione di un tool | Filtrare/modificare comandi prima che vengano eseguiti |
 | `PostToolUse` | Dopo l'esecuzione riuscita | Logging, audit trail, notifiche su operazioni specifiche |
-| ~~`PostToolUseFailure`~~ | ~~Dopo un errore di tool~~ | **Gestito** (vedi sopra) |
 | `UserPromptSubmit` | Quando l'utente invia un prompt | Intercettare/validare prompt prima dell'elaborazione |
 | `TaskCompleted` | Quando un task viene completato (team) | Tracciare progresso dei task nei team |
 | `SubagentStop` | Quando un subagente finisce | Monitorare agenti paralleli |
-| ~~`SessionEnd`~~ | ~~Quando una sessione termina~~ | **Gestito** (vedi sopra) |
 
 ### Meno rilevanti per Claude Bell
 
@@ -170,6 +172,39 @@ Claude Code espone 17 hook events in totale. Quelli non gestiti da Claude Bell:
 | `WorktreeCreate` | Creazione worktree | Specifico per git |
 | `WorktreeRemove` | Rimozione worktree | Specifico per git |
 | `PreCompact` | Prima della compattazione | Specifico per context management |
+
+---
+
+## Architettura
+
+### NotificationMeta (centralizzato)
+
+Ogni tipo di notifica ha un `NotificationMeta` che definisce:
+
+| Campo | Descrizione |
+|-------|-------------|
+| `displayTitle` | Titolo mostrato nell'app |
+| `icon` / `rowIcon` | SF Symbols per detail view e sidebar |
+| `iconColor` | Colore dell'icona (verde per stop, arancione per errori, ecc.) |
+| `nativeBody` | Testo della notifica macOS nativa |
+| `isPassive` | `true` = nessun input richiesto (dismiss con Enter, no transcript, no campo testo) |
+| `deduplicate` | `true` = una sola notifica per sessione/tipo |
+
+### Flusso dati
+
+```
+Claude Code → HTTP POST → HookServer.decodeInput()
+                              │
+                              ├── PermissionRequest: withCheckedContinuation → PendingRequest
+                              │                                                     │
+                              │                                              Allow/Deny → HTTP Response
+                              │
+                              └── Fire-and-forget: NotificationEntry → RequestStore
+                                                                          │
+                                                          ├── deduplicate (se meta.deduplicate)
+                                                          ├── auto-dismiss stale (se meta.isPassive)
+                                                          └── sendNativeNotification()
+```
 
 ---
 

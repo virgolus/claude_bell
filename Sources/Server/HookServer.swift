@@ -163,7 +163,9 @@ final class HookServer: Sendable {
         "claude needs your input",
         "waiting for input",
         "claude code needs your permission",
+        "claude needs your permission",
         "permission required",
+        "needs your permission to use",
     ]
 
     private static func filterGenericMessage(_ text: String) -> String {

@@ -36,6 +36,12 @@ final class RequestStore: ObservableObject {
                 $0.sessionId == notification.sessionId && $0.notificationType == notification.notificationType
             }
         }
+        // When a session completes (stop) or ends, dismiss stale interactive notifications for that session
+        if notification.meta.isPassive {
+            notifications.removeAll {
+                $0.sessionId == notification.sessionId && !$0.meta.isPassive
+            }
+        }
         notifications.append(notification)
         trackSession(id: notification.sessionId, cwd: notification.cwd)
     }
