@@ -3,6 +3,7 @@ import Carbon.HIToolbox
 
 struct SetupView: View {
     @State private var installed = HookInstaller.isInstalled
+    @State private var statuslineInstalled = StatuslineInstaller.isInstalled
     @State private var errorMessage: String?
     @State private var showSuccess = false
     @State private var isRecording = false
@@ -60,6 +61,45 @@ struct SetupView: View {
                                 .onAppear {
                                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) { showSuccess = false }
                                 }
+                        }
+                    }
+                    .padding(4)
+                }
+
+                // Statusline section
+                GroupBox("Status Line") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: statuslineInstalled ? "checkmark.circle.fill" : "xmark.circle")
+                                .foregroundStyle(statuslineInstalled ? .green : .secondary)
+                            Text(statuslineInstalled ? "Status line active" : "Status line not configured")
+                                .font(.body.weight(.medium))
+                        }
+
+                        Text("Show model, context usage, duration and git branch in Claude Code's status line.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        if statuslineInstalled {
+                            Button("Remove Status Line") {
+                                do {
+                                    try StatuslineInstaller.uninstall()
+                                    statuslineInstalled = false
+                                } catch {
+                                    errorMessage = error.localizedDescription
+                                }
+                            }
+                        } else {
+                            Button("Install Status Line") {
+                                do {
+                                    try StatuslineInstaller.install()
+                                    statuslineInstalled = true
+                                } catch {
+                                    errorMessage = error.localizedDescription
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.blue)
                         }
                     }
                     .padding(4)
