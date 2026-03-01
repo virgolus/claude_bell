@@ -14,7 +14,7 @@ struct NotificationRowView: View {
                     .font(.body.weight(.medium))
                     .lineLimit(1)
 
-                Text(notification.projectName)
+                Text(notification.displayProjectName)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

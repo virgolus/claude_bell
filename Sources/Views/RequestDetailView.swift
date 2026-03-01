@@ -3,13 +3,13 @@ import AppKit
 
 enum ActionButton {
     case allow
-    case allowForSession
+    case allowAlways
     case deny
 
     var behavior: PermissionBehavior {
         switch self {
         case .allow: return .allow
-        case .allowForSession: return .allowForSession
+        case .allowAlways: return .allowAlways
         case .deny: return .deny
         }
     }
@@ -67,7 +67,7 @@ struct RequestDetailView: View {
                 HStack(spacing: 10) {
                     actionButton(label: "Deny", icon: "xmark.circle", action: .deny, color: .red)
                     actionButton(label: "Allow", icon: "checkmark.circle", action: .allow, color: .orange)
-                    actionButton(label: "Always", icon: "checkmark.circle.fill", action: .allowForSession, color: .green)
+                    actionButton(label: "Always", icon: "checkmark.circle.fill", action: .allowAlways, color: .green)
                 }
 
                 HStack {
@@ -138,7 +138,7 @@ struct RequestDetailView: View {
         store.removeRequest(id: request.id)
     }
 
-    private static let buttonOrder: [ActionButton] = [.deny, .allow, .allowForSession]
+    private static let buttonOrder: [ActionButton] = [.deny, .allow, .allowAlways]
 
     private func installKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in

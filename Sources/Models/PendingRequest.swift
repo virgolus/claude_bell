@@ -8,12 +8,13 @@ final class PendingRequest: Identifiable, ObservableObject {
     let toolName: String
     let toolInput: [String: AnyCodable]
     let transcriptPath: String
+    let permissionSuggestions: [AnyCodable]?
     let createdAt: Date
     private let continuation: CheckedContinuation<HookResponse, Never>
     private var hasResponded = false
 
     var projectName: String {
-        (cwd as NSString).lastPathComponent
+        RequestStore.shared.sessions[sessionId]?.displayName ?? (cwd as NSString).lastPathComponent
     }
 
     init(
@@ -22,6 +23,7 @@ final class PendingRequest: Identifiable, ObservableObject {
         toolName: String,
         toolInput: [String: AnyCodable],
         transcriptPath: String,
+        permissionSuggestions: [AnyCodable]? = nil,
         continuation: CheckedContinuation<HookResponse, Never>
     ) {
         self.sessionId = sessionId
@@ -29,6 +31,7 @@ final class PendingRequest: Identifiable, ObservableObject {
         self.toolName = toolName
         self.toolInput = toolInput
         self.transcriptPath = transcriptPath
+        self.permissionSuggestions = permissionSuggestions
         self.createdAt = Date()
         self.continuation = continuation
     }
@@ -36,7 +39,12 @@ final class PendingRequest: Identifiable, ObservableObject {
     func respond(_ behavior: PermissionBehavior) {
         guard !hasResponded else { return }
         hasResponded = true
-        let response = HookResponse.permissionDecision(behavior)
+        let response: HookResponse
+        if behavior == .allowAlways {
+            response = HookResponse.permissionDecisionAlways(permissionSuggestions: permissionSuggestions)
+        } else {
+            response = HookResponse.permissionDecision(behavior)
+        }
         continuation.resume(returning: response)
     }
 

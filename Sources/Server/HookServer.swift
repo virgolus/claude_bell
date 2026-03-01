@@ -30,6 +30,7 @@ final class HookServer: Sendable {
                         toolName: input.toolName ?? "Unknown",
                         toolInput: input.toolInput ?? [:],
                         transcriptPath: input.transcriptPath ?? "",
+                        permissionSuggestions: input.permissionSuggestions,
                         continuation: continuation
                     )
                     store.addRequest(pending)

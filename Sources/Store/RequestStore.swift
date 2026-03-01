@@ -12,6 +12,8 @@ final class RequestStore: ObservableObject {
 
     /// Set by ClaudeBellApp to auto-show the panel on new requests
     var onNewRequest: (() -> Void)?
+    /// Set by AppDelegate to dismiss the panel properly
+    var onDismissPanel: (() -> Void)?
 
     var badgeCount: Int {
         pendingRequests.count + notifications.count
@@ -67,11 +69,14 @@ final class RequestStore: ObservableObject {
 
     private func autoDismissIfEmpty() {
         if pendingRequests.isEmpty && notifications.isEmpty {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                NSApp.keyWindow?.orderOut(nil)
-                NSApp.hide(nil)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                self.onDismissPanel?()
             }
         }
+    }
+
+    func renameSession(id: String, name: String?) {
+        sessions[id]?.customName = name
     }
 
     private func trackSession(id: String, cwd: String) {

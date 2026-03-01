@@ -72,6 +72,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return event
         }
 
+        // Wire up dismiss callback
+        RequestStore.shared.onDismissPanel = { [weak self] in
+            self?.dismissPanel()
+        }
+
         // Global shortcut to toggle panel
         GlobalShortcut.shared.onTrigger = {
             self.togglePanel()
@@ -152,11 +157,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func togglePanel() {
-        // Simulate clicking the status bar button — this properly toggles the MenuBarExtra panel
         if let button = findStatusButton() {
             button.performClick(nil)
         } else {
             NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
+    private func dismissPanel() {
+        if let button = findStatusButton() {
+            button.performClick(nil)
         }
     }
 

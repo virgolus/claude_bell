@@ -173,6 +173,73 @@ enum TranscriptParser {
         return nil
     }
 
+    /// Parses numbered options from the last assistant message text in the transcript.
+    /// Looks for patterns like "1. Option text" or "❯ 1. Option text"
+    static func parseNumberedOptions(from path: String) -> [ParsedQuestion]? {
+        guard let data = FileManager.default.contents(atPath: path),
+              let content = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+
+        let lines = content.components(separatedBy: "\n").filter { !$0.isEmpty }
+
+        // Find the last assistant message
+        for line in lines.reversed() {
+            guard let lineData = line.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
+                  let type = json["type"] as? String, type == "assistant",
+                  let message = json["message"] as? [String: Any] else {
+                continue
+            }
+
+            var textParts: [String] = []
+            if let contentArray = message["content"] as? [[String: Any]] {
+                for block in contentArray {
+                    if let blockType = block["type"] as? String, blockType == "text",
+                       let text = block["text"] as? String {
+                        textParts.append(text)
+                    }
+                }
+            } else if let contentString = message["content"] as? String {
+                textParts.append(contentString)
+            }
+
+            let fullText = textParts.joined(separator: "\n")
+
+            // Look for numbered options: "1. ...", "2. ...", etc.
+            let optionPattern = #"^\s*(?:❯\s*)?(\d+)\.\s+(.+)$"#
+            guard let regex = try? NSRegularExpression(pattern: optionPattern, options: .anchorsMatchLines) else {
+                continue
+            }
+
+            let matches = regex.matches(in: fullText, range: NSRange(fullText.startIndex..., in: fullText))
+            guard matches.count >= 2 else { continue }
+
+            var options: [QuestionOption] = []
+            for match in matches {
+                guard let numRange = Range(match.range(at: 1), in: fullText),
+                      let textRange = Range(match.range(at: 2), in: fullText),
+                      let num = Int(fullText[numRange]) else { continue }
+                options.append(QuestionOption(
+                    index: num,
+                    label: String(fullText[textRange]).trimmingCharacters(in: .whitespaces),
+                    description: ""
+                ))
+            }
+
+            if !options.isEmpty {
+                return [ParsedQuestion(
+                    header: "",
+                    question: "",
+                    options: options,
+                    multiSelect: false
+                )]
+            }
+        }
+
+        return nil
+    }
+
     private static func summarizeInput(_ input: [String: Any]) -> String {
         // Show first key-value pair as summary
         var parts: [String] = []

@@ -15,6 +15,11 @@ struct NotificationEntry: Identifiable, Sendable {
         (cwd as NSString).lastPathComponent
     }
 
+    @MainActor
+    var displayProjectName: String {
+        RequestStore.shared.sessions[sessionId]?.displayName ?? projectName
+    }
+
     var meta: NotificationMeta {
         NotificationMeta.for(notificationType)
     }

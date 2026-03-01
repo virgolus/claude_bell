@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A view that renders markdown text with proper formatting.
+/// A view that renders markdown text with proper formatting including headings, lists, code blocks, and tables.
 struct MarkdownText: View {
     let content: String
     let font: Font
@@ -11,159 +11,219 @@ struct MarkdownText: View {
     }
 
     var body: some View {
-        if content.contains("```") || containsTable(content) {
-            // Has code blocks or tables — split and render separately
-            codeBlockRendering
-        } else {
-            // Simple markdown — use native AttributedString
-            simpleMarkdown
-                .textSelection(.enabled)
-        }
-    }
-
-    private var simpleMarkdown: Text {
-        if let attributed = try? AttributedString(markdown: content, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
-            return Text(attributed).font(font)
-        } else {
-            return Text(content).font(font)
-        }
-    }
-
-    private var codeBlockRendering: some View {
-        let blocks = parseCodeBlocks(content)
-        return VStack(alignment: .leading, spacing: 6) {
+        let blocks = parseAllBlocks(content)
+        VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                if block.isCode {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        Text(block.content)
-                            .font(.system(.caption, design: .monospaced))
-                            .textSelection(.enabled)
-                            .padding(10)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(nsColor: .textBackgroundColor))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                    )
-                } else if !block.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    if block.isTable {
-                        tableView(block.content)
-                    } else if let attributed = try? AttributedString(markdown: block.content, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
-                        Text(attributed)
-                            .font(font)
-                            .textSelection(.enabled)
-                    } else {
-                        Text(block.content)
-                            .font(font)
-                            .textSelection(.enabled)
-                    }
-                }
+                blockView(block)
             }
         }
     }
 
-    private struct ContentBlock {
-        let content: String
-        let isCode: Bool
-        var isTable: Bool = false
+    // MARK: - Block types
+
+    private enum Block {
+        case heading(level: Int, text: String)
+        case codeBlock(String)
+        case table(String)
+        case listItem(indent: Int, ordered: Bool, number: Int?, text: String)
+        case paragraph(String)
+        case divider
     }
 
-    private func parseCodeBlocks(_ text: String) -> [ContentBlock] {
-        var blocks: [ContentBlock] = []
+    // MARK: - Rendering
+
+    @ViewBuilder
+    private func blockView(_ block: Block) -> some View {
+        switch block {
+        case .heading(let level, let text):
+            headingView(level: level, text: text)
+        case .codeBlock(let code):
+            ScrollView(.horizontal, showsIndicators: false) {
+                Text(code)
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
+                    .padding(10)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(nsColor: .textBackgroundColor))
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+            )
+        case .table(let tableText):
+            tableView(tableText)
+        case .listItem(let indent, _, _, let text):
+            HStack(alignment: .top, spacing: 4) {
+                Text("•")
+                    .font(font)
+                    .foregroundStyle(.secondary)
+                inlineMarkdown(text)
+            }
+            .padding(.leading, CGFloat(indent) * 16)
+        case .paragraph(let text):
+            if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                inlineMarkdown(text)
+            }
+        case .divider:
+            Divider()
+        }
+    }
+
+    private func headingView(level: Int, text: String) -> some View {
+        let headingFont: Font = switch level {
+        case 1: .title.weight(.bold)
+        case 2: .title2.weight(.bold)
+        case 3: .title3.weight(.semibold)
+        default: .headline.weight(.semibold)
+        }
+        return inlineMarkdown(text, font: headingFont)
+            .padding(.top, level <= 2 ? 4 : 2)
+    }
+
+    @ViewBuilder
+    private func inlineMarkdown(_ text: String, font overrideFont: Font? = nil) -> some View {
+        let f = overrideFont ?? font
+        if let attributed = try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
+            Text(attributed).font(f).textSelection(.enabled)
+        } else {
+            Text(text).font(f).textSelection(.enabled)
+        }
+    }
+
+    // MARK: - Parsing
+
+    private func parseAllBlocks(_ text: String) -> [Block] {
+        var blocks: [Block] = []
         var remaining = text
-        while let start = remaining.range(of: "```") {
-            // Text before code block
-            let before = String(remaining[remaining.startIndex..<start.lowerBound])
-            if !before.isEmpty {
-                blocks.append(ContentBlock(content: before, isCode: false))
+        let headingPattern = #"^(#{1,4})\s+(.+)$"#
+        let listPattern = #"^(\s*)([-*+]|\d+\.)\s+(.+)$"#
+        let dividerPattern = #"^(\s*[-*_]\s*){3,}$"#
+
+        while !remaining.isEmpty {
+            // Code block
+            if let codeStart = remaining.range(of: "```") {
+                let before = String(remaining[remaining.startIndex..<codeStart.lowerBound])
+                if !before.isEmpty {
+                    blocks.append(contentsOf: parseNonCodeBlocks(before, headingPattern: headingPattern, listPattern: listPattern, dividerPattern: dividerPattern))
+                }
+                remaining = String(remaining[codeStart.upperBound...])
+                // Skip language identifier
+                if let newline = remaining.firstIndex(of: "\n") {
+                    remaining = String(remaining[remaining.index(after: newline)...])
+                }
+                if let end = remaining.range(of: "```") {
+                    let code = String(remaining[remaining.startIndex..<end.lowerBound])
+                    blocks.append(.codeBlock(code.trimmingCharacters(in: .newlines)))
+                    remaining = String(remaining[end.upperBound...])
+                } else {
+                    blocks.append(.codeBlock(remaining.trimmingCharacters(in: .newlines)))
+                    remaining = ""
+                }
+                continue
             }
-            remaining = String(remaining[start.upperBound...])
-            // Skip optional language identifier on the same line
-            if let newline = remaining.firstIndex(of: "\n") {
-                remaining = String(remaining[remaining.index(after: newline)...])
-            }
-            // Find closing ```
-            if let end = remaining.range(of: "```") {
-                let code = String(remaining[remaining.startIndex..<end.lowerBound])
-                blocks.append(ContentBlock(content: code.trimmingCharacters(in: .newlines), isCode: true))
-                remaining = String(remaining[end.upperBound...])
-            } else {
-                // No closing — treat rest as code
-                blocks.append(ContentBlock(content: remaining.trimmingCharacters(in: .newlines), isCode: true))
-                remaining = ""
-            }
+
+            // No more code blocks
+            blocks.append(contentsOf: parseNonCodeBlocks(remaining, headingPattern: headingPattern, listPattern: listPattern, dividerPattern: dividerPattern))
+            remaining = ""
         }
-        if !remaining.isEmpty {
-            // Split remaining text to separate table blocks from regular text
-            blocks.append(contentsOf: splitTables(remaining))
-        }
+
         return blocks
     }
 
-    /// Detect if text contains a markdown table (lines starting with |)
-    private func containsTable(_ text: String) -> Bool {
+    private func parseNonCodeBlocks(_ text: String, headingPattern: String, listPattern: String, dividerPattern: String) -> [Block] {
+        var blocks: [Block] = []
+        var paragraphLines: [String] = []
         let lines = text.components(separatedBy: "\n")
-        var pipeLineCount = 0
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("|") && trimmed.hasSuffix("|") {
-                pipeLineCount += 1
-                if pipeLineCount >= 2 { return true }
-            } else {
-                pipeLineCount = 0
-            }
-        }
-        return false
-    }
 
-    /// Split text into table and non-table blocks
-    private func splitTables(_ text: String) -> [ContentBlock] {
-        let lines = text.components(separatedBy: "\n")
-        var blocks: [ContentBlock] = []
-        var currentLines: [String] = []
+        let headingRegex = try? NSRegularExpression(pattern: headingPattern, options: .anchorsMatchLines)
+        let listRegex = try? NSRegularExpression(pattern: listPattern, options: .anchorsMatchLines)
+        let dividerRegex = try? NSRegularExpression(pattern: dividerPattern, options: .anchorsMatchLines)
+
+        // Detect table regions
         var inTable = false
+        var tableLines: [String] = []
+
+        func flushParagraph() {
+            let text = paragraphLines.joined(separator: "\n")
+            if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                blocks.append(.paragraph(text))
+            }
+            paragraphLines = []
+        }
+
+        func flushTable() {
+            if !tableLines.isEmpty {
+                blocks.append(.table(tableLines.joined(separator: "\n")))
+                tableLines = []
+            }
+            inTable = false
+        }
 
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
+            let nsLine = line as NSString
+            let range = NSRange(location: 0, length: nsLine.length)
             let isTableLine = trimmed.hasPrefix("|") && trimmed.hasSuffix("|")
 
-            if isTableLine && !inTable {
-                // Flush non-table text
-                if !currentLines.isEmpty {
-                    let content = currentLines.joined(separator: "\n")
-                    if !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        blocks.append(ContentBlock(content: content, isCode: false))
-                    }
-                    currentLines = []
+            if isTableLine {
+                if !inTable {
+                    flushParagraph()
+                    inTable = true
                 }
-                inTable = true
-                currentLines.append(line)
-            } else if isTableLine && inTable {
-                currentLines.append(line)
-            } else if !isTableLine && inTable {
-                // Flush table
-                let content = currentLines.joined(separator: "\n")
-                blocks.append(ContentBlock(content: content, isCode: false, isTable: true))
-                currentLines = [line]
-                inTable = false
-            } else {
-                currentLines.append(line)
+                tableLines.append(line)
+                continue
+            } else if inTable {
+                flushTable()
             }
+
+            // Heading
+            if let match = headingRegex?.firstMatch(in: line, range: range),
+               let hashRange = Range(match.range(at: 1), in: line),
+               let textRange = Range(match.range(at: 2), in: line) {
+                flushParagraph()
+                blocks.append(.heading(level: line[hashRange].count, text: String(line[textRange])))
+                continue
+            }
+
+            // Divider
+            if let _ = dividerRegex?.firstMatch(in: line, range: range), trimmed.count >= 3 {
+                flushParagraph()
+                blocks.append(.divider)
+                continue
+            }
+
+            // List item
+            if let match = listRegex?.firstMatch(in: line, range: range),
+               let indentRange = Range(match.range(at: 1), in: line),
+               let markerRange = Range(match.range(at: 2), in: line),
+               let textRange = Range(match.range(at: 3), in: line) {
+                flushParagraph()
+                let indent = line[indentRange].count / 2
+                let marker = String(line[markerRange])
+                let ordered = marker.hasSuffix(".")
+                let number = ordered ? Int(marker.dropLast()) : nil
+                blocks.append(.listItem(indent: indent, ordered: ordered, number: number, text: String(line[textRange])))
+                continue
+            }
+
+            // Empty line = paragraph break
+            if trimmed.isEmpty {
+                flushParagraph()
+                continue
+            }
+
+            paragraphLines.append(line)
         }
 
-        if !currentLines.isEmpty {
-            let content = currentLines.joined(separator: "\n")
-            if !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                blocks.append(ContentBlock(content: content, isCode: false, isTable: inTable))
-            }
-        }
+        if inTable { flushTable() }
+        flushParagraph()
 
         return blocks
     }
 
-    /// Render a markdown table as a formatted grid
+    // MARK: - Table rendering
+
     private func tableView(_ text: String) -> some View {
         let rows = parseTable(text)
         return VStack(alignment: .leading, spacing: 0) {
@@ -205,7 +265,6 @@ struct MarkdownText: View {
             .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
             .map { line in
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
-                // Check if separator row (|---|---|)
                 let inner = String(trimmed.dropFirst().dropLast())
                 let isSep = inner.allSatisfy { $0 == "-" || $0 == "|" || $0 == ":" || $0 == " " }
                     && inner.contains("-")

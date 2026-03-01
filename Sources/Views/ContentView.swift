@@ -32,7 +32,7 @@ struct ContentView: View {
                 }
             }
         }
-        .frame(width: 900, height: 650)
+        .frame(width: 900, height: NSScreen.main.map { $0.visibleFrame.height } ?? 650)
         .onAppear {
             NotificationManager.requestPermission()
             autoSelectLatest()
@@ -95,11 +95,27 @@ struct ContentView: View {
             }
         }
         .listStyle(.sidebar)
-        .onChange(of: store.pendingRequests.count) { _, _ in
-            autoSelectIfNone()
+        .onChange(of: store.pendingRequests.count) { old, new in
+            if new > old {
+                // New request arrived — always select the latest
+                if let last = store.pendingRequests.last {
+                    selectedItem = .request(last.id)
+                }
+            } else {
+                autoSelectIfNone()
+            }
         }
-        .onChange(of: store.notifications.count) { _, _ in
-            autoSelectIfNone()
+        .onChange(of: store.notifications.count) { old, new in
+            if new > old {
+                // New notification arrived — select it if nothing else selected or current is stale
+                if let last = store.notifications.last {
+                    if selectedItem == nil || !isSelectedItemValid {
+                        selectedItem = .notification(last.id)
+                    }
+                }
+            } else {
+                autoSelectIfNone()
+            }
         }
     }
 
@@ -139,7 +155,7 @@ struct ContentView: View {
                             .font(.title2)
                             .foregroundStyle(notification.meta.iconColor)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(notification.projectName)
+                            Text(notification.displayProjectName)
                                 .font(.title.weight(.bold))
                             HStack(spacing: 4) {
                                 Text(notification.displayTitle)
@@ -169,7 +185,7 @@ struct ContentView: View {
 
                     // Question options from transcript
                     if !notification.transcriptPath.isEmpty,
-                       let questions = TranscriptParser.parseLastQuestions(from: notification.transcriptPath),
+                       let questions = transcriptQuestions(for: notification),
                        !questions.isEmpty {
                         QuestionOptionsView(
                             questions: questions,
@@ -220,6 +236,23 @@ struct ContentView: View {
             }
             .padding()
         }
+    }
+
+    private var isSelectedItemValid: Bool {
+        switch selectedItem {
+        case .request(let id): return store.pendingRequests.contains { $0.id == id }
+        case .notification(let id): return store.notifications.contains { $0.id == id }
+        case nil: return false
+        }
+    }
+
+    /// Try AskUserQuestion first, then fall back to numbered options in text
+    private func transcriptQuestions(for notification: NotificationEntry) -> [ParsedQuestion]? {
+        let path = notification.transcriptPath
+        if let questions = TranscriptParser.parseLastQuestions(from: path), !questions.isEmpty {
+            return questions
+        }
+        return TranscriptParser.parseNumberedOptions(from: path)
     }
 
     private func autoSelectLatest() {
