@@ -58,12 +58,10 @@ private struct MessageBubble: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 if !message.textContent.isEmpty {
-                    let truncated = message.textContent.count > 300
-                        ? String(message.textContent.prefix(300)) + "..."
+                    let truncated = message.textContent.count > 500
+                        ? String(message.textContent.prefix(500)) + "..."
                         : message.textContent
-                    Text(truncated)
-                        .font(.caption)
-                        .textSelection(.enabled)
+                    MarkdownText(truncated, font: .caption)
                 }
 
                 ForEach(message.toolUses) { tool in

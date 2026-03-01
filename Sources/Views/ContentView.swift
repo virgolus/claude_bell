@@ -21,18 +21,21 @@ struct ContentView: View {
             } else if store.pendingRequests.isEmpty && store.notifications.isEmpty {
                 EmptyStateView()
             } else {
-                HSplitView {
+                HStack(spacing: 0) {
                     sidebarList
-                        .frame(minWidth: 200, maxWidth: 280)
+                        .frame(width: 220)
+
+                    Divider()
 
                     detailPanel
-                        .frame(minWidth: 300)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
         }
-        .frame(width: 640, height: 480)
+        .frame(width: 900, height: 650)
         .onAppear {
             NotificationManager.requestPermission()
+            autoSelectLatest()
         }
     }
 
@@ -41,8 +44,22 @@ struct ContentView: View {
             if !store.pendingRequests.isEmpty {
                 Section("Pending Requests") {
                     ForEach(store.pendingRequests) { request in
-                        RequestRowView(request: request)
-                            .tag(SidebarItem.request(request.id))
+                        HStack {
+                            RequestRowView(request: request)
+                            Button {
+                                request.respond(allow: false)
+                                store.removeRequest(id: request.id)
+                                if selectedItem == .request(request.id) {
+                                    selectedItem = nil
+                                }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .tag(SidebarItem.request(request.id))
                     }
                 }
             }
@@ -50,8 +67,21 @@ struct ContentView: View {
             if !store.notifications.isEmpty {
                 Section("Notifications") {
                     ForEach(store.notifications) { notification in
-                        NotificationRowView(notification: notification)
-                            .tag(SidebarItem.notification(notification.id))
+                        HStack {
+                            NotificationRowView(notification: notification)
+                            Button {
+                                store.removeNotification(id: notification.id)
+                                if selectedItem == .notification(notification.id) {
+                                    selectedItem = nil
+                                }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .tag(SidebarItem.notification(notification.id))
                     }
                 }
             }
@@ -66,10 +96,10 @@ struct ContentView: View {
         }
         .listStyle(.sidebar)
         .onChange(of: store.pendingRequests.count) { _, _ in
-            autoSelectFirst()
+            autoSelectLatest()
         }
         .onChange(of: store.notifications.count) { _, _ in
-            autoSelectFirst()
+            autoSelectLatest()
         }
     }
 
@@ -103,22 +133,54 @@ struct ContentView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
+                    // Header
                     HStack {
-                        Image(systemName: "bell.fill")
+                        Image(systemName: notificationDetailIcon(notification))
                             .font(.title2)
                             .foregroundStyle(.blue)
                         VStack(alignment: .leading) {
-                            Text(notification.notificationType)
+                            Text(notification.displayTitle)
                                 .font(.title3.weight(.semibold))
-                            Text(notification.projectName)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            HStack(spacing: 4) {
+                                Text(notification.projectName)
+                                Text("·")
+                                Text(TimeAgoFormatter.format(notification.createdAt))
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                         }
                     }
 
                     Divider()
 
-                    if needsTextInput(notification) {
+                    // Message
+                    if !notification.message.isEmpty {
+                        MarkdownText(notification.message)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                            .background(Color.secondary.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+
+                    // Transcript context
+                    if !notification.transcriptPath.isEmpty {
+                        ConversationContextView(transcriptPath: notification.transcriptPath)
+                    }
+
+                    // Question options from transcript
+                    if !notification.transcriptPath.isEmpty,
+                       let questions = TranscriptParser.parseLastQuestions(from: notification.transcriptPath),
+                       !questions.isEmpty {
+                        QuestionOptionsView(
+                            questions: questions,
+                            onSend: { text in
+                                TerminalBridge.sendText(text, toCwd: notification.cwd)
+                                store.removeNotification(id: notification.id)
+                                selectedItem = nil
+                            }
+                        )
+                    } else if needsTextInput(notification) {
+                        // Fallback: free text input
                         TextInputView(
                             notification: notification,
                             onSend: { text in
@@ -130,9 +192,6 @@ struct ContentView: View {
                                 TerminalBridge.focusTerminalTab(forCwd: notification.cwd)
                             }
                         )
-                    } else {
-                        Text(notification.message)
-                            .textSelection(.enabled)
                     }
                 }
                 .padding()
@@ -145,7 +204,6 @@ struct ContentView: View {
                     store.removeNotification(id: notification.id)
                     selectedItem = nil
                 }
-                .keyboardShortcut(.escape, modifiers: [])
 
                 Spacer()
 
@@ -159,17 +217,24 @@ struct ContentView: View {
         }
     }
 
-    private func needsTextInput(_ notification: NotificationEntry) -> Bool {
-        notification.notificationType == "idle_prompt" || notification.notificationType == "elicitation_dialog"
+    private func notificationDetailIcon(_ notification: NotificationEntry) -> String {
+        switch notification.notificationType {
+        case "permission_prompt": return "lock.shield.fill"
+        case "idle_prompt": return "questionmark.circle.fill"
+        case "elicitation_dialog": return "text.bubble.fill"
+        default: return "bell.fill"
+        }
     }
 
-    private func autoSelectFirst() {
-        if selectedItem == nil {
-            if let first = store.pendingRequests.first {
-                selectedItem = .request(first.id)
-            } else if let first = store.notifications.first {
-                selectedItem = .notification(first.id)
-            }
+    private func needsTextInput(_ notification: NotificationEntry) -> Bool {
+        true // All notification types may need user input
+    }
+
+    private func autoSelectLatest() {
+        if let last = store.pendingRequests.last {
+            selectedItem = .request(last.id)
+        } else if let last = store.notifications.last {
+            selectedItem = .notification(last.id)
         }
     }
 }

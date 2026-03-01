@@ -10,6 +10,10 @@ struct HookInput: Codable, Sendable {
     let notificationType: String?
     let notificationMessage: String?
     let permissionMode: String?
+    // Additional fields Claude Code may send
+    let title: String?
+    let message: String?
+    let question: String?
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
@@ -21,5 +25,8 @@ struct HookInput: Codable, Sendable {
         case notificationType = "notification_type"
         case notificationMessage = "notification_message"
         case permissionMode = "permission_mode"
+        case title
+        case message
+        case question
     }
 }

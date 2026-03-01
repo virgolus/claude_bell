@@ -44,17 +44,24 @@ final class HookServer: Sendable {
 
         router.post("/hooks/notification") { request, context -> Response in
             let body = try await request.body.collect(upTo: 1_048_576)
+            if let raw = String(buffer: body) as String? {
+                print("[HookServer] Notification raw body: \(raw)")
+            }
             let input = try JSONDecoder().decode(HookInput.self, from: body)
 
             let notificationType = input.notificationType ?? "unknown"
             let relevantTypes = ["permission_prompt", "idle_prompt", "elicitation_dialog"]
 
             if relevantTypes.contains(notificationType) {
+                let displayMessage = input.notificationMessage ?? input.message ?? input.question ?? ""
+                let displayTitle = input.title ?? ""
                 let entry = NotificationEntry(
                     sessionId: input.sessionId,
                     cwd: input.cwd,
                     notificationType: notificationType,
-                    message: input.notificationMessage ?? "",
+                    message: displayMessage,
+                    title: displayTitle,
+                    transcriptPath: input.transcriptPath ?? "",
                     createdAt: Date()
                 )
                 Task { @MainActor in

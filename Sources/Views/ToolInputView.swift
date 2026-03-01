@@ -15,15 +15,32 @@ struct ToolInputView: View {
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
 
-                    Text(toolInput[key]?.description ?? "—")
-                        .font(.system(.body, design: .monospaced))
-                        .textSelection(.enabled)
-                        .padding(8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    let value = toolInput[key]?.description ?? "—"
+                    if looksLikeCode(key: key, value: value) {
+                        ScrollView {
+                            Text(value)
+                                .font(.system(.body, design: .monospaced))
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(10)
+                        }
+                        .frame(maxHeight: 300)
                         .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
+                    } else {
+                        MarkdownText(value)
+                            .padding(8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
                 }
             }
         }
+    }
+
+    private func looksLikeCode(key: String, value: String) -> Bool {
+        let codeKeys = ["command", "content", "new_source", "old_string", "new_string", "file_path"]
+        return codeKeys.contains(key) || value.contains("\n")
     }
 }

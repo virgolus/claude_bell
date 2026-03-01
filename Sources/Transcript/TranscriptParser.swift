@@ -14,6 +14,21 @@ struct ToolUseEntry: Identifiable {
     let input: String // Pretty-printed JSON summary
 }
 
+struct QuestionOption: Identifiable {
+    let id = UUID()
+    let index: Int      // 1-based
+    let label: String
+    let description: String
+}
+
+struct ParsedQuestion: Identifiable {
+    let id = UUID()
+    let header: String
+    let question: String
+    let options: [QuestionOption]
+    let multiSelect: Bool
+}
+
 enum TranscriptParser {
 
     /// Reads the last N user/assistant messages from a JSONL transcript file.
@@ -89,6 +104,73 @@ enum TranscriptParser {
 
         // Return last N messages
         return Array(messages.suffix(count))
+    }
+
+    /// Parses the last AskUserQuestion from the transcript.
+    /// The input.questions is an array of {question, options, multiSelect, header}.
+    static func parseLastQuestions(from path: String) -> [ParsedQuestion]? {
+        guard let data = FileManager.default.contents(atPath: path),
+              let content = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+
+        let lines = content.components(separatedBy: "\n").filter { !$0.isEmpty }
+
+        // Scan backwards for the last AskUserQuestion tool_use
+        for line in lines.reversed() {
+            guard let lineData = line.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
+                  let type = json["type"] as? String, type == "assistant",
+                  let message = json["message"] as? [String: Any],
+                  let contentArray = message["content"] as? [[String: Any]] else {
+                continue
+            }
+
+            for block in contentArray {
+                guard let blockType = block["type"] as? String,
+                      blockType == "tool_use",
+                      let name = block["name"] as? String,
+                      name == "AskUserQuestion",
+                      let input = block["input"] as? [String: Any] else {
+                    continue
+                }
+
+                var parsed: [ParsedQuestion] = []
+
+                // Handle questions array format
+                if let questions = input["questions"] as? [[String: Any]] {
+                    for q in questions {
+                        guard let questionText = q["question"] as? String else { continue }
+                        let header = q["header"] as? String ?? ""
+                        let multiSelect = q["multiSelect"] as? Bool ?? false
+                        var options: [QuestionOption] = []
+
+                        if let opts = q["options"] as? [[String: Any]] {
+                            for (i, opt) in opts.enumerated() {
+                                options.append(QuestionOption(
+                                    index: i + 1,
+                                    label: opt["label"] as? String ?? "Option \(i + 1)",
+                                    description: opt["description"] as? String ?? ""
+                                ))
+                            }
+                        }
+
+                        parsed.append(ParsedQuestion(
+                            header: header,
+                            question: questionText,
+                            options: options,
+                            multiSelect: multiSelect
+                        ))
+                    }
+                }
+
+                if !parsed.isEmpty {
+                    return parsed
+                }
+            }
+        }
+
+        return nil
     }
 
     private static func summarizeInput(_ input: [String: Any]) -> String {

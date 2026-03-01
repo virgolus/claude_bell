@@ -10,6 +10,7 @@ final class PendingRequest: Identifiable, ObservableObject {
     let transcriptPath: String
     let createdAt: Date
     private let continuation: CheckedContinuation<HookResponse, Never>
+    private var hasResponded = false
 
     var projectName: String {
         (cwd as NSString).lastPathComponent
@@ -33,6 +34,8 @@ final class PendingRequest: Identifiable, ObservableObject {
     }
 
     func respond(allow: Bool) {
+        guard !hasResponded else { return }
+        hasResponded = true
         let response = HookResponse.permissionDecision(allow: allow)
         continuation.resume(returning: response)
     }

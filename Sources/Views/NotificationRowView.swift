@@ -10,14 +10,21 @@ struct NotificationRowView: View {
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(displayType)
+                Text(notification.displayTitle)
                     .font(.body.weight(.medium))
                     .lineLimit(1)
 
-                Text(notification.projectName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                if !notification.message.isEmpty {
+                    Text(notification.message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                } else {
+                    Text(notification.projectName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer()
@@ -35,15 +42,6 @@ struct NotificationRowView: View {
         case "idle_prompt": return "questionmark.circle"
         case "elicitation_dialog": return "text.bubble"
         default: return "bell"
-        }
-    }
-
-    private var displayType: String {
-        switch notification.notificationType {
-        case "permission_prompt": return "Permission Prompt"
-        case "idle_prompt": return "Waiting for Input"
-        case "elicitation_dialog": return "Question"
-        default: return notification.notificationType
         }
     }
 }

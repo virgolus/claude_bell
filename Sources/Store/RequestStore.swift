@@ -10,6 +10,9 @@ final class RequestStore: ObservableObject {
     @Published var notifications: [NotificationEntry] = []
     @Published var sessions: [String: SessionInfo] = [:]
 
+    /// Set by ClaudeBellApp to auto-show the panel on new requests
+    var onNewRequest: (() -> Void)?
+
     var badgeCount: Int {
         pendingRequests.count + notifications.count
     }
@@ -19,10 +22,12 @@ final class RequestStore: ObservableObject {
         trackSession(id: request.sessionId, cwd: request.cwd)
         playRequestSound()
         startTimeout(for: request)
+        onNewRequest?()
     }
 
     func removeRequest(id: UUID) {
         pendingRequests.removeAll { $0.id == id }
+        autoDismissIfEmpty()
     }
 
     func addNotification(_ notification: NotificationEntry) {
@@ -32,6 +37,16 @@ final class RequestStore: ObservableObject {
 
     func removeNotification(id: UUID) {
         notifications.removeAll { $0.id == id }
+        autoDismissIfEmpty()
+    }
+
+    private func autoDismissIfEmpty() {
+        if pendingRequests.isEmpty && notifications.isEmpty {
+            // Close the MenuBarExtra panel
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                NSApp.keyWindow?.orderOut(nil)
+            }
+        }
     }
 
     private func trackSession(id: String, cwd: String) {

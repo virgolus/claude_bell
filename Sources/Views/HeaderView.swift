@@ -29,6 +29,14 @@ struct HeaderView: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+
+            Button {
+                NSApplication.shared.terminate(nil)
+            } label: {
+                Image(systemName: "xmark.circle")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
