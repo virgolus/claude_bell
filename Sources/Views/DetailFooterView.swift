@@ -1,21 +1,34 @@
 import SwiftUI
 
 /// Consistent footer bar with Dismiss and Open in Terminal buttons.
+/// When `focusedButton` is provided, keyboard navigation is managed by the parent view.
+/// When `focusedButton` is nil (standalone), the footer manages its own keyboard navigation.
 struct DetailFooterView: View {
     let cwd: String
     let isPassive: Bool
     let onDismiss: () -> Void
 
+    /// When non-nil, parent controls which button is highlighted (no local key monitor).
+    var focusedButton: FooterButton?
+
+    /// When standalone (focusedButton == nil), local state manages focus.
+    @State private var localFocused: FooterButton = .dismiss
+    @State private var keyMonitor: Any?
+
     enum FooterButton: Hashable, CaseIterable {
         case dismiss, openInTerminal
     }
 
-    @State private var focused: FooterButton = .dismiss
-    @State private var keyMonitor: Any?
+    private var activeFocus: FooterButton {
+        focusedButton ?? localFocused
+    }
 
-    init(cwd: String, isPassive: Bool = false, onDismiss: @escaping () -> Void) {
+    private var isStandalone: Bool { focusedButton == nil }
+
+    init(cwd: String, isPassive: Bool = false, focusedButton: FooterButton? = nil, onDismiss: @escaping () -> Void) {
         self.cwd = cwd
         self.isPassive = isPassive
+        self.focusedButton = focusedButton
         self.onDismiss = onDismiss
     }
 
@@ -32,7 +45,7 @@ struct DetailFooterView: View {
                 .controlSize(.small)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(focused == .dismiss ? Color.accentColor : Color.clear, lineWidth: 2)
+                        .stroke(activeFocus == .dismiss ? Color.accentColor : Color.clear, lineWidth: 2)
                 )
 
                 Spacer()
@@ -47,23 +60,27 @@ struct DetailFooterView: View {
                 .controlSize(.small)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(focused == .openInTerminal ? Color.accentColor : Color.clear, lineWidth: 2)
+                        .stroke(activeFocus == .openInTerminal ? Color.accentColor : Color.clear, lineWidth: 2)
                 )
             }
             .padding()
         }
-        .onAppear { installKeyMonitor() }
-        .onDisappear { removeKeyMonitor() }
+        .onAppear {
+            if isStandalone { installKeyMonitor() }
+        }
+        .onDisappear {
+            if isStandalone { removeKeyMonitor() }
+        }
     }
 
     private func installKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             switch event.keyCode {
             case 123: // left arrow
-                focused = .dismiss
+                localFocused = .dismiss
                 return nil
             case 124: // right arrow
-                focused = .openInTerminal
+                localFocused = .openInTerminal
                 return nil
             case 36: // return
                 activate()
@@ -81,8 +98,8 @@ struct DetailFooterView: View {
         }
     }
 
-    private func activate() {
-        switch focused {
+    func activate() {
+        switch activeFocus {
         case .dismiss:
             onDismiss()
         case .openInTerminal:

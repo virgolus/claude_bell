@@ -19,10 +19,14 @@ struct RequestDetailView: View {
     @EnvironmentObject var store: RequestStore
     let request: PendingRequest
     @State private var remainingSeconds: Int = 300
-    @State private var focused: ActionButton = .allow
+    @State private var focused: ActionButton? = .allow
+    @State private var footerFocused: DetailFooterView.FooterButton?
     @State private var keyMonitor: Any?
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    /// Whether focus is on the footer row
+    private var isInFooter: Bool { footerFocused != nil }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -72,7 +76,7 @@ struct RequestDetailView: View {
             .padding(.top, 12)
             .padding(.bottom, 4)
 
-            DetailFooterView(cwd: request.cwd) {
+            DetailFooterView(cwd: request.cwd, focusedButton: footerFocused) {
                 request.respond(allow: false)
                 store.removeRequest(id: request.id)
             }
@@ -85,6 +89,7 @@ struct RequestDetailView: View {
             let elapsed = Int(-request.createdAt.timeIntervalSinceNow)
             remainingSeconds = max(0, 300 - elapsed)
             focused = .allow
+            footerFocused = nil
             installKeyMonitor()
         }
         .onDisappear {
@@ -93,7 +98,7 @@ struct RequestDetailView: View {
     }
 
     private func actionButton(label: String, icon: String, action: ActionButton, color: Color) -> some View {
-        let isFocused = focused == action
+        let isFocused = focused == action && !isInFooter
         return HStack(spacing: 6) {
             Image(systemName: icon)
             Text(label)
@@ -111,32 +116,55 @@ struct RequestDetailView: View {
         .contentShape(RoundedRectangle(cornerRadius: 8))
         .onTapGesture {
             focused = action
+            footerFocused = nil
             confirm()
         }
     }
 
     private func confirm() {
-        request.respond(focused.behavior)
+        guard let action = focused, !isInFooter else { return }
+        request.respond(action.behavior)
         store.removeRequest(id: request.id)
     }
 
     private static let buttonOrder: [ActionButton] = [.deny, .allow, .allowAlways]
+    private static let footerOrder: [DetailFooterView.FooterButton] = [.dismiss, .openInTerminal]
 
     private func installKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             switch event.keyCode {
             case 123: // left arrow
-                if let idx = Self.buttonOrder.firstIndex(of: focused), idx > 0 {
+                if isInFooter {
+                    footerFocused = .dismiss
+                } else if let current = focused, let idx = Self.buttonOrder.firstIndex(of: current), idx > 0 {
                     focused = Self.buttonOrder[idx - 1]
                 }
                 return nil
             case 124: // right arrow
-                if let idx = Self.buttonOrder.firstIndex(of: focused), idx < Self.buttonOrder.count - 1 {
+                if isInFooter {
+                    footerFocused = .openInTerminal
+                } else if let current = focused, let idx = Self.buttonOrder.firstIndex(of: current), idx < Self.buttonOrder.count - 1 {
                     focused = Self.buttonOrder[idx + 1]
                 }
                 return nil
+            case 125: // down arrow
+                if !isInFooter {
+                    footerFocused = .dismiss
+                    focused = nil
+                }
+                return nil
+            case 126: // up arrow
+                if isInFooter {
+                    footerFocused = nil
+                    focused = .allow
+                }
+                return nil
             case 36: // return
-                confirm()
+                if isInFooter {
+                    activateFooter()
+                } else {
+                    confirm()
+                }
                 return nil
             default:
                 return event
@@ -148,6 +176,20 @@ struct RequestDetailView: View {
         if let monitor = keyMonitor {
             NSEvent.removeMonitor(monitor)
             keyMonitor = nil
+        }
+    }
+
+    private func activateFooter() {
+        switch footerFocused {
+        case .dismiss:
+            request.respond(allow: false)
+            store.removeRequest(id: request.id)
+        case .openInTerminal:
+            TerminalBridge.focusTerminalTab(forCwd: request.cwd)
+            request.respond(allow: false)
+            store.removeRequest(id: request.id)
+        case nil:
+            break
         }
     }
 
