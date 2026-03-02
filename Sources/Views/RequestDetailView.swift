@@ -28,6 +28,46 @@ struct RequestDetailView: View {
     /// Whether focus is on the footer row
     private var isInFooter: Bool { footerFocused != nil }
 
+    private var isAskUserQuestion: Bool { request.toolName == "AskUserQuestion" }
+
+    /// Parse questions directly from toolInput["questions"]
+    private var parsedQuestions: [ParsedQuestion]? {
+        guard isAskUserQuestion,
+              let questionsAnyCodable = request.toolInput["questions"],
+              let questionsArray = questionsAnyCodable.value as? [Any] else {
+            return nil
+        }
+
+        var parsed: [ParsedQuestion] = []
+        for item in questionsArray {
+            guard let q = item as? [String: Any],
+                  let questionText = q["question"] as? String else { continue }
+            let header = q["header"] as? String ?? ""
+            let multiSelect = q["multiSelect"] as? Bool ?? false
+            var options: [QuestionOption] = []
+
+            if let opts = q["options"] as? [Any] {
+                for (i, optItem) in opts.enumerated() {
+                    if let opt = optItem as? [String: Any] {
+                        options.append(QuestionOption(
+                            index: i + 1,
+                            label: opt["label"] as? String ?? "Option \(i + 1)",
+                            description: opt["description"] as? String ?? ""
+                        ))
+                    }
+                }
+            }
+
+            parsed.append(ParsedQuestion(
+                header: header,
+                question: questionText,
+                options: options,
+                multiSelect: multiSelect
+            ))
+        }
+        return parsed.isEmpty ? nil : parsed
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
@@ -39,7 +79,7 @@ struct RequestDetailView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(request.projectName)
                                 .font(.title.weight(.bold))
-                            Text(request.toolName)
+                            Text(isAskUserQuestion ? "Question" : request.toolName)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -51,11 +91,24 @@ struct RequestDetailView: View {
 
                     Divider()
 
-                    Text(permissionDescription)
-                        .font(.callout)
-                        .foregroundStyle(.primary)
+                    if let questions = parsedQuestions {
+                        // AskUserQuestion: show interactive question options
+                        QuestionOptionsView(
+                            questions: questions,
+                            onSend: { text in
+                                request.respond(.allow)
+                                TerminalBridge.sendText(text, toCwd: request.cwd)
+                                store.removeRequest(id: request.id)
+                            }
+                        )
+                    } else {
+                        // Normal permission request
+                        Text(permissionDescription)
+                            .font(.callout)
+                            .foregroundStyle(.primary)
 
-                    ToolInputView(toolInput: request.toolInput)
+                        ToolInputView(toolInput: request.toolInput)
+                    }
 
                     if !request.transcriptPath.isEmpty {
                         Divider()
@@ -65,16 +118,18 @@ struct RequestDetailView: View {
                 .padding()
             }
 
-            Divider()
+            if !isAskUserQuestion {
+                Divider()
 
-            HStack(spacing: 10) {
-                actionButton(label: "Deny", icon: "xmark.circle", action: .deny, color: .red)
-                actionButton(label: "Allow", icon: "checkmark.circle", action: .allow, color: .orange)
-                actionButton(label: "Always", icon: "checkmark.circle.fill", action: .allowAlways, color: .green)
+                HStack(spacing: 10) {
+                    actionButton(label: "Deny", icon: "xmark.circle", action: .deny, color: .red)
+                    actionButton(label: "Allow", icon: "checkmark.circle", action: .allow, color: .orange)
+                    actionButton(label: "Always", icon: "checkmark.circle.fill", action: .allowAlways, color: .green)
+                }
+                .padding(.horizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 4)
             }
-            .padding(.horizontal)
-            .padding(.top, 12)
-            .padding(.bottom, 4)
 
             DetailFooterView(cwd: request.cwd, focusedButton: footerFocused) {
                 request.respond(allow: false)
@@ -88,8 +143,8 @@ struct RequestDetailView: View {
         .onAppear {
             let elapsed = Int(-request.createdAt.timeIntervalSinceNow)
             remainingSeconds = max(0, 300 - elapsed)
-            focused = .allow
-            footerFocused = nil
+            focused = isAskUserQuestion ? nil : .allow
+            footerFocused = isAskUserQuestion ? nil : nil
             installKeyMonitor()
         }
         .onDisappear {
