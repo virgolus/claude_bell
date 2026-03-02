@@ -88,16 +88,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.setupStatusItemMenu()
         }
 
-        // Lower the panel window level so system dialogs appear on top
+        // Adjust panel window level and keep it on screen
         NotificationCenter.default.addObserver(
             forName: NSWindow.didBecomeKeyNotification,
             object: nil,
             queue: .main
-        ) { notification in
-            if let window = notification.object as? NSWindow {
-                let name = String(describing: type(of: window))
-                if name.contains("MenuBarExtra") || name.contains("StatusItemWindow") || name.contains("_NSPopoverWindow") {
-                    window.level = .floating
+        ) { note in
+            guard let window = note.object as? NSWindow else { return }
+            let name = String(describing: type(of: window))
+            if name.contains("MenuBarExtra") || name.contains("StatusItemWindow") || name.contains("_NSPopoverWindow") {
+                window.level = .floating
+                // Adjust position on next run loop to ensure frame is settled
+                DispatchQueue.main.async {
+                    guard let screen = window.screen ?? NSScreen.main else { return }
+                    let visible = screen.visibleFrame
+                    var frame = window.frame
+                    if frame.minX < visible.minX { frame.origin.x = visible.minX }
+                    if frame.maxX > visible.maxX { frame.origin.x = visible.maxX - frame.width }
+                    if frame.origin != window.frame.origin {
+                        window.setFrameOrigin(frame.origin)
+                    }
                 }
             }
         }
