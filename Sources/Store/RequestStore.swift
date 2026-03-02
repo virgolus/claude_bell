@@ -120,13 +120,12 @@ final class RequestStore: ObservableObject {
 
     private func startTimeout(for request: PendingRequest) {
         let requestId = request.id
-        Task {
+        Task { @MainActor [weak self] in
             // 5 minute timeout
-            try? await Task.sleep(for: .seconds(300))
-            if pendingRequests.contains(where: { $0.id == requestId }) {
-                request.respond(allow: false)
-                removeRequest(id: requestId)
-            }
+            try? await Task.sleep(nanoseconds: 300_000_000_000)
+            guard let self, pendingRequests.contains(where: { $0.id == requestId }) else { return }
+            request.respond(allow: false)
+            removeRequest(id: requestId)
         }
     }
 }
