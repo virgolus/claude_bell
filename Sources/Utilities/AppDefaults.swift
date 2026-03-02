@@ -1,7 +1,7 @@
 import Foundation
 
-/// Shared UserDefaults that always uses the app's bundle identifier,
-/// regardless of whether the binary is launched via `swift run` or as a `.app` bundle.
+/// Shared UserDefaults that works both via `swift run` and as a `.app` bundle.
+/// Uses a group suite name (different from bundle ID) so it works in both contexts.
 enum AppDefaults {
-    static let shared = UserDefaults(suiteName: "com.posatapelosa.claudebell")!
+    static let shared = UserDefaults(suiteName: "group.com.posatapelosa.claudebell")!
 }
