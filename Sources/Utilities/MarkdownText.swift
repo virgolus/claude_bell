@@ -96,9 +96,9 @@ struct MarkdownText: View {
             case .boldItalic(let s):
                 return result + Text(s).bold().italic()
             case .code(let s):
-                return result + Text(s).font(.system(.body, design: .monospaced)).foregroundColor(.orange)
+                return result + Text(s).font(.system(.body, design: .monospaced)).foregroundColor(.accentColor)
             case .boldCode(let s):
-                return result + Text(s).bold().font(.system(.body, design: .monospaced)).foregroundColor(.orange)
+                return result + Text(s).bold().font(.system(.body, design: .monospaced)).foregroundColor(.accentColor)
             }
         }
         rendered.font(f).textSelection(.enabled)
