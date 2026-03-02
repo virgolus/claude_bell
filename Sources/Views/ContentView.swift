@@ -140,6 +140,7 @@ struct ContentView: View {
         case .request(let id):
             if let request = store.pendingRequests.first(where: { $0.id == id }) {
                 RequestDetailView(request: request)
+                    .id(request.id)
             } else {
                 placeholder
             }
@@ -234,6 +235,7 @@ struct ContentView: View {
                 selectedItem = nil
             }
         }
+        .id(notification.id)
     }
 
     @State private var renamingSessionId: String?
