@@ -22,6 +22,7 @@ struct RequestDetailView: View {
     @State private var focused: ActionButton? = .allow
     @State private var footerFocused: DetailFooterView.FooterButton?
     @State private var keyMonitor: Any?
+    @State private var cachedQuestions: [ParsedQuestion]?
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -29,11 +30,12 @@ struct RequestDetailView: View {
     private var isInFooter: Bool { footerFocused != nil }
 
     private var isAskUserQuestion: Bool { request.toolName == "AskUserQuestion" }
+    private var isExitPlanMode: Bool { request.toolName == "ExitPlanMode" }
+    private var isSpecialTool: Bool { isAskUserQuestion || isExitPlanMode }
 
-    /// Parse questions directly from toolInput["questions"]
-    private var parsedQuestions: [ParsedQuestion]? {
-        guard isAskUserQuestion,
-              let questionsAnyCodable = request.toolInput["questions"],
+    /// Parse questions from toolInput["questions"] — called once in onAppear
+    private static func parseQuestions(from toolInput: [String: AnyCodable]) -> [ParsedQuestion]? {
+        guard let questionsAnyCodable = toolInput["questions"],
               let questionsArray = questionsAnyCodable.value as? [Any] else {
             return nil
         }
@@ -79,7 +81,7 @@ struct RequestDetailView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(request.projectName)
                                 .font(.title.weight(.bold))
-                            Text(isAskUserQuestion ? "Question" : request.toolName)
+                            Text(isAskUserQuestion ? "Question" : isExitPlanMode ? "Plan Review" : request.toolName)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -91,7 +93,7 @@ struct RequestDetailView: View {
 
                     Divider()
 
-                    if let questions = parsedQuestions {
+                    if let questions = cachedQuestions {
                         // AskUserQuestion: show interactive question options
                         QuestionOptionsView(
                             questions: questions,
@@ -99,12 +101,14 @@ struct RequestDetailView: View {
                                 request.respond(.allow)
                                 TerminalBridge.sendText(text, toCwd: request.cwd)
                                 store.removeRequest(id: request.id)
-                                // Bring Claude Bell back to front after sending
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                     NSApplication.shared.activate()
                                 }
                             }
                         )
+                    } else if isExitPlanMode {
+                        // ExitPlanMode: show plan as markdown + action options
+                        ExitPlanModeView(request: request, store: store)
                     } else {
                         // Normal permission request
                         Text(permissionDescription)
@@ -122,7 +126,7 @@ struct RequestDetailView: View {
                 .padding()
             }
 
-            if !isAskUserQuestion {
+            if !isSpecialTool {
                 Divider()
 
                 HStack(spacing: 10) {
@@ -147,8 +151,11 @@ struct RequestDetailView: View {
         .onAppear {
             let elapsed = Int(-request.createdAt.timeIntervalSinceNow)
             remainingSeconds = max(0, 300 - elapsed)
-            focused = isAskUserQuestion ? nil : .allow
-            footerFocused = isAskUserQuestion ? nil : nil
+            focused = isSpecialTool ? nil : .allow
+            footerFocused = nil
+            if isAskUserQuestion {
+                cachedQuestions = Self.parseQuestions(from: request.toolInput)
+            }
             installKeyMonitor()
         }
         .onDisappear {

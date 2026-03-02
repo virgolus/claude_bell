@@ -28,11 +28,14 @@ struct ToolInputView: View {
                         .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                     } else {
-                        MarkdownText(value)
-                            .padding(8)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                        ScrollView {
+                            MarkdownText(value)
+                                .padding(8)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .frame(maxHeight: 400)
+                        .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
                 }
             }
@@ -41,6 +44,14 @@ struct ToolInputView: View {
 
     private func looksLikeCode(key: String, value: String) -> Bool {
         let codeKeys = ["command", "content", "new_source", "old_string", "new_string", "file_path"]
-        return codeKeys.contains(key) || value.contains("\n")
+        if codeKeys.contains(key) { return true }
+        // Markdown keys should be rendered as markdown, not code
+        let markdownKeys = ["plan", "description", "prompt", "message", "text", "body"]
+        if markdownKeys.contains(key) { return false }
+        // Heuristic: if it has markdown headings, render as markdown
+        if value.contains("\n# ") || value.contains("\n## ") || value.contains("\n- ") || value.starts(with: "# ") {
+            return false
+        }
+        return false
     }
 }
