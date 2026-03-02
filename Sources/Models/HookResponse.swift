@@ -5,10 +5,7 @@ struct HookResponse: Sendable {
     let json: String
 
     static func permissionDecision(_ behavior: PermissionBehavior) -> HookResponse {
-        let json = """
-        {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"\(behavior.rawValue)"}}}
-        """
-        return HookResponse(json: json)
+        HookResponse(json: #"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"\#(behavior.rawValue)"}}}"#)
     }
 
     /// Allow and apply permission_suggestions as updatedPermissions (equivalent to "always allow")
@@ -17,16 +14,10 @@ struct HookResponse: Sendable {
            !suggestions.isEmpty,
            let data = try? JSONEncoder().encode(suggestions),
            let suggestionsJSON = String(data: data, encoding: .utf8) {
-            let json = """
-            {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow","updatedPermissions":\(suggestionsJSON)}}}
-            """
-            return HookResponse(json: json)
+            return HookResponse(json: #"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow","updatedPermissions":\#(suggestionsJSON)}}}"#)
         }
         // Fallback: construct a toolAlwaysAllow permission from the tool name
-        let fallbackJSON = """
-        {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow","updatedPermissions":[{"type":"toolAlwaysAllow","tool":"\(toolName)"}]}}}
-        """
-        return HookResponse(json: fallbackJSON)
+        return HookResponse(json: #"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow","updatedPermissions":[{"type":"toolAlwaysAllow","tool":"\#(toolName)"}]}}}"#)
     }
 
     static func permissionDecision(allow: Bool) -> HookResponse {
