@@ -96,8 +96,11 @@ struct ContentView: View {
         }
         .onChange(of: store.pendingRequests.count) { old, new in
             if new > old {
-                if let last = store.pendingRequests.last {
-                    selectedItem = .request(last.id)
+                // Only auto-select if nothing is currently selected
+                if selectedItem == nil || !isSelectedItemValid {
+                    if let last = store.pendingRequests.last {
+                        selectedItem = .request(last.id)
+                    }
                 }
             } else {
                 autoSelectIfNone()
@@ -105,8 +108,8 @@ struct ContentView: View {
         }
         .onChange(of: store.notifications.count) { old, new in
             if new > old {
-                if let last = store.notifications.last {
-                    if selectedItem == nil || !isSelectedItemValid {
+                if selectedItem == nil || !isSelectedItemValid {
+                    if let last = store.notifications.last {
                         selectedItem = .notification(last.id)
                     }
                 }
@@ -116,6 +119,16 @@ struct ContentView: View {
         }
         .onChange(of: selectedItem) { _, newValue in
             if newValue == nil {
+                autoSelectLatest()
+            }
+        }
+        .onChange(of: store.pendingRequests.map(\.id)) { _, _ in
+            if let sel = selectedItem, !isItemValid(sel) {
+                autoSelectLatest()
+            }
+        }
+        .onChange(of: store.notifications.map(\.id)) { _, _ in
+            if let sel = selectedItem, !isItemValid(sel) {
                 autoSelectLatest()
             }
         }
@@ -295,10 +308,14 @@ struct ContentView: View {
     }
 
     private var isSelectedItemValid: Bool {
-        switch selectedItem {
+        guard let item = selectedItem else { return false }
+        return isItemValid(item)
+    }
+
+    private func isItemValid(_ item: SidebarItem) -> Bool {
+        switch item {
         case .request(let id): return store.pendingRequests.contains { $0.id == id }
         case .notification(let id): return store.notifications.contains { $0.id == id }
-        case nil: return false
         }
     }
 

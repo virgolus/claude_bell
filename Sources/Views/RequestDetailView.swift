@@ -99,6 +99,10 @@ struct RequestDetailView: View {
                                 request.respond(.allow)
                                 TerminalBridge.sendText(text, toCwd: request.cwd)
                                 store.removeRequest(id: request.id)
+                                // Bring Claude Bell back to front after sending
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    NSApplication.shared.activate()
+                                }
                             }
                         )
                     } else {
