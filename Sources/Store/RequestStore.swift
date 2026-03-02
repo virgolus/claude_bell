@@ -95,6 +95,10 @@ final class RequestStore: ObservableObject {
         sessions.removeValue(forKey: id)
     }
 
+    func trackSessionPublic(id: String, cwd: String) {
+        trackSession(id: id, cwd: cwd)
+    }
+
     private func trackSession(id: String, cwd: String) {
         if sessions[id] != nil {
             sessions[id]?.lastSeen = Date()

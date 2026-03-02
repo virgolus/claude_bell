@@ -106,6 +106,26 @@ enum HookInstaller {
         sessionEndArray.append(sessionEndHook)
         hooks["SessionEnd"] = sessionEndArray
 
+        // PreToolUse hook (session advancement detection)
+        let preToolHook: [String: Any] = [
+            "matcher": "",
+            "hooks": [[
+                "type": "http",
+                "url": "http://localhost:19485/hooks/pre-tool-use",
+                "timeout": 10
+            ] as [String: Any]]
+        ]
+
+        var preToolArray = hooks["PreToolUse"] as? [[String: Any]] ?? []
+        preToolArray.removeAll { entry in
+            if let hooksList = entry["hooks"] as? [[String: Any]] {
+                return hooksList.contains { ($0["url"] as? String)?.contains("19485") == true }
+            }
+            return false
+        }
+        preToolArray.append(preToolHook)
+        hooks["PreToolUse"] = preToolArray
+
         // Notification hook
         let notifHook: [String: Any] = [
             "matcher": "permission_prompt|idle_prompt|elicitation_dialog",
@@ -193,6 +213,21 @@ enum HookInstaller {
                 hooks.removeValue(forKey: "SessionEnd")
             } else {
                 hooks["SessionEnd"] = sessionEndArray
+            }
+        }
+
+        // Remove Claude Bell entries from PreToolUse
+        if var preToolArray = hooks["PreToolUse"] as? [[String: Any]] {
+            preToolArray.removeAll { entry in
+                if let hooksList = entry["hooks"] as? [[String: Any]] {
+                    return hooksList.contains { ($0["url"] as? String)?.contains("19485") == true }
+                }
+                return false
+            }
+            if preToolArray.isEmpty {
+                hooks.removeValue(forKey: "PreToolUse")
+            } else {
+                hooks["PreToolUse"] = preToolArray
             }
         }
 

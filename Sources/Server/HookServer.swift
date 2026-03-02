@@ -138,6 +138,15 @@ final class HookServer: Sendable {
             return Response(status: .ok)
         }
 
+        router.post("/hooks/pre-tool-use") { request, context -> Response in
+            let input = try await Self.decodeInput(request, label: "PreToolUse")
+            Task { @MainActor in
+                store.sessionAdvanced(id: input.sessionId)
+                store.trackSessionPublic(id: input.sessionId, cwd: input.cwd)
+            }
+            return Response(status: .ok)
+        }
+
         router.get("/health") { _, _ -> Response in
             return Response(
                 status: .ok,
