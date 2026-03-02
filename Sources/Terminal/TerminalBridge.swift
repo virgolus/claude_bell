@@ -13,7 +13,7 @@ enum TerminalBridge {
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
 
-        let sent = sendiTerm2Paste(cwd: cwd) || sendTerminalPaste(cwd: cwd)
+        let sent = sendiTerm2Paste(cwd: cwd) || sendTerminalPaste(cwd: cwd) || sendWarpPaste()
 
         // Restore clipboard after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -46,10 +46,9 @@ enum TerminalBridge {
                 repeat with i from 1 to count of tabs of w
                     set t to tab i of w
                     set procs to processes of t
-                    set tabHistory to history of t
-                    set tabTitle to custom title of t
+                    set winName to name of w
                     repeat with p in procs
-                        if p contains "claude" and (tabTitle contains "\(cwdFolder)" or tabHistory contains "\(cwdFolder)") then
+                        if p contains "claude" and winName contains "\(cwdFolder)" then
                             set selected tab of w to t
                             set index of w to 1
                             activate
@@ -96,22 +95,20 @@ enum TerminalBridge {
     }
 
     private static func focusTerminal(cwd: String) -> Bool {
-        // First try to match by cwd (tty's working directory via lsof)
         let cwdFolder = (cwd as NSString).lastPathComponent
         let script = """
         tell application "Terminal"
             if not running then return false
             activate
-            -- First pass: match tab whose custom title or history contains the cwd folder
+            -- First pass: match tab whose window name contains the cwd folder
             repeat with w in windows
                 repeat with i from 1 to count of tabs of w
                     set t to tab i of w
                     set procs to processes of t
-                    set tabHistory to history of t
-                    set tabTitle to custom title of t
+                    set winName to name of w
                     repeat with p in procs
                         if p contains "claude" then
-                            if tabTitle contains "\(cwdFolder)" or tabHistory contains "\(cwdFolder)" then
+                            if winName contains "\(cwdFolder)" then
                                 set selected tab of w to t
                                 set index of w to 1
                                 return true
@@ -147,16 +144,40 @@ enum TerminalBridge {
         guard NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == "com.googlecode.iterm2" }) else {
             return false
         }
+        let cwdFolder = (cwd as NSString).lastPathComponent
         let script = """
         tell application "iTerm2"
+            -- First pass: match by cwd path in session
+            repeat with w in windows
+                repeat with t in tabs of w
+                    repeat with s in sessions of t
+                        set sessionName to name of s
+                        set sessionPath to path of s
+                        if sessionName contains "claude" and (sessionPath contains "\(cwdFolder)" or sessionName contains "\(cwdFolder)") then
+                            select t
+                            select s
+                            activate
+                            delay 0.15
+                            tell application "System Events"
+                                tell process "iTerm2"
+                                    keystroke "v" using command down
+                                    delay 0.05
+                                    keystroke return
+                                end tell
+                            end tell
+                            return true
+                        end if
+                    end repeat
+                end repeat
+            end repeat
+            -- Second pass: any claude session
             repeat with w in windows
                 repeat with t in tabs of w
                     repeat with s in sessions of t
                         set sessionName to name of s
                         if sessionName contains "claude" then
-                            tell s
-                                select s
-                            end tell
+                            select t
+                            select s
                             activate
                             delay 0.15
                             tell application "System Events"
@@ -181,9 +202,25 @@ enum TerminalBridge {
         guard NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == "com.googlecode.iterm2" }) else {
             return false
         }
+        let cwdFolder = (cwd as NSString).lastPathComponent
         let script = """
         tell application "iTerm2"
             activate
+            -- First pass: match by cwd path
+            repeat with w in windows
+                repeat with t in tabs of w
+                    repeat with s in sessions of t
+                        set sessionName to name of s
+                        set sessionPath to path of s
+                        if sessionName contains "claude" and (sessionPath contains "\(cwdFolder)" or sessionName contains "\(cwdFolder)") then
+                            select t
+                            select s
+                            return true
+                        end if
+                    end repeat
+                end repeat
+            end repeat
+            -- Second pass: any claude session
             repeat with w in windows
                 repeat with t in tabs of w
                     repeat with s in sessions of t
@@ -198,6 +235,30 @@ enum TerminalBridge {
             end repeat
         end tell
         return false
+        """
+        return runAppleScript(script)
+    }
+
+    // MARK: - Warp
+
+    /// Paste into Warp's active window (limited AppleScript support — no tab matching).
+    private static func sendWarpPaste() -> Bool {
+        guard NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == "dev.warp.Warp-Stable" }) else {
+            return false
+        }
+        let script = """
+        tell application "Warp"
+            activate
+            delay 0.15
+        end tell
+        tell application "System Events"
+            tell process "Warp"
+                keystroke "v" using command down
+                delay 0.05
+                keystroke return
+            end tell
+        end tell
+        return true
         """
         return runAppleScript(script)
     }

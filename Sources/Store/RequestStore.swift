@@ -31,11 +31,17 @@ final class RequestStore: ObservableObject {
         }
     }
 
-    /// Lighter version: only dismiss stale notifications, not permission requests.
-    /// Used by notification handler to avoid auto-denying pending requests.
+    /// Dismiss stale notifications and permission requests for a session.
+    /// Called from notification handler (excluding permission_prompt) when
+    /// a new event indicates the session has moved on.
     func dismissStaleNotifications(id: String) {
         notifications.removeAll {
-            $0.sessionId == id && !$0.meta.isPassive
+            $0.sessionId == id
+        }
+        let staleRequests = pendingRequests.filter { $0.sessionId == id }
+        for req in staleRequests {
+            req.respond(allow: false)
+            pendingRequests.removeAll { $0.id == req.id }
         }
     }
 
