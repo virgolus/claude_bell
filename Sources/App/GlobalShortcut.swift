@@ -17,17 +17,17 @@ final class GlobalShortcut {
     private var eventHandler: EventHandlerRef?
 
     var keyCode: Int {
-        get { UserDefaults.standard.object(forKey: "shortcutKeyCode") as? Int ?? kVK_ANSI_B }
-        set { UserDefaults.standard.set(newValue, forKey: "shortcutKeyCode") }
+        get { AppDefaults.shared.object(forKey: "shortcutKeyCode") as? Int ?? kVK_ANSI_B }
+        set { AppDefaults.shared.set(newValue, forKey: "shortcutKeyCode") }
     }
 
     var modifierFlags: NSEvent.ModifierFlags {
         get {
-            let raw = UserDefaults.standard.object(forKey: "shortcutModifiers") as? UInt
+            let raw = AppDefaults.shared.object(forKey: "shortcutModifiers") as? UInt
                 ?? NSEvent.ModifierFlags([.command, .shift]).rawValue
             return NSEvent.ModifierFlags(rawValue: raw)
         }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: "shortcutModifiers") }
+        set { AppDefaults.shared.set(newValue.rawValue, forKey: "shortcutModifiers") }
     }
 
     var shortcutDescription: String {

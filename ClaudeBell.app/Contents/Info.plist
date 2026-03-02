@@ -8,6 +8,8 @@
     <string>com.posatapelosa.claudebell</string>
     <key>CFBundleName</key>
     <string>Claude Bell</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleVersion</key>

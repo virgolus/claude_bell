@@ -12,8 +12,9 @@ struct HookResponse: Sendable {
     }
 
     /// Allow and apply permission_suggestions as updatedPermissions (equivalent to "always allow")
-    static func permissionDecisionAlways(permissionSuggestions: [AnyCodable]?) -> HookResponse {
+    static func permissionDecisionAlways(permissionSuggestions: [AnyCodable]?, toolName: String) -> HookResponse {
         if let suggestions = permissionSuggestions,
+           !suggestions.isEmpty,
            let data = try? JSONEncoder().encode(suggestions),
            let suggestionsJSON = String(data: data, encoding: .utf8) {
             let json = """
@@ -21,8 +22,11 @@ struct HookResponse: Sendable {
             """
             return HookResponse(json: json)
         }
-        // Fallback to simple allow if no suggestions available
-        return permissionDecision(.allow)
+        // Fallback: construct a toolAlwaysAllow permission from the tool name
+        let fallbackJSON = """
+        {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow","updatedPermissions":[{"type":"toolAlwaysAllow","tool":"\(toolName)"}]}}}
+        """
+        return HookResponse(json: fallbackJSON)
     }
 
     static func permissionDecision(allow: Bool) -> HookResponse {

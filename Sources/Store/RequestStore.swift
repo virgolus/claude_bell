@@ -110,8 +110,8 @@ final class RequestStore: ObservableObject {
     static let availableSounds = ["Purr", "Blow", "Bottle", "Frog", "Funk", "Glass", "Hero", "Morse", "Ping", "Pop", "Sosumi", "Submarine", "Tink"]
 
     static var selectedSound: String {
-        get { UserDefaults.standard.string(forKey: "notificationSound") ?? "Purr" }
-        set { UserDefaults.standard.set(newValue, forKey: "notificationSound") }
+        get { AppDefaults.shared.string(forKey: "notificationSound") ?? "Purr" }
+        set { AppDefaults.shared.set(newValue, forKey: "notificationSound") }
     }
 
     private func playRequestSound() {
