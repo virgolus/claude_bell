@@ -37,9 +37,36 @@ enum TerminalBridge {
 
     /// Focus the correct Terminal.app tab, paste from clipboard, press Return.
     private static func sendTerminalPaste(cwd: String) -> Bool {
+        let cwdFolder = (cwd as NSString).lastPathComponent
         let script = """
         tell application "Terminal"
             if not running then return false
+            -- First pass: match by cwd folder
+            repeat with w in windows
+                repeat with i from 1 to count of tabs of w
+                    set t to tab i of w
+                    set procs to processes of t
+                    set tabHistory to history of t
+                    set tabTitle to custom title of t
+                    repeat with p in procs
+                        if p contains "claude" and (tabTitle contains "\(cwdFolder)" or tabHistory contains "\(cwdFolder)") then
+                            set selected tab of w to t
+                            set index of w to 1
+                            activate
+                            delay 0.15
+                            tell application "System Events"
+                                tell process "Terminal"
+                                    keystroke "v" using command down
+                                    delay 0.05
+                                    keystroke return
+                                end tell
+                            end tell
+                            return true
+                        end if
+                    end repeat
+                end repeat
+            end repeat
+            -- Second pass: any claude tab
             repeat with w in windows
                 repeat with i from 1 to count of tabs of w
                     set t to tab i of w
@@ -69,10 +96,31 @@ enum TerminalBridge {
     }
 
     private static func focusTerminal(cwd: String) -> Bool {
+        // First try to match by cwd (tty's working directory via lsof)
+        let cwdFolder = (cwd as NSString).lastPathComponent
         let script = """
         tell application "Terminal"
             if not running then return false
             activate
+            -- First pass: match tab whose custom title or history contains the cwd folder
+            repeat with w in windows
+                repeat with i from 1 to count of tabs of w
+                    set t to tab i of w
+                    set procs to processes of t
+                    set tabHistory to history of t
+                    set tabTitle to custom title of t
+                    repeat with p in procs
+                        if p contains "claude" then
+                            if tabTitle contains "\(cwdFolder)" or tabHistory contains "\(cwdFolder)" then
+                                set selected tab of w to t
+                                set index of w to 1
+                                return true
+                            end if
+                        end if
+                    end repeat
+                end repeat
+            end repeat
+            -- Second pass: fallback to any tab with claude
             repeat with w in windows
                 repeat with i from 1 to count of tabs of w
                     set t to tab i of w
