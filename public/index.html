@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claude Bell</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <style>
         :root {
             --bg: #0a0a0f;
@@ -631,7 +632,7 @@
         </div>
 
         <div class="arch-svg-wrap">
-            <svg viewBox="0 0 800 520" width="800" height="520" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif">
+            <svg viewBox="0 0 800 600" width="800" height="600" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif">
                 <defs>
                     <linearGradient id="glow-orange" x1="0%" y1="0%" x2="100%" y2="0%">
                         <stop offset="0%" stop-color="#f97316" stop-opacity="0.15"/>
@@ -653,38 +654,63 @@
                     </marker>
                 </defs>
 
-                <!-- Top: Claude Code sessions -->
-                <g transform="translate(400, 30)">
-                    <rect x="-160" y="-20" width="320" height="44" rx="22" fill="#12121a" stroke="#f97316" stroke-width="1.5"/>
-                    <text text-anchor="middle" y="7" fill="#f97316" font-size="15" font-weight="700">Claude Code</text>
-                    <text text-anchor="middle" y="7" fill="#8888a0" font-size="13" dx="95"> (N sessions)</text>
+                <!-- Top: Multiple Claude Code terminal sessions -->
+                <g transform="translate(100, 28)">
+                    <rect x="-55" y="-18" width="110" height="36" rx="8" fill="#12121a" stroke="#f97316" stroke-width="1.2"/>
+                    <text x="0" y="4" text-anchor="middle" fill="#f97316" font-size="11" font-weight="600">Terminal 1</text>
+                    <text x="0" y="16" text-anchor="middle" fill="#8888a0" font-size="9">claude code</text>
                 </g>
+                <g transform="translate(270, 28)">
+                    <rect x="-55" y="-18" width="110" height="36" rx="8" fill="#12121a" stroke="#f97316" stroke-width="1.2"/>
+                    <text x="0" y="4" text-anchor="middle" fill="#f97316" font-size="11" font-weight="600">Terminal 2</text>
+                    <text x="0" y="16" text-anchor="middle" fill="#8888a0" font-size="9">claude code</text>
+                </g>
+                <g transform="translate(440, 28)">
+                    <rect x="-55" y="-18" width="110" height="36" rx="8" fill="#12121a" stroke="#f97316" stroke-width="1.2"/>
+                    <text x="0" y="4" text-anchor="middle" fill="#f97316" font-size="11" font-weight="600">Terminal 3</text>
+                    <text x="0" y="16" text-anchor="middle" fill="#8888a0" font-size="9">claude code</text>
+                </g>
+                <g transform="translate(610, 28)">
+                    <rect x="-55" y="-18" width="110" height="36" rx="8" fill="#12121a" stroke="#f97316" stroke-width="1.2"/>
+                    <text x="0" y="4" text-anchor="middle" fill="#f97316" font-size="11" font-weight="600">Terminal N</text>
+                    <text x="0" y="16" text-anchor="middle" fill="#8888a0" font-size="9">claude code</text>
+                </g>
+                <!-- Dots between 3 and N -->
+                <text x="525" y="32" fill="#8888a0" font-size="18" font-weight="700">...</text>
 
-                <!-- Arrow down -->
-                <line x1="400" y1="56" x2="400" y2="100" stroke="url(#arrow-grad)" stroke-width="2" marker-end="url(#arrowDown)"/>
-                <text x="415" y="82" fill="#3b82f6" font-size="11" font-weight="600">HTTP POST :19485</text>
+                <!-- Converging arrows from each terminal to center -->
+                <line x1="100" y1="48" x2="370" y2="100" stroke="url(#arrow-grad)" stroke-width="1.5" opacity="0.6"/>
+                <line x1="270" y1="48" x2="390" y2="100" stroke="url(#arrow-grad)" stroke-width="1.5" opacity="0.7"/>
+                <line x1="440" y1="48" x2="410" y2="100" stroke="url(#arrow-grad)" stroke-width="1.5" opacity="0.7"/>
+                <line x1="610" y1="48" x2="430" y2="100" stroke="url(#arrow-grad)" stroke-width="1.5" opacity="0.6"/>
+                <!-- Central arrow with label -->
+                <line x1="400" y1="96" x2="400" y2="116" stroke="url(#arrow-grad)" stroke-width="2" marker-end="url(#arrowDown)"/>
+                <text x="520" y="86" fill="#3b82f6" font-size="11" font-weight="600">HTTP hooks :19485</text>
+
+                <!-- Funnel visual hint -->
+                <path d="M 80,56 L 400,108 L 720,56" fill="none" stroke="#f97316" stroke-width="0.5" opacity="0.15"/>
 
                 <!-- Central box: Claude Bell -->
-                <rect x="120" y="108" width="560" height="280" rx="16" fill="#12121a" stroke="#2a2a3a" stroke-width="1.5"/>
-                <rect x="120" y="108" width="560" height="280" rx="16" fill="url(#glow-orange)"/>
+                <rect x="120" y="124" width="560" height="300" rx="16" fill="#12121a" stroke="#2a2a3a" stroke-width="1.5"/>
+                <rect x="120" y="124" width="560" height="300" rx="16" fill="url(#glow-orange)"/>
 
-                <!-- Title bar -->
-                <text x="400" y="146" text-anchor="middle" fill="#f97316" font-size="18" font-weight="800">Claude Bell</text>
-                <line x1="160" y1="162" x2="640" y2="162" stroke="#2a2a3a" stroke-width="1"/>
+                <!-- Title bar with bell icon -->
+                <text x="388" y="160" text-anchor="middle" fill="#f97316" font-size="18" font-weight="800">Claude Bell</text>
+                <text x="432" y="160" fill="#f97316" font-size="16">&#x1F514;</text>
+                <text x="400" y="176" text-anchor="middle" fill="#8888a0" font-size="10">All sessions in one place</text>
+                <line x1="160" y1="184" x2="640" y2="184" stroke="#2a2a3a" stroke-width="1"/>
 
                 <!-- Row 1: Permission Request -->
-                <g transform="translate(0, 186)">
+                <g transform="translate(0, 208)">
                     <rect x="160" y="-14" width="200" height="32" rx="8" fill="rgba(249,115,22,0.08)" stroke="rgba(249,115,22,0.25)" stroke-width="1"/>
                     <text x="180" y="7" fill="#e8e8f0" font-size="13" font-weight="600">Permission Request</text>
-                    <!-- arrow -->
                     <line x1="370" y1="0" x2="470" y2="0" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowRight)"/>
-                    <!-- result -->
                     <rect x="478" y="-14" width="170" height="32" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.25)" stroke-width="1"/>
                     <text x="498" y="7" fill="#22c55e" font-size="12" font-weight="600">Allow / Deny / Always</text>
                 </g>
 
                 <!-- Row 2: Questions -->
-                <g transform="translate(0, 236)">
+                <g transform="translate(0, 258)">
                     <rect x="160" y="-14" width="200" height="32" rx="8" fill="rgba(168,85,247,0.08)" stroke="rgba(168,85,247,0.25)" stroke-width="1"/>
                     <text x="180" y="7" fill="#e8e8f0" font-size="13" font-weight="600">Questions & Dialogs</text>
                     <line x1="370" y1="0" x2="470" y2="0" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowRight)"/>
@@ -693,7 +719,7 @@
                 </g>
 
                 <!-- Row 3: Idle Prompt -->
-                <g transform="translate(0, 286)">
+                <g transform="translate(0, 308)">
                     <rect x="160" y="-14" width="200" height="32" rx="8" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
                     <text x="180" y="7" fill="#e8e8f0" font-size="13" font-weight="600">Idle Prompt</text>
                     <line x1="370" y1="0" x2="470" y2="0" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowRight)"/>
@@ -702,7 +728,7 @@
                 </g>
 
                 <!-- Row 4: Session Tracking -->
-                <g transform="translate(0, 336)">
+                <g transform="translate(0, 358)">
                     <rect x="160" y="-14" width="200" height="32" rx="8" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
                     <text x="180" y="7" fill="#e8e8f0" font-size="13" font-weight="600">Session Tracking</text>
                     <line x1="370" y1="0" x2="470" y2="0" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4 3"/>
@@ -711,14 +737,30 @@
                 </g>
 
                 <!-- Arrow down from box -->
-                <line x1="400" y1="390" x2="400" y2="440" stroke="url(#arrow-grad)" stroke-width="2" marker-end="url(#arrowDown)"/>
-                <text x="415" y="422" fill="#3b82f6" font-size="11" font-weight="600">HTTP Response / AppleScript</text>
+                <line x1="400" y1="426" x2="400" y2="480" stroke="url(#arrow-grad)" stroke-width="2" marker-end="url(#arrowDown)"/>
+                <text x="415" y="460" fill="#3b82f6" font-size="11" font-weight="600">HTTP Response / AppleScript</text>
 
-                <!-- Bottom: Claude Code continues -->
-                <g transform="translate(400, 470)">
+                <!-- Bottom: Diverging arrows back to terminals -->
+                <g transform="translate(400, 510)">
                     <rect x="-170" y="-20" width="340" height="44" rx="22" fill="#12121a" stroke="#22c55e" stroke-width="1.5"/>
-                    <text text-anchor="middle" y="7" fill="#22c55e" font-size="15" font-weight="700">Claude Code continues working</text>
+                    <text text-anchor="middle" y="7" fill="#22c55e" font-size="15" font-weight="700">All sessions continue working</text>
                 </g>
+
+                <!-- Diverging lines from bottom pill -->
+                <line x1="260" y1="536" x2="100" y2="570" stroke="#22c55e" stroke-width="1" opacity="0.3"/>
+                <line x1="340" y1="536" x2="270" y2="570" stroke="#22c55e" stroke-width="1" opacity="0.3"/>
+                <line x1="460" y1="536" x2="440" y2="570" stroke="#22c55e" stroke-width="1" opacity="0.3"/>
+                <line x1="540" y1="536" x2="610" y2="570" stroke="#22c55e" stroke-width="1" opacity="0.3"/>
+
+                <!-- Small terminal icons at bottom -->
+                <rect x="80" y="570" width="40" height="22" rx="4" fill="#12121a" stroke="#22c55e" stroke-width="0.8" opacity="0.5"/>
+                <text x="100" y="585" text-anchor="middle" fill="#22c55e" font-size="8" opacity="0.6">T1</text>
+                <rect x="250" y="570" width="40" height="22" rx="4" fill="#12121a" stroke="#22c55e" stroke-width="0.8" opacity="0.5"/>
+                <text x="270" y="585" text-anchor="middle" fill="#22c55e" font-size="8" opacity="0.6">T2</text>
+                <rect x="420" y="570" width="40" height="22" rx="4" fill="#12121a" stroke="#22c55e" stroke-width="0.8" opacity="0.5"/>
+                <text x="440" y="585" text-anchor="middle" fill="#22c55e" font-size="8" opacity="0.6">T3</text>
+                <rect x="590" y="570" width="40" height="22" rx="4" fill="#12121a" stroke="#22c55e" stroke-width="0.8" opacity="0.5"/>
+                <text x="610" y="585" text-anchor="middle" fill="#22c55e" font-size="8" opacity="0.6">TN</text>
             </svg>
         </div>
     </section>

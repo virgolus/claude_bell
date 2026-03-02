@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#fb923c"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="#0a0a0f"/>
+  <g transform="translate(16, 15)">
+    <!-- Bell body -->
+    <path d="M-8,2 C-8,-4 -6,-8 0,-8 C6,-8 8,-4 8,2 L8,4 L-8,4 Z" fill="url(#g)"/>
+    <!-- Bell rim -->
+    <rect x="-10" y="4" width="20" height="3" rx="1.5" fill="url(#g)"/>
+    <!-- Clapper -->
+    <circle cx="0" cy="10" r="2.5" fill="url(#g)"/>
+    <!-- Badge dot -->
+    <circle cx="7" cy="-7" r="4" fill="#ef4444"/>
+  </g>
+</svg>

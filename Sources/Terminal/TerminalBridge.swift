@@ -4,15 +4,26 @@ import AppKit
 enum TerminalBridge {
 
     /// Sends text to a Terminal.app tab whose process matches Claude Code.
+    /// Uses clipboard paste (Cmd+V) + Return for reliability.
     static func sendText(_ text: String, toCwd cwd: String) {
-        let escaped = text
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-            .replacingOccurrences(of: "\n", with: "\\n")
+        // Save clipboard, put text, paste+enter, restore clipboard
+        let pasteboard = NSPasteboard.general
+        let oldContents = pasteboard.string(forType: .string)
 
-        if sendiTerm2Text(escaped, cwd: cwd) { return }
-        if sendTerminalText(escaped, cwd: cwd) { return }
-        activateTerminal()
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        let sent = sendiTerm2Paste(cwd: cwd) || sendTerminalPaste(cwd: cwd)
+
+        // Restore clipboard after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            pasteboard.clearContents()
+            if let old = oldContents {
+                pasteboard.setString(old, forType: .string)
+            }
+        }
+
+        if !sent { activateTerminal() }
     }
 
     /// Brings the terminal tab running Claude Code to the front.
@@ -24,7 +35,8 @@ enum TerminalBridge {
 
     // MARK: - Terminal.app
 
-    private static func sendTerminalText(_ escaped: String, cwd: String) -> Bool {
+    /// Focus the correct Terminal.app tab, paste from clipboard, press Return.
+    private static func sendTerminalPaste(cwd: String) -> Bool {
         let script = """
         tell application "Terminal"
             if not running then return false
@@ -37,10 +49,11 @@ enum TerminalBridge {
                             set selected tab of w to t
                             set index of w to 1
                             activate
-                            delay 0.1
+                            delay 0.15
                             tell application "System Events"
                                 tell process "Terminal"
-                                    keystroke "\(escaped)"
+                                    keystroke "v" using command down
+                                    delay 0.05
                                     keystroke return
                                 end tell
                             end tell
@@ -81,7 +94,8 @@ enum TerminalBridge {
 
     // MARK: - iTerm2
 
-    private static func sendiTerm2Text(_ escaped: String, cwd: String) -> Bool {
+    /// Focus the correct iTerm2 session, paste from clipboard, press Return.
+    private static func sendiTerm2Paste(cwd: String) -> Bool {
         guard NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == "com.googlecode.iterm2" }) else {
             return false
         }
@@ -92,7 +106,18 @@ enum TerminalBridge {
                     repeat with s in sessions of t
                         set sessionName to name of s
                         if sessionName contains "claude" then
-                            tell s to write text "\(escaped)"
+                            tell s
+                                select s
+                            end tell
+                            activate
+                            delay 0.15
+                            tell application "System Events"
+                                tell process "iTerm2"
+                                    keystroke "v" using command down
+                                    delay 0.05
+                                    keystroke return
+                                end tell
+                            end tell
                             return true
                         end if
                     end repeat
