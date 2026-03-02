@@ -84,11 +84,127 @@ struct MarkdownText: View {
     @ViewBuilder
     private func inlineMarkdown(_ text: String, font overrideFont: Font? = nil) -> some View {
         let f = overrideFont ?? font
-        if let attributed = try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
-            Text(attributed).font(f).textSelection(.enabled)
-        } else {
-            Text(text).font(f).textSelection(.enabled)
+        let spans = parseInlineSpans(text)
+        let rendered = spans.reduce(Text("")) { result, span in
+            switch span {
+            case .plain(let s):
+                return result + Text(s)
+            case .bold(let s):
+                return result + Text(s).bold()
+            case .italic(let s):
+                return result + Text(s).italic()
+            case .boldItalic(let s):
+                return result + Text(s).bold().italic()
+            case .code(let s):
+                return result + Text(s).font(.system(.body, design: .monospaced)).foregroundColor(.orange)
+            case .boldCode(let s):
+                return result + Text(s).bold().font(.system(.body, design: .monospaced)).foregroundColor(.orange)
+            }
         }
+        rendered.font(f).textSelection(.enabled)
+    }
+
+    // MARK: - Inline span parsing
+
+    private enum InlineSpan {
+        case plain(String)
+        case bold(String)
+        case italic(String)
+        case boldItalic(String)
+        case code(String)
+        case boldCode(String)
+    }
+
+    /// Parse inline markdown into spans: **bold**, *italic*, ***boldItalic***, `code`, **`boldCode`**
+    private func parseInlineSpans(_ text: String) -> [InlineSpan] {
+        var spans: [InlineSpan] = []
+        var remaining = text[text.startIndex...]
+
+        while !remaining.isEmpty {
+            // Find the next special character
+            guard let specialIdx = remaining.firstIndex(where: { $0 == "*" || $0 == "`" }) else {
+                spans.append(.plain(String(remaining)))
+                break
+            }
+
+            // Add plain text before the special char
+            if specialIdx > remaining.startIndex {
+                spans.append(.plain(String(remaining[remaining.startIndex..<specialIdx])))
+                remaining = remaining[specialIdx...]
+            }
+
+            if remaining.hasPrefix("```") {
+                // Skip triple backticks (code blocks handled at block level)
+                spans.append(.plain("```"))
+                remaining = remaining[remaining.index(remaining.startIndex, offsetBy: 3)...]
+            } else if remaining.hasPrefix("`") {
+                // Inline code
+                let afterTick = remaining.index(after: remaining.startIndex)
+                if let endTick = remaining[afterTick...].firstIndex(of: "`") {
+                    let code = String(remaining[afterTick..<endTick])
+                    spans.append(.code(code))
+                    remaining = remaining[remaining.index(after: endTick)...]
+                } else {
+                    spans.append(.plain("`"))
+                    remaining = remaining[afterTick...]
+                }
+            } else if remaining.hasPrefix("***") {
+                // Bold italic
+                let afterStars = remaining.index(remaining.startIndex, offsetBy: 3)
+                if let endRange = remaining[afterStars...].range(of: "***") {
+                    let inner = String(remaining[afterStars..<endRange.lowerBound])
+                    spans.append(.boldItalic(inner))
+                    remaining = remaining[endRange.upperBound...]
+                } else {
+                    spans.append(.plain("***"))
+                    remaining = remaining[afterStars...]
+                }
+            } else if remaining.hasPrefix("**") {
+                // Bold (may contain inline code)
+                let afterStars = remaining.index(remaining.startIndex, offsetBy: 2)
+                if let endRange = remaining[afterStars...].range(of: "**") {
+                    let inner = String(remaining[afterStars..<endRange.lowerBound])
+                    // Check if inner is wrapped in backticks: **`code`**
+                    if inner.hasPrefix("`") && inner.hasSuffix("`") && inner.count > 2 {
+                        let code = String(inner.dropFirst().dropLast())
+                        spans.append(.boldCode(code))
+                    } else if inner.contains("`") {
+                        // Mixed bold with code inside — parse inner spans and mark all bold
+                        let innerSpans = parseInlineSpans(inner)
+                        for s in innerSpans {
+                            switch s {
+                            case .plain(let t): spans.append(.bold(t))
+                            case .code(let t): spans.append(.boldCode(t))
+                            default: spans.append(s)
+                            }
+                        }
+                    } else {
+                        spans.append(.bold(inner))
+                    }
+                    remaining = remaining[endRange.upperBound...]
+                } else {
+                    spans.append(.plain("**"))
+                    remaining = remaining[afterStars...]
+                }
+            } else if remaining.hasPrefix("*") {
+                // Italic
+                let afterStar = remaining.index(after: remaining.startIndex)
+                if let endIdx = remaining[afterStar...].firstIndex(of: "*") {
+                    let inner = String(remaining[afterStar..<endIdx])
+                    spans.append(.italic(inner))
+                    remaining = remaining[remaining.index(after: endIdx)...]
+                } else {
+                    spans.append(.plain("*"))
+                    remaining = remaining[afterStar...]
+                }
+            } else {
+                // Should not reach here, but safety
+                spans.append(.plain(String(remaining.prefix(1))))
+                remaining = remaining[remaining.index(after: remaining.startIndex)...]
+            }
+        }
+
+        return spans
     }
 
     // MARK: - Parsing

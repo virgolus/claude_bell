@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCC — Claude Code Cockpit</title>
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-card-hover: #1a1a26;
+            --border: #2a2a3a;
+            --text: #e8e8f0;
+            --text-secondary: #8888a0;
+            --accent: #f97316;
+            --accent-glow: rgba(249, 115, 22, 0.15);
+            --purple: #a855f7;
+            --blue: #3b82f6;
+            --green: #22c55e;
+            --red: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Subtle grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                linear-gradient(rgba(249,115,22,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(249,115,22,0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            text-align: center;
+            padding: 100px 24px 80px;
+            position: relative;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 100px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+
+        .hero-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .hero h1 {
+            font-size: clamp(48px, 8vw, 80px);
+            font-weight: 800;
+            letter-spacing: -2px;
+            line-height: 1.05;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 .accent {
+            background: linear-gradient(135deg, var(--accent), #fb923c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-sub {
+            font-size: 20px;
+            color: var(--text-secondary);
+            max-width: 560px;
+            margin: 0 auto 40px;
+            line-height: 1.5;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #ea580c;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 30px rgba(249,115,22,0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent);
+        }
+
+        /* ─── Stats ─── */
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 48px;
+            padding: 40px 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 80px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* ─── Section ─── */
+        .section {
+            padding: 60px 0;
+        }
+
+        .section-label {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-size: clamp(32px, 5vw, 44px);
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 16px;
+        }
+
+        .section-desc {
+            font-size: 18px;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin-bottom: 48px;
+        }
+
+        /* ─── Feature Grid ─── */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .feature-card {
+            padding: 28px;
+            border-radius: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: rgba(249,115,22,0.3);
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+        }
+
+        .feature-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 16px;
+        }
+
+        .feature-card h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .feature-card p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .icon-orange { background: rgba(249,115,22,0.12); }
+        .icon-purple { background: rgba(168,85,247,0.12); }
+        .icon-blue   { background: rgba(59,130,246,0.12); }
+        .icon-green  { background: rgba(34,197,94,0.12); }
+        .icon-red    { background: rgba(239,68,68,0.12); }
+
+        /* ─── How It Works ─── */
+        .flow {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            position: relative;
+            max-width: 700px;
+        }
+
+        .flow::before {
+            content: '';
+            position: absolute;
+            left: 27px;
+            top: 44px;
+            bottom: 44px;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--accent), var(--purple), var(--blue));
+            border-radius: 2px;
+        }
+
+        .flow-step {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+            padding: 20px 0;
+        }
+
+        .flow-num {
+            width: 56px;
+            height: 56px;
+            min-width: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 800;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            position: relative;
+            z-index: 1;
+        }
+
+        .flow-step:nth-child(1) .flow-num { border-color: var(--accent); color: var(--accent); }
+        .flow-step:nth-child(2) .flow-num { border-color: var(--purple); color: var(--purple); }
+        .flow-step:nth-child(3) .flow-num { border-color: var(--blue); color: var(--blue); }
+        .flow-step:nth-child(4) .flow-num { border-color: var(--green); color: var(--green); }
+
+        .flow-content h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .flow-content p {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        /* ─── Code Block ─── */
+        .code-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            margin: 48px 0;
+        }
+
+        .code-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 20px;
+            background: rgba(255,255,255,0.02);
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .code-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+        }
+        .code-dot.r { background: #ff5f56; }
+        .code-dot.y { background: #ffbd2e; }
+        .code-dot.g { background: #27c93f; }
+
+        .code-body {
+            padding: 20px 24px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.7;
+            overflow-x: auto;
+        }
+
+        .code-body .comment { color: #6b7280; }
+        .code-body .string  { color: #22c55e; }
+        .code-body .key     { color: #f97316; }
+        .code-body .punct   { color: #6b7280; }
+
+        /* ─── Architecture Diagram ─── */
+        .arch-svg-wrap {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px 16px;
+            margin-top: 48px;
+            overflow-x: auto;
+        }
+
+        .arch-svg-wrap svg {
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* ─── Tech Stack ─── */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .tech-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 18px 20px;
+            border-radius: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+
+        .tech-icon {
+            font-size: 28px;
+            min-width: 36px;
+            text-align: center;
+        }
+
+        .tech-name {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .tech-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* ─── Hooks Table ─── */
+        .hooks-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .hooks-table th,
+        .hooks-table td {
+            padding: 14px 20px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .hooks-table th {
+            background: rgba(249,115,22,0.06);
+            font-weight: 700;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+        }
+
+        .hooks-table td {
+            font-family: 'SF Mono', monospace;
+            font-size: 13px;
+        }
+
+        .hooks-table tr:last-child td { border-bottom: none; }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-blocking {
+            background: rgba(239,68,68,0.12);
+            color: var(--red);
+        }
+
+        .badge-async {
+            background: rgba(34,197,94,0.12);
+            color: var(--green);
+        }
+
+        /* ─── Footer ─── */
+        footer {
+            text-align: center;
+            padding: 60px 24px;
+            border-top: 1px solid var(--border);
+            margin-top: 80px;
+        }
+
+        footer p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        footer .footer-logo {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+
+        footer .footer-logo .accent {
+            background: linear-gradient(135deg, var(--accent), #fb923c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            .stats { flex-direction: column; gap: 24px; }
+            .features-grid { grid-template-columns: 1fr; }
+            .hero { padding: 60px 24px 40px; }
+            .arch-diagram { font-size: 11px; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="hero-badge">
+        <span class="dot"></span>
+        Native macOS app for Claude Code
+    </div>
+    <h1>
+        <span class="accent">Claude</span><br>
+        Cockpit
+    </h1>
+    <p class="hero-sub">
+        A native macOS menu bar app that centralizes permission requests and notifications from all your Claude Code sessions into one place.
+    </p>
+    <div class="hero-actions">
+        <a href="#install" class="btn btn-primary">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download
+        </a>
+        <a href="#how" class="btn btn-secondary">How It Works</a>
+    </div>
+</section>
+
+<!-- Stats -->
+<div class="container">
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-value">100%</div>
+            <div class="stat-label">Native Swift & SwiftUI</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">5</div>
+            <div class="stat-label">Claude Code Hooks</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">&lt;1MB</div>
+            <div class="stat-label">Lightweight binary</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">0</div>
+            <div class="stat-label">Electron bloat</div>
+        </div>
+    </div>
+</div>
+
+<!-- Features -->
+<div class="container">
+    <section class="section">
+        <div class="section-label">Features</div>
+        <h2 class="section-title">Everything you need.<br>Nothing you don't.</h2>
+        <p class="section-desc">
+            Stop hunting through terminal tabs. Respond to Claude Code from anywhere on your Mac.
+        </p>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon icon-green">🖥️</div>
+                <h3>Multi-Session Tracking</h3>
+                <p>Track all active Claude Code sessions in one place. Rename sessions, see activity timestamps, auto-cleanup when done.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon icon-orange">🔐</div>
+                <h3>Permission Requests</h3>
+                <p>Allow or deny tool execution with one click. See what command Claude wants to run, with full context from the conversation.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon icon-purple">💬</div>
+                <h3>Interactive Notifications</h3>
+                <p>Answer Claude's questions directly from the menu bar. Supports free text input, single-select, and multi-select options.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon icon-blue">📋</div>
+                <h3>Transcript Context</h3>
+                <p>See the last messages from your conversation right in the panel. Understand what Claude is working on before deciding.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon icon-red">⌨️</div>
+                <h3>Global Shortcut</h3>
+                <p>Toggle the panel from anywhere with a customizable hotkey. No Accessibility permissions needed — uses native Carbon API.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon icon-orange">🔔</div>
+                <h3>Native Notifications</h3>
+                <p>macOS notifications with customizable sounds. Never miss a permission request, even when you're in another app.</p>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- How It Works -->
+<div class="container" id="how">
+    <section class="section">
+        <div class="section-label">Architecture</div>
+        <h2 class="section-title">How it works</h2>
+        <p class="section-desc">
+            Claude Code Cockpit uses Claude Code's HTTP hooks to intercept events before they reach the terminal.
+        </p>
+
+        <div class="flow">
+            <div class="flow-step">
+                <div class="flow-num">1</div>
+                <div class="flow-content">
+                    <h3>Claude Code triggers a hook</h3>
+                    <p>When Claude needs permission to run a tool (Bash, Edit, Write...) or wants to ask a question, it sends an HTTP POST to localhost:19485.</p>
+                </div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-num">2</div>
+                <div class="flow-content">
+                    <h3>Claude Code Cockpit shows the request</h3>
+                    <p>The menu bar icon lights up, a sound plays, and a native notification appears. The panel shows the tool, its input, and the conversation context.</p>
+                </div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-num">3</div>
+                <div class="flow-content">
+                    <h3>You respond from anywhere</h3>
+                    <p>Click Allow, Deny, or Always. For questions, type your answer or pick from options. Responses go straight to Terminal.app or iTerm2.</p>
+                </div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-num">4</div>
+                <div class="flow-content">
+                    <h3>Claude Code continues</h3>
+                    <p>The HTTP response is sent back, and Claude Code resumes immediately. If the app isn't running, Claude falls back to the normal terminal dialog.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="arch-svg-wrap">
+            <svg viewBox="0 0 800 520" width="800" height="520" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif">
+                <defs>
+                    <linearGradient id="glow-orange" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#f97316" stop-opacity="0.15"/>
+                        <stop offset="100%" stop-color="#f97316" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="arrow-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#f97316"/>
+                        <stop offset="100%" stop-color="#a855f7"/>
+                    </linearGradient>
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="6" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                    <marker id="arrowDown" markerWidth="10" markerHeight="7" refX="5" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#f97316"/>
+                    </marker>
+                    <marker id="arrowRight" markerWidth="10" markerHeight="7" refX="5" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#22c55e"/>
+                    </marker>
+                </defs>
+
+                <!-- Top: Claude Code sessions -->
+                <g transform="translate(400, 30)">
+                    <rect x="-160" y="-20" width="320" height="44" rx="22" fill="#12121a" stroke="#f97316" stroke-width="1.5"/>
+                    <text text-anchor="middle" y="7" fill="#f97316" font-size="15" font-weight="700">Claude Code</text>
+                    <text text-anchor="middle" y="7" fill="#8888a0" font-size="13" dx="95"> (N sessions)</text>
+                </g>
+
+                <!-- Arrow down -->
+                <line x1="400" y1="56" x2="400" y2="100" stroke="url(#arrow-grad)" stroke-width="2" marker-end="url(#arrowDown)"/>
+                <text x="415" y="82" fill="#3b82f6" font-size="11" font-weight="600">HTTP POST :19485</text>
+
+                <!-- Central box: Claude Code Cockpit -->
+                <rect x="120" y="108" width="560" height="280" rx="16" fill="#12121a" stroke="#2a2a3a" stroke-width="1.5"/>
+                <rect x="120" y="108" width="560" height="280" rx="16" fill="url(#glow-orange)"/>
+
+                <!-- Title bar -->
+                <text x="400" y="146" text-anchor="middle" fill="#f97316" font-size="18" font-weight="800">Claude Code Cockpit</text>
+                <line x1="160" y1="162" x2="640" y2="162" stroke="#2a2a3a" stroke-width="1"/>
+
+                <!-- Row 1: Permission Request -->
+                <g transform="translate(0, 186)">
+                    <rect x="160" y="-14" width="200" height="32" rx="8" fill="rgba(249,115,22,0.08)" stroke="rgba(249,115,22,0.25)" stroke-width="1"/>
+                    <text x="180" y="7" fill="#e8e8f0" font-size="13" font-weight="600">Permission Request</text>
+                    <!-- arrow -->
+                    <line x1="370" y1="0" x2="470" y2="0" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowRight)"/>
+                    <!-- result -->
+                    <rect x="478" y="-14" width="170" height="32" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.25)" stroke-width="1"/>
+                    <text x="498" y="7" fill="#22c55e" font-size="12" font-weight="600">Allow / Deny / Always</text>
+                </g>
+
+                <!-- Row 2: Questions -->
+                <g transform="translate(0, 236)">
+                    <rect x="160" y="-14" width="200" height="32" rx="8" fill="rgba(168,85,247,0.08)" stroke="rgba(168,85,247,0.25)" stroke-width="1"/>
+                    <text x="180" y="7" fill="#e8e8f0" font-size="13" font-weight="600">Questions & Dialogs</text>
+                    <line x1="370" y1="0" x2="470" y2="0" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowRight)"/>
+                    <rect x="478" y="-14" width="170" height="32" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.25)" stroke-width="1"/>
+                    <text x="498" y="7" fill="#22c55e" font-size="12" font-weight="600">Text / Option select</text>
+                </g>
+
+                <!-- Row 3: Idle Prompt -->
+                <g transform="translate(0, 286)">
+                    <rect x="160" y="-14" width="200" height="32" rx="8" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
+                    <text x="180" y="7" fill="#e8e8f0" font-size="13" font-weight="600">Idle Prompt</text>
+                    <line x1="370" y1="0" x2="470" y2="0" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowRight)"/>
+                    <rect x="478" y="-14" width="170" height="32" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.25)" stroke-width="1"/>
+                    <text x="498" y="7" fill="#22c55e" font-size="12" font-weight="600">via AppleScript</text>
+                </g>
+
+                <!-- Row 4: Session Tracking -->
+                <g transform="translate(0, 336)">
+                    <rect x="160" y="-14" width="200" height="32" rx="8" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
+                    <text x="180" y="7" fill="#e8e8f0" font-size="13" font-weight="600">Session Tracking</text>
+                    <line x1="370" y1="0" x2="470" y2="0" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4 3"/>
+                    <rect x="478" y="-14" width="170" height="32" rx="8" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
+                    <text x="498" y="7" fill="#3b82f6" font-size="12" font-weight="600">Active sessions list</text>
+                </g>
+
+                <!-- Arrow down from box -->
+                <line x1="400" y1="390" x2="400" y2="440" stroke="url(#arrow-grad)" stroke-width="2" marker-end="url(#arrowDown)"/>
+                <text x="415" y="422" fill="#3b82f6" font-size="11" font-weight="600">HTTP Response / AppleScript</text>
+
+                <!-- Bottom: Claude Code continues -->
+                <g transform="translate(400, 470)">
+                    <rect x="-170" y="-20" width="340" height="44" rx="22" fill="#12121a" stroke="#22c55e" stroke-width="1.5"/>
+                    <text text-anchor="middle" y="7" fill="#22c55e" font-size="15" font-weight="700">Claude Code continues working</text>
+                </g>
+            </svg>
+        </div>
+    </section>
+</div>
+
+<!-- Hook Config -->
+<div class="container" id="install">
+    <section class="section">
+        <div class="section-label">Setup</div>
+        <h2 class="section-title">One-click install</h2>
+        <p class="section-desc">
+            Claude Code Cockpit adds its hooks to your <code style="color:var(--accent)">~/.claude/settings.json</code> automatically. Or configure manually:
+        </p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-dot r"></span>
+                <span class="code-dot y"></span>
+                <span class="code-dot g"></span>
+                <span style="margin-left: 8px">~/.claude/settings.json</span>
+            </div>
+            <div class="code-body">
+<span class="punct">{</span>
+  <span class="key">"hooks"</span><span class="punct">:</span> <span class="punct">{</span>
+    <span class="key">"PermissionRequest"</span><span class="punct">:</span> <span class="punct">[{</span>
+      <span class="key">"matcher"</span><span class="punct">:</span> <span class="string">""</span><span class="punct">,</span>
+      <span class="key">"hooks"</span><span class="punct">:</span> <span class="punct">[{</span>
+        <span class="key">"type"</span><span class="punct">:</span> <span class="string">"http"</span><span class="punct">,</span>
+        <span class="key">"url"</span><span class="punct">:</span> <span class="string">"http://localhost:19485/hooks/permission-request"</span><span class="punct">,</span>
+        <span class="key">"timeout"</span><span class="punct">:</span> <span class="string">300</span>
+      <span class="punct">}]</span>
+    <span class="punct">}],</span>
+    <span class="key">"Notification"</span><span class="punct">:</span> <span class="punct">[{</span>
+      <span class="key">"matcher"</span><span class="punct">:</span> <span class="string">""</span><span class="punct">,</span>
+      <span class="key">"hooks"</span><span class="punct">:</span> <span class="punct">[{</span>
+        <span class="key">"type"</span><span class="punct">:</span> <span class="string">"http"</span><span class="punct">,</span>
+        <span class="key">"url"</span><span class="punct">:</span> <span class="string">"http://localhost:19485/hooks/notification"</span><span class="punct">,</span>
+        <span class="key">"timeout"</span><span class="punct">:</span> <span class="string">10</span>
+      <span class="punct">}]</span>
+    <span class="punct">}]</span>
+  <span class="punct">}</span>
+<span class="punct">}</span>
+            </div>
+        </div>
+
+        <!-- Hooks table -->
+        <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 16px;">Supported Hooks</h3>
+
+        <table class="hooks-table">
+            <thead>
+                <tr>
+                    <th>Hook</th>
+                    <th>Type</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="color: var(--accent)">PermissionRequest</td>
+                    <td><span class="badge badge-blocking">Blocking</span></td>
+                    <td style="font-family: inherit">Allow or deny tool execution</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--accent)">Notification</td>
+                    <td><span class="badge badge-async">Async</span></td>
+                    <td style="font-family: inherit">Questions, idle prompts, dialogs</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--accent)">Stop</td>
+                    <td><span class="badge badge-async">Async</span></td>
+                    <td style="font-family: inherit">Task completed notification</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--accent)">PostToolUseFailure</td>
+                    <td><span class="badge badge-async">Async</span></td>
+                    <td style="font-family: inherit">Tool error alerts</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--accent)">SessionEnd</td>
+                    <td><span class="badge badge-async">Async</span></td>
+                    <td style="font-family: inherit">Session cleanup</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+</div>
+
+<!-- Tech Stack -->
+<div class="container">
+    <section class="section">
+        <div class="section-label">Built with</div>
+        <h2 class="section-title">Tech Stack</h2>
+        <p class="section-desc">
+            Native performance, zero compromise.
+        </p>
+
+        <div class="tech-grid">
+            <div class="tech-item">
+                <div class="tech-icon">🐦</div>
+                <div>
+                    <div class="tech-name">Swift 5.10+</div>
+                    <div class="tech-desc">Modern async/await concurrency</div>
+                </div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-icon">🎨</div>
+                <div>
+                    <div class="tech-name">SwiftUI</div>
+                    <div class="tech-desc">Native macOS MenuBarExtra</div>
+                </div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-icon">🐝</div>
+                <div>
+                    <div class="tech-name">Hummingbird</div>
+                    <div class="tech-desc">Lightweight async HTTP server</div>
+                </div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-icon">📜</div>
+                <div>
+                    <div class="tech-name">AppleScript Bridge</div>
+                    <div class="tech-desc">Terminal.app & iTerm2 control</div>
+                </div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-icon">🔑</div>
+                <div>
+                    <div class="tech-name">Carbon API</div>
+                    <div class="tech-desc">Global hotkeys, no permissions</div>
+                </div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-icon">📦</div>
+                <div>
+                    <div class="tech-name">SPM</div>
+                    <div class="tech-desc">Swift Package Manager build</div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Footer -->
+<footer>
+    <div class="footer-logo">
+        <span class="accent">CCC</span> — Claude Code Cockpit
+    </div>
+    <p>A macOS-native companion for Claude Code.</p>
+    <p style="margin-top: 8px; font-size: 12px; color: #555;">
+        Built with Swift. Powered by Claude Code hooks.
+    </p>
+</footer>
+
+</body>
+</html>

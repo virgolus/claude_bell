@@ -34,7 +34,16 @@ enum TerminalBridge {
                     set procs to processes of t
                     repeat with p in procs
                         if p contains "claude" then
-                            do script "\(escaped)" in t
+                            set selected tab of w to t
+                            set index of w to 1
+                            activate
+                            delay 0.1
+                            tell application "System Events"
+                                tell process "Terminal"
+                                    keystroke "\(escaped)"
+                                    keystroke return
+                                end tell
+                            end tell
                             return true
                         end if
                     end repeat
