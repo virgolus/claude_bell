@@ -21,6 +21,9 @@ final class HookServer: Sendable {
             let body = try await request.body.collect(upTo: 1_048_576)
             let input = try JSONDecoder().decode(HookInput.self, from: body)
             print("[HookServer] Decoded: tool=\(input.toolName ?? "nil"), session=\(input.sessionId)")
+            if let raw = String(buffer: body) as String? {
+                print("[HookServer] PermissionRequest raw body: \(raw)")
+            }
 
             let response = await withCheckedContinuation { (continuation: CheckedContinuation<HookResponse, Never>) in
                 Task { @MainActor in
@@ -62,7 +65,10 @@ final class HookServer: Sendable {
                     createdAt: Date()
                 )
                 Task { @MainActor in
-                    store.sessionAdvanced(id: input.sessionId)
+                    // permission_prompt is sent alongside PermissionRequest — don't dismiss it
+                    if notificationType != "permission_prompt" {
+                        store.sessionAdvanced(id: input.sessionId)
+                    }
                     store.addNotification(entry)
                     Self.sendNativeNotification(for: entry)
                 }

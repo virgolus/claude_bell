@@ -32,6 +32,7 @@ struct DetailFooterView: View {
 
                 Button {
                     TerminalBridge.focusTerminalTab(forCwd: cwd)
+                    onDismiss()
                 } label: {
                     Label("Open in Terminal", systemImage: "terminal")
                         .font(.caption)

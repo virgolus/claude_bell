@@ -185,8 +185,9 @@ struct ContentView: View {
                         ConversationContextView(transcriptPath: notification.transcriptPath, startExpanded: true)
                     }
 
-                    // Question options from transcript
-                    if !notification.transcriptPath.isEmpty,
+                    // Question options from transcript (skip for passive types like task completed)
+                    if !notification.meta.isPassive,
+                       !notification.transcriptPath.isEmpty,
                        let questions = transcriptQuestions(for: notification),
                        !questions.isEmpty {
                         QuestionOptionsView(

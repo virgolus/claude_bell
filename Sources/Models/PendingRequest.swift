@@ -41,10 +41,12 @@ final class PendingRequest: Identifiable, ObservableObject {
         hasResponded = true
         let response: HookResponse
         if behavior == .allowAlways {
+            print("[PendingRequest] Always clicked — permissionSuggestions: \(String(describing: permissionSuggestions))")
             response = HookResponse.permissionDecisionAlways(permissionSuggestions: permissionSuggestions)
         } else {
             response = HookResponse.permissionDecision(behavior)
         }
+        print("[PendingRequest] Responding with: \(response.json)")
         continuation.resume(returning: response)
     }
 
