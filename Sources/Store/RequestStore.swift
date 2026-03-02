@@ -22,14 +22,20 @@ final class RequestStore: ObservableObject {
     /// Called when a new hook event arrives for a session — dismiss stale items
     func sessionAdvanced(id: String) {
         // Dismiss stale interactive notifications (user already responded in terminal)
-        notifications.removeAll {
-            $0.sessionId == id && !$0.meta.isPassive
-        }
+        dismissStaleNotifications(id: id)
         // Dismiss stale permission requests (user already responded in terminal)
         let staleRequests = pendingRequests.filter { $0.sessionId == id }
         for req in staleRequests {
             req.respond(allow: false) // release the HTTP connection
             pendingRequests.removeAll { $0.id == req.id }
+        }
+    }
+
+    /// Lighter version: only dismiss stale notifications, not permission requests.
+    /// Used by notification handler to avoid auto-denying pending requests.
+    func dismissStaleNotifications(id: String) {
+        notifications.removeAll {
+            $0.sessionId == id && !$0.meta.isPassive
         }
     }
 

@@ -58,23 +58,38 @@ final class HookServer: Sendable {
                 // For idle_prompt: check transcript to see if Claude is genuinely asking
                 // something or just finished a task. If no question pending, treat as "stop".
                 let effectiveType: String
+                let effectiveMessage: String
                 if notificationType == "idle_prompt" {
                     let hasQuestion = Self.transcriptHasPendingQuestion(path: input.transcriptPath ?? "")
-                    effectiveType = hasQuestion ? notificationType : "stop"
+                    if hasQuestion {
+                        effectiveType = notificationType
+                        effectiveMessage = message
+                    } else {
+                        effectiveType = "stop"
+                        // Use last assistant message from transcript as body
+                        effectiveMessage = message.isEmpty
+                            ? Self.lastAssistantMessage(from: input.transcriptPath ?? "")
+                            : message
+                    }
                 } else {
                     effectiveType = notificationType
+                    effectiveMessage = message
                 }
 
                 let entry = NotificationEntry(
                     sessionId: input.sessionId,
                     cwd: input.cwd,
                     notificationType: effectiveType,
-                    message: message,
+                    message: effectiveMessage,
                     title: title,
                     transcriptPath: input.transcriptPath ?? "",
                     createdAt: Date()
                 )
                 Task { @MainActor in
+                    // Clean stale notifications (but NOT permission requests)
+                    if notificationType != "permission_prompt" {
+                        store.dismissStaleNotifications(id: input.sessionId)
+                    }
                     store.addNotification(entry)
                     Self.sendNativeNotification(for: entry)
                 }
@@ -204,6 +219,43 @@ final class HookServer: Sendable {
             title: "Claude Code — \(entry.projectName)",
             body: body ?? entry.meta.nativeBody
         )
+    }
+
+    /// Extract the last assistant text message from the transcript.
+    private static func lastAssistantMessage(from path: String) -> String {
+        guard !path.isEmpty,
+              let data = FileManager.default.contents(atPath: path),
+              let content = String(data: data, encoding: .utf8) else {
+            return ""
+        }
+
+        let lines = content.components(separatedBy: "\n").filter { !$0.isEmpty }
+
+        for line in lines.reversed() {
+            guard let lineData = line.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
+                  let type = json["type"] as? String, type == "assistant",
+                  let message = json["message"] as? [String: Any] else {
+                continue
+            }
+
+            var textParts: [String] = []
+            if let contentArray = message["content"] as? [[String: Any]] {
+                for block in contentArray {
+                    if let blockType = block["type"] as? String, blockType == "text",
+                       let text = block["text"] as? String {
+                        textParts.append(text)
+                    }
+                }
+            } else if let contentString = message["content"] as? String {
+                textParts.append(contentString)
+            }
+
+            let combined = textParts.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !combined.isEmpty { return combined }
+        }
+
+        return ""
     }
 
     /// Check if the transcript's last assistant message contains a pending question
