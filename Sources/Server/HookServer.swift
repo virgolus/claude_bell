@@ -65,10 +65,6 @@ final class HookServer: Sendable {
                     createdAt: Date()
                 )
                 Task { @MainActor in
-                    // permission_prompt is sent alongside PermissionRequest — don't dismiss it
-                    if notificationType != "permission_prompt" {
-                        store.sessionAdvanced(id: input.sessionId)
-                    }
                     store.addNotification(entry)
                     Self.sendNativeNotification(for: entry)
                 }
