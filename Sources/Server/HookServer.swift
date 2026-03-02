@@ -55,10 +55,20 @@ final class HookServer: Sendable {
                 )
                 let title = Self.filterGenericMessage(input.title ?? "")
 
+                // For idle_prompt: check transcript to see if Claude is genuinely asking
+                // something or just finished a task. If no question pending, treat as "stop".
+                let effectiveType: String
+                if notificationType == "idle_prompt" {
+                    let hasQuestion = Self.transcriptHasPendingQuestion(path: input.transcriptPath ?? "")
+                    effectiveType = hasQuestion ? notificationType : "stop"
+                } else {
+                    effectiveType = notificationType
+                }
+
                 let entry = NotificationEntry(
                     sessionId: input.sessionId,
                     cwd: input.cwd,
-                    notificationType: notificationType,
+                    notificationType: effectiveType,
                     message: message,
                     title: title,
                     transcriptPath: input.transcriptPath ?? "",
@@ -194,5 +204,55 @@ final class HookServer: Sendable {
             title: "Claude Code — \(entry.projectName)",
             body: body ?? entry.meta.nativeBody
         )
+    }
+
+    /// Check if the transcript's last assistant message contains a pending question
+    /// (AskUserQuestion tool call, or text ending with '?'). If not, the idle_prompt
+    /// is really a task completion.
+    private static func transcriptHasPendingQuestion(path: String) -> Bool {
+        guard !path.isEmpty,
+              let data = FileManager.default.contents(atPath: path),
+              let content = String(data: data, encoding: .utf8) else {
+            return false
+        }
+
+        let lines = content.components(separatedBy: "\n").filter { !$0.isEmpty }
+
+        // Scan backwards for the last assistant message
+        for line in lines.reversed() {
+            guard let lineData = line.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
+                  let type = json["type"] as? String, type == "assistant",
+                  let message = json["message"] as? [String: Any] else {
+                continue
+            }
+
+            // Check for AskUserQuestion tool use
+            if let contentArray = message["content"] as? [[String: Any]] {
+                for block in contentArray {
+                    if let blockType = block["type"] as? String,
+                       blockType == "tool_use",
+                       let name = block["name"] as? String,
+                       name == "AskUserQuestion" {
+                        return true
+                    }
+                }
+
+                // Check if the last text block ends with a question
+                let textBlocks = contentArray.compactMap { block -> String? in
+                    guard let t = block["type"] as? String, t == "text",
+                          let text = block["text"] as? String else { return nil }
+                    return text
+                }
+                if let lastText = textBlocks.last?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   lastText.hasSuffix("?") {
+                    return true
+                }
+            }
+
+            return false
+        }
+
+        return false
     }
 }
