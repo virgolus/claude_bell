@@ -71,17 +71,19 @@ final class RequestStore: ObservableObject {
             if sessionHasRequest { return }
 
         }
-        // Passive notifications (stop, tool_error, session_end) clear stale
-        // interactive notifications but are NOT kept in the panel themselves —
-        // they only appear as native macOS notifications.
+        // Passive notifications (stop, tool_error, session_end) replace stale
+        // interactive notifications. They stay in the panel until the session
+        // advances (cleared by PreToolUse/sessionAdvanced) or user dismisses.
         if notification.meta.isPassive {
             notifications.removeAll {
                 $0.sessionId == notification.sessionId
             }
-            if pendingRequests.isEmpty && notifications.isEmpty {
-                DispatchQueue.main.async { self.onDismissPanel?() }
+            playNotificationSound()
+        }
+        if notification.meta.deduplicate {
+            notifications.removeAll {
+                $0.sessionId == notification.sessionId && $0.notificationType == notification.notificationType
             }
-            return
         }
         notifications.append(notification)
         trackSession(id: notification.sessionId, cwd: notification.cwd)
@@ -123,6 +125,10 @@ final class RequestStore: ObservableObject {
 
     private func playRequestSound() {
         NSSound(named: Self.selectedSound)?.play()
+    }
+
+    private func playNotificationSound() {
+        NSSound(named: "Glass")?.play()
     }
 
     private func startTimeout(for request: PendingRequest) {
