@@ -91,7 +91,6 @@ final class HookServer: Sendable {
                         store.dismissStaleNotifications(id: input.sessionId)
                     }
                     store.addNotification(entry)
-                    Self.sendNativeNotification(for: entry)
                 }
             }
 
@@ -113,7 +112,6 @@ final class HookServer: Sendable {
             Task { @MainActor in
                 store.sessionAdvanced(id: input.sessionId)
                 store.addNotification(entry)
-                Self.sendNativeNotification(for: entry)
             }
 
             return Response(status: .ok)
@@ -136,7 +134,6 @@ final class HookServer: Sendable {
             Task { @MainActor in
                 store.sessionAdvanced(id: input.sessionId)
                 store.addNotification(entry)
-                Self.sendNativeNotification(for: entry, body: "\(toolName) failed")
             }
 
             return Response(status: .ok)
@@ -159,7 +156,6 @@ final class HookServer: Sendable {
                     createdAt: Date()
                 )
                 store.addNotification(entry)
-                Self.sendNativeNotification(for: entry)
             }
 
             return Response(status: .ok)
@@ -212,13 +208,6 @@ final class HookServer: Sendable {
     private static func filterGenericMessage(_ text: String) -> String {
         let lower = text.lowercased()
         return genericMessages.contains(where: { lower.contains($0) }) ? "" : text
-    }
-
-    private static func sendNativeNotification(for entry: NotificationEntry, body: String? = nil) {
-        NotificationManager.sendNotification(
-            title: "Claude Code — \(entry.projectName)",
-            body: body ?? entry.meta.nativeBody
-        )
     }
 
     /// Extract the last assistant text message from the transcript.

@@ -43,8 +43,13 @@ struct ToolInputView: View {
     }
 
     private func looksLikeCode(key: String, value: String) -> Bool {
-        let codeKeys = ["command", "content", "new_source", "old_string", "new_string", "file_path"]
+        let codeKeys = ["command", "new_source", "old_string", "new_string", "file_path"]
         if codeKeys.contains(key) { return true }
+        // "content" is code unless the file being written is markdown
+        if key == "content" {
+            let filePath = toolInput["file_path"]?.description ?? ""
+            return !filePath.hasSuffix(".md")
+        }
         // Markdown keys should be rendered as markdown, not code
         let markdownKeys = ["plan", "description", "prompt", "message", "text", "body"]
         if markdownKeys.contains(key) { return false }
