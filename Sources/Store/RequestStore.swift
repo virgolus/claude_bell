@@ -70,23 +70,18 @@ final class RequestStore: ObservableObject {
             }
             if sessionHasRequest { return }
 
-            // Skip if session already has a "stop" notification (task finished)
-            let sessionHasStop = notifications.contains {
-                $0.sessionId == notification.sessionId && $0.notificationType == "stop"
-            }
-            if sessionHasStop { return }
         }
-
-        if notification.meta.deduplicate {
-            notifications.removeAll {
-                $0.sessionId == notification.sessionId && $0.notificationType == notification.notificationType
-            }
-        }
-        // When a session completes (stop) or ends, dismiss stale interactive notifications for that session
+        // Passive notifications (stop, tool_error, session_end) clear stale
+        // interactive notifications but are NOT kept in the panel themselves —
+        // they only appear as native macOS notifications.
         if notification.meta.isPassive {
             notifications.removeAll {
-                $0.sessionId == notification.sessionId && !$0.meta.isPassive
+                $0.sessionId == notification.sessionId
             }
+            if pendingRequests.isEmpty && notifications.isEmpty {
+                DispatchQueue.main.async { self.onDismissPanel?() }
+            }
+            return
         }
         notifications.append(notification)
         trackSession(id: notification.sessionId, cwd: notification.cwd)
