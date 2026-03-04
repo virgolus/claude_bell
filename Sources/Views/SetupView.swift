@@ -9,6 +9,9 @@ struct SetupView: View {
     @State private var isRecording = false
     @State private var shortcutLabel = GlobalShortcut.shared.shortcutDescription
     @State private var selectedSound = RequestStore.selectedSound
+    @State private var showHookConfirm = false
+    @State private var showStatuslineConfirm = false
+    @State private var macOSNotifications = AppDefaults.shared.bool(forKey: "macOSNotificationsEnabled")
 
     var body: some View {
         ScrollView {
@@ -43,17 +46,25 @@ struct SetupView: View {
                         }
                     } else {
                         Button("Install Hooks") {
-                            do {
-                                try HookInstaller.install()
-                                installed = true
-                                showSuccess = true
-                                errorMessage = nil
-                            } catch {
-                                errorMessage = error.localizedDescription
-                            }
+                            showHookConfirm = true
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.orange)
+                        .alert("Install Hooks?", isPresented: $showHookConfirm) {
+                            Button("Install") {
+                                do {
+                                    try HookInstaller.install()
+                                    installed = true
+                                    showSuccess = true
+                                    errorMessage = nil
+                                } catch {
+                                    errorMessage = error.localizedDescription
+                                }
+                            }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("This will modify ~/.claude/settings.json to register Claude Bell hooks.")
+                        }
                     }
 
                     if let error = errorMessage {
@@ -92,15 +103,23 @@ struct SetupView: View {
                         }
                     } else {
                         Button("Install Status Line") {
-                            do {
-                                try StatuslineInstaller.install()
-                                statuslineInstalled = true
-                            } catch {
-                                errorMessage = error.localizedDescription
-                            }
+                            showStatuslineConfirm = true
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.blue)
+                        .alert("Install Status Line?", isPresented: $showStatuslineConfirm) {
+                            Button("Install") {
+                                do {
+                                    try StatuslineInstaller.install()
+                                    statuslineInstalled = true
+                                } catch {
+                                    errorMessage = error.localizedDescription
+                                }
+                            }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("This will modify ~/.claude/settings.json and create a status line script.")
+                        }
                     }
                 }
 
@@ -156,6 +175,21 @@ struct SetupView: View {
                             .font(.callout)
                             .foregroundStyle(.orange)
                     }
+                }
+
+                // MARK: - macOS Notifications
+                settingsSection(title: "macOS Notifications", icon: "bell.badge.fill", iconColor: .green) {
+                    Text("Show native macOS notification banners for events.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    Toggle("Enable macOS Notifications", isOn: $macOSNotifications)
+                        .onChange(of: macOSNotifications) { _, enabled in
+                            AppDefaults.shared.set(enabled, forKey: "macOSNotificationsEnabled")
+                            if enabled {
+                                NotificationManager.requestPermission()
+                            }
+                        }
                 }
 
                 // MARK: - Version

@@ -20,7 +20,7 @@ struct ClaudeBellApp: App {
             Label {
                 Text("Claude Bell")
             } icon: {
-                Image(systemName: store.badgeCount > 0 ? "bell.badge.fill" : "bell.fill")
+                Image(systemName: store.isMuted ? "bell.slash.fill" : (store.badgeCount > 0 ? "bell.badge.fill" : "bell.fill"))
             }
         }
         .menuBarExtraStyle(.window)
@@ -142,6 +142,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showContextMenu(near button: NSStatusBarButton) {
         let menu = NSMenu()
 
+        let muteTitle = RequestStore.shared.isMuted ? "Unmute" : "Mute"
+        let muteItem = NSMenuItem(title: muteTitle, action: #selector(toggleMute), keyEquivalent: "")
+        muteItem.target = self
+        menu.addItem(muteItem)
+
+        menu.addItem(.separator())
+
         let infoItem = NSMenuItem(title: "About Claude Bell", action: #selector(showAbout), keyEquivalent: "")
         infoItem.target = self
         menu.addItem(infoItem)
@@ -156,6 +163,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let event = NSApp.currentEvent {
             NSMenu.popUpContextMenu(menu, with: event, for: button)
         }
+    }
+
+    @objc private func toggleMute() {
+        RequestStore.shared.isMuted.toggle()
     }
 
     @objc private func showAbout() {

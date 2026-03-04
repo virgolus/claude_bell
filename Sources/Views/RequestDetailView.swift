@@ -79,8 +79,7 @@ struct RequestDetailView: View {
                             .font(.title2)
                             .foregroundStyle(.orange)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(request.projectName)
-                                .font(.title.weight(.bold))
+                            RenameableTitleView(text: request.projectName, sessionId: request.sessionId)
                             Text(isAskUserQuestion ? "Question" : isExitPlanMode ? "Plan Review" : request.toolName)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)

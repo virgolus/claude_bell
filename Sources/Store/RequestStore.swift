@@ -9,6 +9,9 @@ final class RequestStore: ObservableObject {
     @Published var pendingRequests: [PendingRequest] = []
     @Published var notifications: [NotificationEntry] = []
     @Published var sessions: [String: SessionInfo] = [:]
+    @Published var isMuted: Bool = AppDefaults.shared.bool(forKey: "isMuted") {
+        didSet { AppDefaults.shared.set(isMuted, forKey: "isMuted") }
+    }
 
     /// Set by ClaudeBellApp to auto-show the panel on new requests
     var onNewRequest: (() -> Void)?
@@ -141,10 +144,12 @@ final class RequestStore: ObservableObject {
     }
 
     private func playRequestSound() {
+        guard !isMuted else { return }
         NSSound(named: Self.selectedSound)?.play()
     }
 
     private func playNotificationSound() {
+        guard !isMuted else { return }
         NSSound(named: "Glass")?.play()
     }
 

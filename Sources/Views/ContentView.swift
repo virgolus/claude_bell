@@ -40,7 +40,6 @@ struct ContentView: View {
         }
         .frame(width: 900, height: NSScreen.main.map { $0.visibleFrame.height } ?? 650)
         .onAppear {
-            NotificationManager.requestPermission()
             autoSelectLatest()
         }
     }
@@ -177,8 +176,7 @@ struct ContentView: View {
                             .font(.title2)
                             .foregroundStyle(notification.meta.iconColor)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(notification.displayProjectName)
-                                .font(.title.weight(.bold))
+                            RenameableTitleView(text: notification.displayProjectName, sessionId: notification.sessionId)
                             HStack(spacing: 4) {
                                 Text(notification.displayTitle)
                                 Text("·")

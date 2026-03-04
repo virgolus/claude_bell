@@ -22,6 +22,7 @@ enum NotificationManager {
             print("[Notification] \(title): \(body)")
             return
         }
+        guard AppDefaults.shared.bool(forKey: "macOSNotificationsEnabled") else { return }
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
