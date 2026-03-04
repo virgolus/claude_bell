@@ -22,8 +22,12 @@ If the build fails, report the error and stop.
 
 ## 2. Update app bundle
 
+Copy the release binary and the SPM resource bundle (for changelog.json):
+
 ```bash
 cp .build/arm64-apple-macosx/release/ClaudeBell ClaudeBell.app/Contents/MacOS/ClaudeBell
+rm -rf ClaudeBell.app/ClaudeBell_ClaudeBell.bundle && mkdir -p ClaudeBell.app/ClaudeBell_ClaudeBell.bundle
+cp public/changelog.json ClaudeBell.app/ClaudeBell_ClaudeBell.bundle/changelog.json
 ```
 
 ## 3. Create distribution zip
