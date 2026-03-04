@@ -1,6 +1,10 @@
 Build a release version of ClaudeBell and deploy it to Vercel. Follow these steps exactly:
 
-## 1. Build release binary
+## 1. Increment version
+
+Read `Sources/App/AppVersion.swift` and increment the `build` number by 1. If the changes warrant it (new features, breaking changes), also bump the `current` version string. Use the Edit tool to update the file.
+
+## 2. Build release binary
 
 ```bash
 swift build -c release
@@ -8,7 +12,7 @@ swift build -c release
 
 Wait for the build to complete successfully before proceeding.
 
-## 2. Update the app bundle
+## 3. Update the app bundle
 
 Copy the release binary into the app bundle:
 
@@ -16,7 +20,7 @@ Copy the release binary into the app bundle:
 cp .build/arm64-apple-macosx/release/ClaudeBell ClaudeBell.app/Contents/MacOS/ClaudeBell
 ```
 
-## 3. Create the distribution zip
+## 4. Create the distribution zip
 
 Remove the old zip and create a new one from the updated app bundle:
 
@@ -25,7 +29,7 @@ rm -f public/ClaudeBell.zip
 zip -r public/ClaudeBell.zip ClaudeBell.app -x "*.DS_Store"
 ```
 
-## 4. Restart the app
+## 5. Restart the app
 
 Kill the running instance and relaunch with the new binary:
 
@@ -33,12 +37,12 @@ Kill the running instance and relaunch with the new binary:
 pkill -x ClaudeBell; sleep 1; open ClaudeBell.app
 ```
 
-## 5. Commit and push
+## 6. Commit and push
 
-Stage the updated zip (the binary in ClaudeBell.app/Contents/MacOS/ is in .gitignore, only the zip is tracked):
+Stage all changed files including the version bump and the updated zip:
 
 ```bash
-git add public/ClaudeBell.zip
+git add Sources/App/AppVersion.swift public/ClaudeBell.zip
 ```
 
 Then commit with a message describing what changed, push to origin, and deploy:
@@ -54,3 +58,4 @@ vercel --prod
 - The Vercel site serves the `public/` folder as a static site; `ClaudeBell.zip` is the download link
 - Only `public/ClaudeBell.zip` is tracked in git — the binary inside `ClaudeBell.app/Contents/MacOS/` is gitignored
 - Verify the build succeeds before creating the zip
+- Always increment the build number in `Sources/App/AppVersion.swift` before building

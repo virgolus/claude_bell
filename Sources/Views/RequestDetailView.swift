@@ -198,6 +198,8 @@ struct RequestDetailView: View {
 
     private func installKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            // Don't intercept keys when a text field is active (e.g. renaming a session)
+            if isTextFieldActive() { return event }
             switch event.keyCode {
             case 123: // left arrow
                 if isInFooter {

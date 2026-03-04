@@ -19,7 +19,13 @@ struct ContentView: View {
             if showSetup {
                 SetupView()
             } else if store.pendingRequests.isEmpty && store.notifications.isEmpty {
-                EmptyStateView()
+                VStack(spacing: 0) {
+                    EmptyStateView()
+                    if !store.sessions.isEmpty {
+                        sessionsSection
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 HStack(spacing: 0) {
                     sidebarList

@@ -157,6 +157,16 @@ struct SetupView: View {
                             .foregroundStyle(.orange)
                     }
                 }
+
+                // MARK: - Version
+                HStack {
+                    Spacer()
+                    Text("Claude Bell v\(AppVersion.current) (\(AppVersion.build))")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                }
+                .padding(.top, 8)
             }
             .padding()
         }

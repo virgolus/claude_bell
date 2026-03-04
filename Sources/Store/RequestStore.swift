@@ -116,6 +116,23 @@ final class RequestStore: ObservableObject {
         }
     }
 
+    /// Remove sessions that haven't been seen for a while and have no active notifications/requests.
+    func cleanupStaleSessions() {
+        let cutoff = Date().addingTimeInterval(-30 * 60) // 30 minutes
+        let staleIds = sessions.filter { _, info in
+            info.lastSeen < cutoff
+        }.map(\.key)
+
+        for id in staleIds {
+            // Only remove if no active notifications or requests for this session
+            let hasNotifications = notifications.contains { $0.sessionId == id }
+            let hasRequests = pendingRequests.contains { $0.sessionId == id }
+            if !hasNotifications && !hasRequests {
+                sessions.removeValue(forKey: id)
+            }
+        }
+    }
+
     static let availableSounds = ["Purr", "Blow", "Bottle", "Frog", "Funk", "Glass", "Hero", "Morse", "Ping", "Pop", "Sosumi", "Submarine", "Tink"]
 
     static var selectedSound: String {

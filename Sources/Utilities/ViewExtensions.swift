@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 extension View {
     @ViewBuilder
@@ -9,4 +10,10 @@ extension View {
             self
         }
     }
+}
+
+/// Returns true if the current first responder is a text input field.
+func isTextFieldActive() -> Bool {
+    guard let responder = NSApp.keyWindow?.firstResponder else { return false }
+    return responder is NSTextView || responder is NSTextField
 }

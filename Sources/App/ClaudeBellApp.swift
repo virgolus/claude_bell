@@ -63,7 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Esc to close panel
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 53 {
+            if event.keyCode == 53 && !isTextFieldActive() {
                 self?.dismissPanel()
                 return nil
             }
@@ -73,6 +73,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Wire up dismiss callback
         RequestStore.shared.onDismissPanel = { [weak self] in
             self?.dismissPanel()
+        }
+
+        // Periodically clean up stale sessions (every 5 minutes)
+        Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { _ in
+            Task { @MainActor in
+                RequestStore.shared.cleanupStaleSessions()
+            }
         }
 
         // Global shortcut to toggle panel
@@ -154,7 +161,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func showAbout() {
         let alert = NSAlert()
         alert.messageText = "Claude Bell"
-        alert.informativeText = "Menu bar app for Claude Code permission requests and notifications.\n\nVersion 1.0\nShortcut: \(GlobalShortcut.shared.shortcutDescription)\nServer: localhost:19485"
+        alert.informativeText = "Menu bar app for Claude Code permission requests and notifications.\n\nVersion \(AppVersion.current) (\(AppVersion.build))\nShortcut: \(GlobalShortcut.shared.shortcutDescription)\nServer: localhost:19485"
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
         alert.runModal()
