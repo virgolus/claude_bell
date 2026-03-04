@@ -14,10 +14,13 @@ Wait for the build to complete successfully before proceeding.
 
 ## 3. Update the app bundle
 
-Copy the release binary into the app bundle:
+Copy the release binary and the SPM resource bundle into the app bundle:
 
 ```bash
 cp .build/arm64-apple-macosx/release/ClaudeBell ClaudeBell.app/Contents/MacOS/ClaudeBell
+rm -rf ClaudeBell.app/ClaudeBell_ClaudeBell.bundle
+mkdir -p ClaudeBell.app/ClaudeBell_ClaudeBell.bundle
+cp public/changelog.json ClaudeBell.app/ClaudeBell_ClaudeBell.bundle/changelog.json
 ```
 
 ## 4. Create the distribution zip

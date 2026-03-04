@@ -25,8 +25,10 @@ swift build
 # 1. Build release
 swift build -c release
 
-# 2. Copia il binario nel bundle app
+# 2. Copia il binario e il resource bundle nell'app
 cp .build/arm64-apple-macosx/release/ClaudeBell ClaudeBell.app/Contents/MacOS/ClaudeBell
+rm -rf ClaudeBell.app/ClaudeBell_ClaudeBell.bundle && mkdir -p ClaudeBell.app/ClaudeBell_ClaudeBell.bundle
+cp public/changelog.json ClaudeBell.app/ClaudeBell_ClaudeBell.bundle/changelog.json
 
 # 3. Crea lo zip per il download
 rm -f public/ClaudeBell.zip
@@ -53,6 +55,8 @@ vercel --prod
 ```bash
 swift build -c release
 cp .build/arm64-apple-macosx/release/ClaudeBell ClaudeBell.app/Contents/MacOS/ClaudeBell
+rm -rf ClaudeBell.app/ClaudeBell_ClaudeBell.bundle && mkdir -p ClaudeBell.app/ClaudeBell_ClaudeBell.bundle
+cp public/changelog.json ClaudeBell.app/ClaudeBell_ClaudeBell.bundle/changelog.json
 rm -f public/ClaudeBell.zip
 zip -r public/ClaudeBell.zip ClaudeBell.app -x "*.DS_Store"
 pkill -x ClaudeBell; sleep 1; open ClaudeBell.app
