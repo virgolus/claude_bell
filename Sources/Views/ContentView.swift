@@ -9,6 +9,7 @@ struct ContentView: View {
     @EnvironmentObject var store: RequestStore
     @State private var selectedItem: SidebarItem?
     @State private var showSetup = false
+    @State private var showWhatsNew = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -41,6 +42,15 @@ struct ContentView: View {
         .frame(width: 900, height: NSScreen.main.map { $0.visibleFrame.height } ?? 650)
         .onAppear {
             autoSelectLatest()
+            checkWhatsNew()
+        }
+        .sheet(isPresented: $showWhatsNew) {
+            if let releases = loadChangelog() {
+                WhatsNewView(releases: releases) {
+                    AppDefaults.shared.set(AppVersion.current, forKey: "lastSeenVersion")
+                    showWhatsNew = false
+                }
+            }
         }
     }
 
@@ -345,5 +355,26 @@ struct ContentView: View {
     private func autoSelectIfNone() {
         guard selectedItem == nil else { return }
         autoSelectLatest()
+    }
+
+    private func checkWhatsNew() {
+        let lastSeen = AppDefaults.shared.string(forKey: "lastSeenVersion")
+        if lastSeen != AppVersion.current {
+            showWhatsNew = true
+        }
+    }
+
+    private func loadChangelog() -> [ChangelogRelease]? {
+        guard let url = Bundle.module.url(forResource: "changelog", withExtension: "json"),
+              let data = try? Data(contentsOf: url) else { return nil }
+        let all = (try? JSONDecoder().decode([ChangelogRelease].self, from: data)) ?? []
+        let lastSeen = AppDefaults.shared.string(forKey: "lastSeenVersion")
+        if let lastSeen {
+            // Show only releases newer than lastSeen
+            let newer = all.filter { $0.version != lastSeen }
+            return newer.isEmpty ? [all[0]] : newer
+        }
+        // First launch — show latest only
+        return all.isEmpty ? nil : [all[0]]
     }
 }

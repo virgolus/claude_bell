@@ -903,6 +903,49 @@
     </section>
 </div>
 
+<!-- Changelog -->
+<div class="container" id="changelog">
+    <section class="section">
+        <div class="section-label">Updates</div>
+        <h2 class="section-title">Changelog</h2>
+        <p class="section-desc">
+            What's new in each release.
+        </p>
+        <div id="changelog-entries"></div>
+    </section>
+</div>
+
+<script>
+(function() {
+    const typeColors = { new: '#22c55e', changed: '#3b82f6', fixed: '#f97316', removed: '#ef4444' };
+    const typeLabels = { new: 'New', changed: 'Changed', fixed: 'Fixed', removed: 'Removed' };
+
+    fetch('./changelog.json')
+        .then(r => r.json())
+        .then(releases => {
+            const container = document.getElementById('changelog-entries');
+            container.innerHTML = releases.map(release => `
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:20px;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                        <span style="font-size:20px;font-weight:800;">v${release.version}</span>
+                        <span style="font-size:13px;color:var(--text-secondary);">${release.date}</span>
+                    </div>
+                    <p style="font-size:15px;color:var(--text-secondary);margin-bottom:16px;">${release.highlights}</p>
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        ${release.changes.map(c => `
+                            <div style="display:flex;align-items:baseline;gap:10px;">
+                                <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:${typeColors[c.type]};background:${typeColors[c.type]}1f;min-width:64px;text-align:center;">${typeLabels[c.type]}</span>
+                                <span style="font-size:14px;color:var(--text);">${c.text}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        })
+        .catch(() => {});
+})();
+</script>
+
 <!-- Footer -->
 <footer>
     <div class="footer-logo">

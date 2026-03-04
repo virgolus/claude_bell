@@ -1,0 +1,14 @@
+[
+  {
+    "version": "1.2.0",
+    "build": 3,
+    "date": "2026-03-04",
+    "highlights": "Mute toggle, renameable sessions, install confirmations",
+    "changes": [
+      { "type": "new", "text": "Mute/unmute from right-click menu with bell.slash icon" },
+      { "type": "new", "text": "Rename sessions by clicking the project name in detail views" },
+      { "type": "new", "text": "Confirmation dialog before installing hooks and statusline" },
+      { "type": "changed", "text": "macOS notifications disabled by default, opt-in via Settings" }
+    ]
+  }
+]

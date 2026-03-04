@@ -14,7 +14,8 @@ let package = Package(
             dependencies: [
                 .product(name: "Hummingbird", package: "hummingbird"),
             ],
-            path: "Sources"
+            path: "Sources",
+            resources: [.copy("Resources/changelog.json")]
         ),
         .testTarget(
             name: "ClaudeBellTests",
