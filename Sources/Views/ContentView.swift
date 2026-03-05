@@ -202,7 +202,7 @@ struct ContentView: View {
 
                     // Message
                     if !notification.message.isEmpty {
-                        MarkdownText(notification.message, font: bodyStyle.bodyFont(), textColor: bodyStyle.fontColor == .primary ? nil : bodyStyle.fontColor)
+                        MarkdownText(notification.message, font: bodyStyle.bodyFont(), textColor: bodyStyle.fontColor)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(10)
                             .background(bodyStyle.backgroundColor)

@@ -27,11 +27,13 @@ final class BodyStyleSettings: ObservableObject {
         didSet { AppDefaults.shared.set(fontName, forKey: "bodyFontName") }
     }
 
-    static let defaultBackgroundColor = Color.secondary.opacity(0.06)
+    /// Concrete default that round-trips through hex (matches the look of Color.secondary.opacity(0.06))
+    static let defaultBackgroundColor = Color(.sRGB, red: 0.5, green: 0.5, blue: 0.5, opacity: 0.06)
+    static let defaultFontColor = Color(.sRGB, red: 0.0, green: 0.0, blue: 0.0, opacity: 1.0)
 
     private init() {
         self.backgroundColor = Self.loadColor(forKey: "bodyBackgroundColor") ?? Self.defaultBackgroundColor
-        self.fontColor = Self.loadColor(forKey: "bodyFontColor") ?? .primary
+        self.fontColor = Self.loadColor(forKey: "bodyFontColor") ?? Self.defaultFontColor
         self.fontName = AppDefaults.shared.string(forKey: "bodyFontName")
     }
 
@@ -48,7 +50,7 @@ final class BodyStyleSettings: ObservableObject {
 
     func resetFontColor() {
         AppDefaults.shared.removeObject(forKey: "bodyFontColor")
-        fontColor = .primary
+        fontColor = Self.defaultFontColor
     }
 
     func resetFontName() {
