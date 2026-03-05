@@ -17,23 +17,47 @@ final class BodyStyleSettings: ObservableObject {
         ("Palatino", "Palatino"),
     ]
 
-    @Published var backgroundColor: Color {
-        didSet { saveColor(backgroundColor, forKey: "bodyBackgroundColor") }
+    /// Whether the user has set a custom background color (vs system default).
+    @Published var hasCustomBackground: Bool
+    /// Whether the user has set a custom font color (vs system default).
+    @Published var hasCustomFontColor: Bool
+
+    /// The custom background color (only used when `hasCustomBackground` is true).
+    @Published var customBackgroundColor: Color {
+        didSet {
+            if hasCustomBackground { saveColor(customBackgroundColor, forKey: "bodyBackgroundColor") }
+        }
     }
-    @Published var fontColor: Color {
-        didSet { saveColor(fontColor, forKey: "bodyFontColor") }
+    /// The custom font color (only used when `hasCustomFontColor` is true).
+    @Published var customFontColor: Color {
+        didSet {
+            if hasCustomFontColor { saveColor(customFontColor, forKey: "bodyFontColor") }
+        }
     }
+
     @Published var fontName: String? {
         didSet { AppDefaults.shared.set(fontName, forKey: "bodyFontName") }
     }
 
-    /// Concrete default that round-trips through hex (matches the look of Color.secondary.opacity(0.06))
-    static let defaultBackgroundColor = Color(.sRGB, red: 0.5, green: 0.5, blue: 0.5, opacity: 0.06)
-    static let defaultFontColor = Color(.sRGB, red: 0.0, green: 0.0, blue: 0.0, opacity: 1.0)
+    /// The effective background color: custom or system default.
+    var backgroundColor: Color {
+        hasCustomBackground ? customBackgroundColor : Color.secondary.opacity(0.06)
+    }
+
+    /// The effective font color: custom or nil (= use system .primary via foregroundStyle inheritance).
+    var fontColor: Color? {
+        hasCustomFontColor ? customFontColor : nil
+    }
 
     private init() {
-        self.backgroundColor = Self.loadColor(forKey: "bodyBackgroundColor") ?? Self.defaultBackgroundColor
-        self.fontColor = Self.loadColor(forKey: "bodyFontColor") ?? Self.defaultFontColor
+        let savedBg = Self.loadColor(forKey: "bodyBackgroundColor")
+        self.hasCustomBackground = savedBg != nil
+        self.customBackgroundColor = savedBg ?? Color(.sRGB, red: 0.5, green: 0.5, blue: 0.5, opacity: 0.3)
+
+        let savedFont = Self.loadColor(forKey: "bodyFontColor")
+        self.hasCustomFontColor = savedFont != nil
+        self.customFontColor = savedFont ?? .white
+
         self.fontName = AppDefaults.shared.string(forKey: "bodyFontName")
     }
 
@@ -43,14 +67,26 @@ final class BodyStyleSettings: ObservableObject {
         return Font.custom(name, size: NSFont.preferredFont(forTextStyle: nsFontStyle(size)).pointSize)
     }
 
+    func setCustomBackground(_ color: Color) {
+        hasCustomBackground = true
+        customBackgroundColor = color
+        saveColor(color, forKey: "bodyBackgroundColor")
+    }
+
+    func setCustomFontColor(_ color: Color) {
+        hasCustomFontColor = true
+        customFontColor = color
+        saveColor(color, forKey: "bodyFontColor")
+    }
+
     func resetBackgroundColor() {
         AppDefaults.shared.removeObject(forKey: "bodyBackgroundColor")
-        backgroundColor = Self.defaultBackgroundColor
+        hasCustomBackground = false
     }
 
     func resetFontColor() {
         AppDefaults.shared.removeObject(forKey: "bodyFontColor")
-        fontColor = Self.defaultFontColor
+        hasCustomFontColor = false
     }
 
     func resetFontName() {

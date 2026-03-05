@@ -209,6 +209,7 @@ struct ContentView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
 
+
                     // Transcript context (expanded by default, skip for passive types since message already shown above)
                     if !notification.transcriptPath.isEmpty && !notification.meta.isPassive {
                         ConversationContextView(transcriptPath: notification.transcriptPath, startExpanded: true)

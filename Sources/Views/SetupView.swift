@@ -184,13 +184,21 @@ struct SetupView: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
 
-                    InlineColorPicker(label: "Background:", color: $bodyStyle.backgroundColor) {
-                        bodyStyle.resetBackgroundColor()
-                    }
+                    InlineColorPicker(
+                        label: "Background:",
+                        color: $bodyStyle.customBackgroundColor,
+                        isCustom: bodyStyle.hasCustomBackground,
+                        onSelect: { bodyStyle.setCustomBackground($0) },
+                        onReset: { bodyStyle.resetBackgroundColor() }
+                    )
 
-                    InlineColorPicker(label: "Font Color:", color: $bodyStyle.fontColor) {
-                        bodyStyle.resetFontColor()
-                    }
+                    InlineColorPicker(
+                        label: "Font Color:",
+                        color: $bodyStyle.customFontColor,
+                        isCustom: bodyStyle.hasCustomFontColor,
+                        onSelect: { bodyStyle.setCustomFontColor($0) },
+                        onReset: { bodyStyle.resetFontColor() }
+                    )
 
                     HStack {
                         Picker("Font:", selection: Binding(
@@ -209,9 +217,8 @@ struct SetupView: View {
                     }
 
                     // Preview
-                    Text("The quick brown fox jumps over the lazy dog.")
+                    previewText
                         .font(bodyStyle.bodyFont(size: .body))
-                        .foregroundStyle(bodyStyle.fontColor)
                         .padding(8)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(bodyStyle.backgroundColor)
@@ -251,6 +258,16 @@ struct SetupView: View {
             GlobalShortcut.shared.restart()
             shortcutLabel = GlobalShortcut.shared.shortcutDescription
         }))
+    }
+
+    @ViewBuilder
+    private var previewText: some View {
+        let text = Text("The quick brown fox jumps over the lazy dog.")
+        if let fc = bodyStyle.fontColor {
+            text.foregroundStyle(fc)
+        } else {
+            text
+        }
     }
 
     // MARK: - Section builder
@@ -316,6 +333,8 @@ struct ShortcutRecorder: NSViewRepresentable {
 private struct InlineColorPicker: View {
     let label: String
     @Binding var color: Color
+    let isCustom: Bool
+    let onSelect: (Color) -> Void
     let onReset: () -> Void
 
     private static let presets: [Color] = [
@@ -334,19 +353,26 @@ private struct InlineColorPicker: View {
                 Text(label)
                     .frame(width: 80, alignment: .leading)
 
-                // Current color swatch
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(color)
-                    .frame(width: 24, height: 24)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(Color.secondary.opacity(0.4), lineWidth: 1)
-                    )
+                // Current color indicator
+                if isCustom {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(color)
+                        .frame(width: 24, height: 24)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(Color.secondary.opacity(0.4), lineWidth: 1)
+                        )
+                } else {
+                    Text("Auto")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 24, height: 24)
+                }
 
                 // Preset swatches
                 ForEach(Array(Self.presets.enumerated()), id: \.offset) { _, preset in
-                    SwatchButton(color: preset, isSelected: false) {
-                        color = preset
+                    SwatchButton(color: preset) {
+                        onSelect(preset)
                         hexText = preset.toHex() ?? ""
                     }
                 }
@@ -374,7 +400,7 @@ private struct InlineColorPicker: View {
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 80)
                         .onSubmit {
-                            if let c = Color(hex: hexText) { color = c }
+                            if let c = Color(hex: hexText) { onSelect(c) }
                         }
                 }
                 .padding(.leading, 80)
@@ -385,7 +411,6 @@ private struct InlineColorPicker: View {
 
 private struct SwatchButton: View {
     let color: Color
-    let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
