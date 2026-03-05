@@ -184,16 +184,12 @@ struct SetupView: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
 
-                    HStack {
-                        ColorPicker("Background:", selection: $bodyStyle.backgroundColor, supportsOpacity: true)
-                        Button("Reset") { bodyStyle.resetBackgroundColor() }
-                            .font(.caption)
+                    InlineColorPicker(label: "Background:", color: $bodyStyle.backgroundColor) {
+                        bodyStyle.resetBackgroundColor()
                     }
 
-                    HStack {
-                        ColorPicker("Font Color:", selection: $bodyStyle.fontColor, supportsOpacity: false)
-                        Button("Reset") { bodyStyle.resetFontColor() }
-                            .font(.caption)
+                    InlineColorPicker(label: "Font Color:", color: $bodyStyle.fontColor) {
+                        bodyStyle.resetFontColor()
                     }
 
                     HStack {
@@ -312,6 +308,97 @@ struct ShortcutRecorder: NSViewRepresentable {
                 nsView.window?.makeFirstResponder(nsView)
             }
         }
+    }
+}
+
+// MARK: - Inline Color Picker (no external window)
+
+private struct InlineColorPicker: View {
+    let label: String
+    @Binding var color: Color
+    let onReset: () -> Void
+
+    private static let presets: [Color] = [
+        .black, .white,
+        Color(.sRGB, red: 0.5, green: 0.5, blue: 0.5, opacity: 1),
+        .red, .orange, .yellow, .green, .mint, .cyan, .blue, .indigo, .purple, .pink,
+        Color(.sRGB, red: 0.5, green: 0.5, blue: 0.5, opacity: 0.06),
+    ]
+
+    @State private var hexText: String = ""
+    @State private var showHex = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text(label)
+                    .frame(width: 80, alignment: .leading)
+
+                // Current color swatch
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(color)
+                    .frame(width: 24, height: 24)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(Color.secondary.opacity(0.4), lineWidth: 1)
+                    )
+
+                // Preset swatches
+                ForEach(Array(Self.presets.enumerated()), id: \.offset) { _, preset in
+                    SwatchButton(color: preset, isSelected: false) {
+                        color = preset
+                        hexText = preset.toHex() ?? ""
+                    }
+                }
+
+                Button {
+                    showHex.toggle()
+                    if showHex { hexText = color.toHex() ?? "" }
+                } label: {
+                    Image(systemName: "number")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+
+                Button("Reset") { onReset() }
+                    .font(.caption)
+            }
+
+            if showHex {
+                HStack(spacing: 6) {
+                    Text("#")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                    TextField("Hex", text: $hexText)
+                        .font(.system(.caption, design: .monospaced))
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                        .onSubmit {
+                            if let c = Color(hex: hexText) { color = c }
+                        }
+                }
+                .padding(.leading, 80)
+            }
+        }
+    }
+}
+
+private struct SwatchButton: View {
+    let color: Color
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            RoundedRectangle(cornerRadius: 3)
+                .fill(color)
+                .frame(width: 16, height: 16)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3)
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 0.5)
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
 

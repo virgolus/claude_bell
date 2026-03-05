@@ -104,9 +104,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let window = note.object as? NSWindow else { return }
             let name = String(describing: type(of: window))
             if name.contains("MenuBarExtra") || name.contains("StatusItemWindow") || name.contains("_NSPopoverWindow") {
-                // Keep panel above normal windows but below the color picker when it's open
-                let colorPanelVisible = NSColorPanel.sharedColorPanelExists && NSColorPanel.shared.isVisible
-                window.level = colorPanelVisible ? .normal : .floating
+                window.level = .floating
                 // Adjust position on next run loop to ensure frame is settled
                 DispatchQueue.main.async {
                     guard let screen = window.screen ?? NSScreen.main else { return }
@@ -117,34 +115,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     if frame.origin != window.frame.origin {
                         window.setFrameOrigin(frame.origin)
                     }
-                }
-            }
-        }
-
-        // When the color picker opens, lower panel level so picker isn't hidden behind it
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.didBecomeKeyNotification,
-            object: NSColorPanel.shared,
-            queue: .main
-        ) { _ in
-            for window in NSApp.windows {
-                let name = String(describing: type(of: window))
-                if name.contains("MenuBarExtra") || name.contains("StatusItemWindow") || name.contains("_NSPopoverWindow") {
-                    window.level = .normal
-                }
-            }
-        }
-
-        // Restore floating level when color picker closes
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.willCloseNotification,
-            object: NSColorPanel.shared,
-            queue: .main
-        ) { _ in
-            for window in NSApp.windows {
-                let name = String(describing: type(of: window))
-                if name.contains("MenuBarExtra") || name.contains("StatusItemWindow") || name.contains("_NSPopoverWindow") {
-                    window.level = .floating
                 }
             }
         }
