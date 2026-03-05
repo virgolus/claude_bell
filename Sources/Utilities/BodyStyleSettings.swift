@@ -19,17 +19,20 @@ final class BodyStyleSettings: ObservableObject {
             }
         }
 
-        var colorScheme: ColorScheme? {
+        var nsAppearance: NSAppearance? {
             switch self {
             case .system: return nil
-            case .light: return .light
-            case .dark: return .dark
+            case .light: return NSAppearance(named: .aqua)
+            case .dark: return NSAppearance(named: .darkAqua)
             }
         }
     }
 
     @Published var appearance: Appearance {
-        didSet { AppDefaults.shared.set(appearance.rawValue, forKey: "appAppearance") }
+        didSet {
+            AppDefaults.shared.set(appearance.rawValue, forKey: "appAppearance")
+            applyAppearance()
+        }
     }
 
     static let availableFonts: [(label: String, name: String?)] = [
@@ -88,6 +91,11 @@ final class BodyStyleSettings: ObservableObject {
 
         let savedAppearance = AppDefaults.shared.string(forKey: "appAppearance") ?? "system"
         self.appearance = Appearance(rawValue: savedAppearance) ?? .system
+        applyAppearance()
+    }
+
+    func applyAppearance() {
+        NSApp.appearance = appearance.nsAppearance
     }
 
     /// Returns the body font at the given size style, using the user's chosen font family.

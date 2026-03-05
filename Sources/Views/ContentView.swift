@@ -41,7 +41,6 @@ struct ContentView: View {
             }
         }
         .frame(width: 900, height: NSScreen.main.map { $0.visibleFrame.height } ?? 650)
-        .preferredColorScheme(bodyStyle.appearance.colorScheme)
         .onAppear {
             autoSelectLatest()
             checkWhatsNew()
