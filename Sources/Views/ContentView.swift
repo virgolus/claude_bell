@@ -7,6 +7,7 @@ enum SidebarItem: Hashable {
 
 struct ContentView: View {
     @EnvironmentObject var store: RequestStore
+    @ObservedObject private var bodyStyle = BodyStyleSettings.shared
     @State private var selectedItem: SidebarItem?
     @State private var showSetup = false
     @State private var showWhatsNew = false
@@ -201,10 +202,10 @@ struct ContentView: View {
 
                     // Message
                     if !notification.message.isEmpty {
-                        MarkdownText(notification.message, font: .title3)
+                        MarkdownText(notification.message, font: bodyStyle.bodyFont(), textColor: bodyStyle.fontColor == .primary ? nil : bodyStyle.fontColor)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(10)
-                            .background(Color.secondary.opacity(0.06))
+                            .background(bodyStyle.backgroundColor)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
 

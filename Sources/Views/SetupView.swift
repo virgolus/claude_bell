@@ -12,6 +12,7 @@ struct SetupView: View {
     @State private var showHookConfirm = false
     @State private var showStatuslineConfirm = false
     @State private var macOSNotifications = AppDefaults.shared.bool(forKey: "macOSNotificationsEnabled")
+    @ObservedObject private var bodyStyle = BodyStyleSettings.shared
 
     var body: some View {
         ScrollView {
@@ -175,6 +176,50 @@ struct SetupView: View {
                             .font(.callout)
                             .foregroundStyle(.orange)
                     }
+                }
+
+                // MARK: - Notification Style
+                settingsSection(title: "Notification Style", icon: "textformat", iconColor: .cyan) {
+                    Text("Customize the appearance of notification body text.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    HStack {
+                        ColorPicker("Background:", selection: $bodyStyle.backgroundColor, supportsOpacity: true)
+                        Button("Reset") { bodyStyle.resetBackgroundColor() }
+                            .font(.caption)
+                    }
+
+                    HStack {
+                        ColorPicker("Font Color:", selection: $bodyStyle.fontColor, supportsOpacity: false)
+                        Button("Reset") { bodyStyle.resetFontColor() }
+                            .font(.caption)
+                    }
+
+                    HStack {
+                        Picker("Font:", selection: Binding(
+                            get: { bodyStyle.fontName ?? "" },
+                            set: { bodyStyle.fontName = $0.isEmpty ? nil : $0 }
+                        )) {
+                            ForEach(BodyStyleSettings.availableFonts, id: \.label) { font in
+                                Text(font.label)
+                                    .tag(font.name ?? "")
+                            }
+                        }
+                        .frame(width: 260)
+
+                        Button("Reset") { bodyStyle.resetFontName() }
+                            .font(.caption)
+                    }
+
+                    // Preview
+                    Text("The quick brown fox jumps over the lazy dog.")
+                        .font(bodyStyle.bodyFont(size: .body))
+                        .foregroundStyle(bodyStyle.fontColor)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(bodyStyle.backgroundColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
 
                 // MARK: - macOS Notifications

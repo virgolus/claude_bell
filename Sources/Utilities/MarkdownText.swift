@@ -4,10 +4,12 @@ import SwiftUI
 struct MarkdownText: View {
     let content: String
     let font: Font
+    let textColor: Color?
 
-    init(_ content: String, font: Font = .body) {
+    init(_ content: String, font: Font = .body, textColor: Color? = nil) {
         self.content = content
         self.font = font
+        self.textColor = textColor
     }
 
     var body: some View {
@@ -101,7 +103,11 @@ struct MarkdownText: View {
                 return result + Text(s).bold().font(.system(.body, design: .monospaced)).foregroundColor(.accentColor)
             }
         }
-        rendered.font(f).textSelection(.enabled)
+        if let textColor {
+            rendered.font(f).foregroundStyle(textColor).textSelection(.enabled)
+        } else {
+            rendered.font(f).textSelection(.enabled)
+        }
     }
 
     // MARK: - Inline span parsing
