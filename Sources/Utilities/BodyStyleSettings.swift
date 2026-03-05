@@ -6,6 +6,32 @@ import AppKit
 final class BodyStyleSettings: ObservableObject {
     static let shared = BodyStyleSettings()
 
+    enum Appearance: String, CaseIterable {
+        case system = "system"
+        case light = "light"
+        case dark = "dark"
+
+        var label: String {
+            switch self {
+            case .system: return "System"
+            case .light: return "Light"
+            case .dark: return "Dark"
+            }
+        }
+
+        var colorScheme: ColorScheme? {
+            switch self {
+            case .system: return nil
+            case .light: return .light
+            case .dark: return .dark
+            }
+        }
+    }
+
+    @Published var appearance: Appearance {
+        didSet { AppDefaults.shared.set(appearance.rawValue, forKey: "appAppearance") }
+    }
+
     static let availableFonts: [(label: String, name: String?)] = [
         ("System Default", nil),
         ("SF Mono", "SFMono-Regular"),
@@ -59,6 +85,9 @@ final class BodyStyleSettings: ObservableObject {
         self.customFontColor = savedFont ?? .white
 
         self.fontName = AppDefaults.shared.string(forKey: "bodyFontName")
+
+        let savedAppearance = AppDefaults.shared.string(forKey: "appAppearance") ?? "system"
+        self.appearance = Appearance(rawValue: savedAppearance) ?? .system
     }
 
     /// Returns the body font at the given size style, using the user's chosen font family.

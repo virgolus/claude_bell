@@ -184,6 +184,13 @@ struct SetupView: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
 
+                    Picker("Appearance:", selection: $bodyStyle.appearance) {
+                        ForEach(BodyStyleSettings.Appearance.allCases, id: \.self) { mode in
+                            Text(mode.label).tag(mode)
+                        }
+                    }
+                    .frame(width: 220)
+
                     InlineColorPicker(
                         label: "Background:",
                         color: $bodyStyle.customBackgroundColor,
