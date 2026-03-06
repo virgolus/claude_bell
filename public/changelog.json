@@ -1,14 +1,15 @@
 [
   {
     "version": "1.4.0",
-    "build": 9,
+    "build": 11,
     "date": "2026-03-06",
-    "highlights": "Notification body style customization and dark theme",
+    "highlights": "Notification body style customization, dark theme, consistent styling across all views",
     "changes": [
       { "type": "new", "text": "Customizable notification body: background color, font color, and font type" },
       { "type": "new", "text": "Appearance toggle (System / Light / Dark) to force theme independently from macOS" },
       { "type": "new", "text": "Inline color swatches with hex input for color selection" },
-      { "type": "new", "text": "Live preview of style settings in the Settings panel" }
+      { "type": "new", "text": "Live preview of style settings in the Settings panel" },
+      { "type": "changed", "text": "Body style settings now apply to all notification types: questions, plans, tool inputs, and text responses" }
     ]
   },
   {
