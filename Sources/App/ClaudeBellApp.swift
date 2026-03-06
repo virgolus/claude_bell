@@ -95,7 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.setupStatusItemMenu()
         }
 
-        // Adjust panel window level and keep it on screen
+        // Adjust panel window level and position based on panel position setting
         NotificationCenter.default.addObserver(
             forName: NSWindow.didBecomeKeyNotification,
             object: nil,
@@ -109,11 +109,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 DispatchQueue.main.async {
                     guard let screen = window.screen ?? NSScreen.main else { return }
                     let visible = screen.visibleFrame
-                    var frame = window.frame
-                    if frame.minX < visible.minX { frame.origin.x = visible.minX }
-                    if frame.maxX > visible.maxX { frame.origin.x = visible.maxX - frame.width }
-                    if frame.origin != window.frame.origin {
-                        window.setFrameOrigin(frame.origin)
+                    let position = BodyStyleSettings.shared.panelPosition
+
+                    switch position {
+                    case .menuBar:
+                        var frame = window.frame
+                        if frame.minX < visible.minX { frame.origin.x = visible.minX }
+                        if frame.maxX > visible.maxX { frame.origin.x = visible.maxX - frame.width }
+                        if frame.origin != window.frame.origin {
+                            window.setFrameOrigin(frame.origin)
+                        }
+                    case .left:
+                        let frame = NSRect(x: visible.minX, y: visible.minY, width: window.frame.width, height: visible.height)
+                        window.setFrame(frame, display: true)
+                    case .right:
+                        let frame = NSRect(x: visible.maxX - window.frame.width, y: visible.minY, width: window.frame.width, height: visible.height)
+                        window.setFrame(frame, display: true)
+                    case .fullscreen:
+                        window.setFrame(visible, display: true)
                     }
                 }
             }

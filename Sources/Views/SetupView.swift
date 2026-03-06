@@ -232,6 +232,20 @@ struct SetupView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
 
+                // MARK: - Panel Position
+                settingsSection(title: "Panel Position", icon: "macwindow", iconColor: .teal) {
+                    Text("Choose where the panel appears on screen.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    Picker("Position:", selection: $bodyStyle.panelPosition) {
+                        ForEach(BodyStyleSettings.PanelPosition.allCases, id: \.self) { pos in
+                            Text(pos.label).tag(pos)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
                 // MARK: - macOS Notifications
                 settingsSection(title: "macOS Notifications", icon: "bell.badge.fill", iconColor: .green) {
                     Text("Show native macOS notification banners for events.")

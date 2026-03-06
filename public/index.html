@@ -632,134 +632,160 @@
         </div>
 
         <div class="arch-svg-wrap">
-            <svg viewBox="0 0 800 600" width="800" height="600" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif">
+            <svg viewBox="0 0 800 480" width="800" height="480" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif">
+                <style>
+                    @keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+                    @keyframes flowIn { from{stroke-dashoffset:16} to{stroke-dashoffset:0} }
+                    @keyframes flowR { from{stroke-dashoffset:14} to{stroke-dashoffset:0} }
+                    .spoke { stroke-dasharray:4 4; animation:flowIn 1s linear infinite; }
+                    .inner { stroke-dasharray:4 3; animation:flowR .8s linear infinite; }
+                    .blink { animation:pulse 2.5s ease-in-out infinite; }
+                </style>
                 <defs>
-                    <linearGradient id="glow-orange" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stop-color="#f97316" stop-opacity="0.15"/>
-                        <stop offset="100%" stop-color="#f97316" stop-opacity="0"/>
+                    <linearGradient id="og" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#f97316"/><stop offset="100%" stop-color="#fb923c"/></linearGradient>
+                    <linearGradient id="hubBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#f97316" stop-opacity=".45"/>
+                        <stop offset="50%" stop-color="#a855f7" stop-opacity=".25"/>
+                        <stop offset="100%" stop-color="#3b82f6" stop-opacity=".45"/>
                     </linearGradient>
-                    <linearGradient id="arrow-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stop-color="#f97316"/>
-                        <stop offset="100%" stop-color="#a855f7"/>
+                    <linearGradient id="hubFill" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#1c1c30" stop-opacity=".97"/>
+                        <stop offset="100%" stop-color="#121220" stop-opacity=".99"/>
                     </linearGradient>
-                    <filter id="glow">
-                        <feGaussianBlur stdDeviation="6" result="blur"/>
-                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                    </filter>
-                    <marker id="arrowDown" markerWidth="10" markerHeight="7" refX="5" refY="3.5" orient="auto">
-                        <polygon points="0 0, 10 3.5, 0 7" fill="#f97316"/>
-                    </marker>
-                    <marker id="arrowRight" markerWidth="10" markerHeight="7" refX="5" refY="3.5" orient="auto">
-                        <polygon points="0 0, 10 3.5, 0 7" fill="#22c55e"/>
-                    </marker>
+                    <radialGradient id="hubGlow" cx="50%" cy="30%" r="60%">
+                        <stop offset="0%" stop-color="#f97316" stop-opacity=".06"/>
+                        <stop offset="50%" stop-color="#a855f7" stop-opacity=".03"/>
+                        <stop offset="100%" stop-color="transparent"/>
+                    </radialGradient>
+                    <filter id="s1" x="-8%" y="-10%" width="116%" height="126%"><feDropShadow dx="0" dy="2" stdDeviation="5" flood-color="#000" flood-opacity=".45"/></filter>
+                    <filter id="s2" x="-4%" y="-4%" width="108%" height="112%"><feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#000" flood-opacity=".5"/></filter>
+                    <marker id="ag" markerWidth="7" markerHeight="5" refX="5" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#22c55e" opacity=".8"/></marker>
+                    <marker id="ab" markerWidth="7" markerHeight="5" refX="5" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#3b82f6" opacity=".8"/></marker>
                 </defs>
 
-                <!-- Top: Multiple Claude Code terminal sessions -->
-                <g transform="translate(100, 28)">
-                    <rect x="-55" y="-18" width="110" height="36" rx="8" fill="#12121a" stroke="#f97316" stroke-width="1.2"/>
-                    <text x="0" y="4" text-anchor="middle" fill="#f97316" font-size="11" font-weight="600">Terminal 1</text>
-                    <text x="0" y="16" text-anchor="middle" fill="#8888a0" font-size="9">claude code</text>
-                </g>
-                <g transform="translate(270, 28)">
-                    <rect x="-55" y="-18" width="110" height="36" rx="8" fill="#12121a" stroke="#f97316" stroke-width="1.2"/>
-                    <text x="0" y="4" text-anchor="middle" fill="#f97316" font-size="11" font-weight="600">Terminal 2</text>
-                    <text x="0" y="16" text-anchor="middle" fill="#8888a0" font-size="9">claude code</text>
-                </g>
-                <g transform="translate(440, 28)">
-                    <rect x="-55" y="-18" width="110" height="36" rx="8" fill="#12121a" stroke="#f97316" stroke-width="1.2"/>
-                    <text x="0" y="4" text-anchor="middle" fill="#f97316" font-size="11" font-weight="600">Terminal 3</text>
-                    <text x="0" y="16" text-anchor="middle" fill="#8888a0" font-size="9">claude code</text>
-                </g>
-                <g transform="translate(610, 28)">
-                    <rect x="-55" y="-18" width="110" height="36" rx="8" fill="#12121a" stroke="#f97316" stroke-width="1.2"/>
-                    <text x="0" y="4" text-anchor="middle" fill="#f97316" font-size="11" font-weight="600">Terminal N</text>
-                    <text x="0" y="16" text-anchor="middle" fill="#8888a0" font-size="9">claude code</text>
-                </g>
-                <!-- Dots between 3 and N -->
-                <text x="525" y="32" fill="#8888a0" font-size="18" font-weight="700">...</text>
+                <!-- ══════════ TERMINAL SESSIONS (spokes) ══════════ -->
 
-                <!-- Converging arrows from each terminal to center -->
-                <line x1="100" y1="48" x2="370" y2="100" stroke="url(#arrow-grad)" stroke-width="1.5" opacity="0.6"/>
-                <line x1="270" y1="48" x2="390" y2="100" stroke="url(#arrow-grad)" stroke-width="1.5" opacity="0.7"/>
-                <line x1="440" y1="48" x2="410" y2="100" stroke="url(#arrow-grad)" stroke-width="1.5" opacity="0.7"/>
-                <line x1="610" y1="48" x2="430" y2="100" stroke="url(#arrow-grad)" stroke-width="1.5" opacity="0.6"/>
-                <!-- Central arrow with label -->
-                <line x1="400" y1="96" x2="400" y2="116" stroke="url(#arrow-grad)" stroke-width="2" marker-end="url(#arrowDown)"/>
-                <text x="520" y="86" fill="#3b82f6" font-size="11" font-weight="600">HTTP hooks :19485</text>
+                <!-- T1: top-left -->
+                <g filter="url(#s1)">
+                    <rect x="10" y="16" width="130" height="48" rx="10" fill="#141422" stroke="url(#og)" stroke-width="1"/>
+                    <text x="30" y="38" fill="#f97316" font-size="8" opacity=".5">&#9654;</text>
+                    <text x="40" y="38" fill="#f97316" font-size="11" font-weight="700">Terminal 1</text>
+                    <text x="40" y="52" fill="#8888a0" font-size="9">claude code</text>
+                </g>
+                <circle cx="75" cy="64" r="3" fill="#f97316" class="blink"/>
 
-                <!-- Funnel visual hint -->
-                <path d="M 80,56 L 400,108 L 720,56" fill="none" stroke="#f97316" stroke-width="0.5" opacity="0.15"/>
+                <!-- T2: top-center-left -->
+                <g filter="url(#s1)">
+                    <rect x="170" y="2" width="130" height="48" rx="10" fill="#141422" stroke="url(#og)" stroke-width="1"/>
+                    <text x="190" y="24" fill="#f97316" font-size="8" opacity=".5">&#9654;</text>
+                    <text x="200" y="24" fill="#f97316" font-size="11" font-weight="700">Terminal 2</text>
+                    <text x="200" y="38" fill="#8888a0" font-size="9">claude code</text>
+                </g>
+                <circle cx="235" cy="50" r="3" fill="#f97316" class="blink" style="animation-delay:.4s"/>
 
-                <!-- Central box: Claude Bell -->
-                <rect x="120" y="124" width="560" height="300" rx="16" fill="#12121a" stroke="#2a2a3a" stroke-width="1.5"/>
-                <rect x="120" y="124" width="560" height="300" rx="16" fill="url(#glow-orange)"/>
+                <!-- T3: top-center-right -->
+                <g filter="url(#s1)">
+                    <rect x="500" y="2" width="130" height="48" rx="10" fill="#141422" stroke="url(#og)" stroke-width="1"/>
+                    <text x="520" y="24" fill="#f97316" font-size="8" opacity=".5">&#9654;</text>
+                    <text x="530" y="24" fill="#f97316" font-size="11" font-weight="700">Terminal 3</text>
+                    <text x="530" y="38" fill="#8888a0" font-size="9">claude code</text>
+                </g>
+                <circle cx="565" cy="50" r="3" fill="#f97316" class="blink" style="animation-delay:.8s"/>
 
-                <!-- Title bar with bell icon -->
-                <text x="400" y="160" text-anchor="middle" fill="#f97316" font-size="18" font-weight="800">Claude Bell</text>
-                <text x="400" y="176" text-anchor="middle" fill="#8888a0" font-size="10">All sessions in one place</text>
-                <line x1="160" y1="184" x2="640" y2="184" stroke="#2a2a3a" stroke-width="1"/>
+                <!-- T4: top-right -->
+                <g filter="url(#s1)">
+                    <rect x="660" y="16" width="130" height="48" rx="10" fill="#141422" stroke="url(#og)" stroke-width="1"/>
+                    <text x="680" y="38" fill="#f97316" font-size="8" opacity=".5">&#9654;</text>
+                    <text x="690" y="38" fill="#f97316" font-size="11" font-weight="700">Terminal 4</text>
+                    <text x="690" y="52" fill="#8888a0" font-size="9">claude code</text>
+                </g>
+                <circle cx="725" cy="64" r="3" fill="#f97316" class="blink" style="animation-delay:1.2s"/>
+
+                <!-- T5: bottom-left -->
+                <g filter="url(#s1)">
+                    <rect x="32" y="416" width="130" height="48" rx="10" fill="#141422" stroke="url(#og)" stroke-width="1"/>
+                    <text x="52" y="438" fill="#f97316" font-size="8" opacity=".5">&#9654;</text>
+                    <text x="62" y="438" fill="#f97316" font-size="11" font-weight="700">Terminal 5</text>
+                    <text x="62" y="452" fill="#8888a0" font-size="9">claude code</text>
+                </g>
+                <circle cx="97" cy="416" r="3" fill="#f97316" class="blink" style="animation-delay:1.6s"/>
+
+                <!-- TN: bottom-right -->
+                <g filter="url(#s1)">
+                    <rect x="638" y="416" width="130" height="48" rx="10" fill="#141422" stroke="url(#og)" stroke-width="1"/>
+                    <text x="658" y="438" fill="#f97316" font-size="8" opacity=".5">&#9654;</text>
+                    <text x="668" y="438" fill="#f97316" font-size="11" font-weight="700">Terminal N</text>
+                    <text x="668" y="452" fill="#8888a0" font-size="9">claude code</text>
+                </g>
+                <circle cx="703" cy="416" r="3" fill="#f97316" class="blink" style="animation-delay:2s"/>
+
+                <!-- Dots hints for "more" -->
+                <text x="340" y="12" fill="#555" font-size="14" font-weight="700">. . .</text>
+                <text x="300" y="460" fill="#555" font-size="14" font-weight="700">. . . . . . . . .</text>
+
+                <!-- ══════════ SPOKE LINES (terminals → hub) ══════════ -->
+                <line x1="100" y1="66" x2="210" y2="130" class="spoke" stroke="#f97316" stroke-width="1.3" opacity=".45"/>
+                <line x1="235" y1="52" x2="280" y2="130" class="spoke" stroke="#f97316" stroke-width="1.3" opacity=".5" style="animation-delay:.1s"/>
+                <line x1="565" y1="52" x2="520" y2="130" class="spoke" stroke="#f97316" stroke-width="1.3" opacity=".5" style="animation-delay:.2s"/>
+                <line x1="700" y1="66" x2="590" y2="130" class="spoke" stroke="#f97316" stroke-width="1.3" opacity=".45" style="animation-delay:.3s"/>
+                <line x1="120" y1="416" x2="250" y2="350" class="spoke" stroke="#f97316" stroke-width="1.3" opacity=".4" style="animation-delay:.5s"/>
+                <line x1="680" y1="416" x2="550" y2="350" class="spoke" stroke="#f97316" stroke-width="1.3" opacity=".4" style="animation-delay:.6s"/>
+
+                <!-- ══════════ CENTRAL HUB: Claude Bell ══════════ -->
+                <g filter="url(#s2)">
+                    <rect x="185" y="108" width="430" height="264" rx="20" fill="url(#hubFill)" stroke="url(#hubBorder)" stroke-width="1.5"/>
+                    <rect x="185" y="108" width="430" height="264" rx="20" fill="url(#hubGlow)"/>
+                    <rect x="205" y="108" width="390" height="2.5" rx="1" fill="url(#og)" opacity=".5"/>
+                </g>
+
+                <!-- Hub title -->
+                <text x="400" y="142" text-anchor="middle" fill="url(#og)" font-size="20" font-weight="800" letter-spacing="-.5">Claude Bell</text>
+                <text x="400" y="160" text-anchor="middle" fill="#6b6b88" font-size="10" font-weight="500">One place to manage all your sessions</text>
+                <line x1="220" y1="172" x2="580" y2="172" stroke="#2a2a3a" stroke-width=".5" opacity=".6"/>
 
                 <!-- Row 1: Permission Request -->
-                <g transform="translate(0, 208)">
-                    <rect x="160" y="-14" width="200" height="32" rx="8" fill="rgba(249,115,22,0.08)" stroke="rgba(249,115,22,0.25)" stroke-width="1"/>
-                    <text x="180" y="7" fill="#e8e8f0" font-size="13" font-weight="600">Permission Request</text>
-                    <line x1="370" y1="0" x2="470" y2="0" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowRight)"/>
-                    <rect x="478" y="-14" width="170" height="32" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.25)" stroke-width="1"/>
-                    <text x="498" y="7" fill="#22c55e" font-size="12" font-weight="600">Allow / Deny / Always</text>
+                <g transform="translate(0,194)">
+                    <rect x="216" y="-14" width="190" height="34" rx="9" fill="rgba(249,115,22,.05)" stroke="rgba(249,115,22,.18)" stroke-width=".7"/>
+                    <circle cx="234" cy="3" r="7" fill="rgba(249,115,22,.12)"/>
+                    <text x="234" y="7" text-anchor="middle" fill="#f97316" font-size="8">&#128274;</text>
+                    <text x="250" y="7" fill="#e8e8f0" font-size="11" font-weight="600">Permission Request</text>
+                    <line x1="414" y1="3" x2="458" y2="3" class="inner" stroke="#22c55e" stroke-width="1" marker-end="url(#ag)" opacity=".65"/>
+                    <rect x="466" y="-14" width="130" height="34" rx="9" fill="rgba(34,197,94,.04)" stroke="rgba(34,197,94,.18)" stroke-width=".7"/>
+                    <text x="531" y="7" text-anchor="middle" fill="#22c55e" font-size="10.5" font-weight="600">Allow / Deny</text>
                 </g>
 
                 <!-- Row 2: Questions -->
-                <g transform="translate(0, 258)">
-                    <rect x="160" y="-14" width="200" height="32" rx="8" fill="rgba(168,85,247,0.08)" stroke="rgba(168,85,247,0.25)" stroke-width="1"/>
-                    <text x="180" y="7" fill="#e8e8f0" font-size="13" font-weight="600">Questions & Dialogs</text>
-                    <line x1="370" y1="0" x2="470" y2="0" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowRight)"/>
-                    <rect x="478" y="-14" width="170" height="32" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.25)" stroke-width="1"/>
-                    <text x="498" y="7" fill="#22c55e" font-size="12" font-weight="600">Text / Option select</text>
+                <g transform="translate(0,240)">
+                    <rect x="216" y="-14" width="190" height="34" rx="9" fill="rgba(168,85,247,.05)" stroke="rgba(168,85,247,.18)" stroke-width=".7"/>
+                    <circle cx="234" cy="3" r="7" fill="rgba(168,85,247,.12)"/>
+                    <text x="234" y="7" text-anchor="middle" fill="#a855f7" font-size="8">&#128172;</text>
+                    <text x="250" y="7" fill="#e8e8f0" font-size="11" font-weight="600">Questions &amp; Dialogs</text>
+                    <line x1="414" y1="3" x2="458" y2="3" class="inner" stroke="#22c55e" stroke-width="1" marker-end="url(#ag)" opacity=".65" style="animation-delay:.25s"/>
+                    <rect x="466" y="-14" width="130" height="34" rx="9" fill="rgba(34,197,94,.04)" stroke="rgba(34,197,94,.18)" stroke-width=".7"/>
+                    <text x="531" y="7" text-anchor="middle" fill="#22c55e" font-size="10.5" font-weight="600">Text / Select</text>
                 </g>
 
                 <!-- Row 3: Idle Prompt -->
-                <g transform="translate(0, 308)">
-                    <rect x="160" y="-14" width="200" height="32" rx="8" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
-                    <text x="180" y="7" fill="#e8e8f0" font-size="13" font-weight="600">Idle Prompt</text>
-                    <line x1="370" y1="0" x2="470" y2="0" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowRight)"/>
-                    <rect x="478" y="-14" width="170" height="32" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.25)" stroke-width="1"/>
-                    <text x="498" y="7" fill="#22c55e" font-size="12" font-weight="600">via AppleScript</text>
+                <g transform="translate(0,286)">
+                    <rect x="216" y="-14" width="190" height="34" rx="9" fill="rgba(59,130,246,.05)" stroke="rgba(59,130,246,.18)" stroke-width=".7"/>
+                    <circle cx="234" cy="3" r="7" fill="rgba(59,130,246,.12)"/>
+                    <text x="234" y="7" text-anchor="middle" fill="#3b82f6" font-size="8">&#9200;</text>
+                    <text x="250" y="7" fill="#e8e8f0" font-size="11" font-weight="600">Idle Prompt</text>
+                    <line x1="414" y1="3" x2="458" y2="3" class="inner" stroke="#22c55e" stroke-width="1" marker-end="url(#ag)" opacity=".65" style="animation-delay:.5s"/>
+                    <rect x="466" y="-14" width="130" height="34" rx="9" fill="rgba(34,197,94,.04)" stroke="rgba(34,197,94,.18)" stroke-width=".7"/>
+                    <text x="531" y="7" text-anchor="middle" fill="#22c55e" font-size="10.5" font-weight="600">AppleScript</text>
                 </g>
 
                 <!-- Row 4: Session Tracking -->
-                <g transform="translate(0, 358)">
-                    <rect x="160" y="-14" width="200" height="32" rx="8" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
-                    <text x="180" y="7" fill="#e8e8f0" font-size="13" font-weight="600">Session Tracking</text>
-                    <line x1="370" y1="0" x2="470" y2="0" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4 3"/>
-                    <rect x="478" y="-14" width="170" height="32" rx="8" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
-                    <text x="498" y="7" fill="#3b82f6" font-size="12" font-weight="600">Active sessions list</text>
+                <g transform="translate(0,332)">
+                    <rect x="216" y="-14" width="190" height="34" rx="9" fill="rgba(59,130,246,.05)" stroke="rgba(59,130,246,.18)" stroke-width=".7"/>
+                    <circle cx="234" cy="3" r="7" fill="rgba(59,130,246,.12)"/>
+                    <text x="234" y="7" text-anchor="middle" fill="#3b82f6" font-size="8">&#128203;</text>
+                    <text x="250" y="7" fill="#e8e8f0" font-size="11" font-weight="600">Session Tracking</text>
+                    <line x1="414" y1="3" x2="458" y2="3" class="inner" stroke="#3b82f6" stroke-width="1" marker-end="url(#ab)" opacity=".65" style="animation-delay:.75s"/>
+                    <rect x="466" y="-14" width="130" height="34" rx="9" fill="rgba(59,130,246,.04)" stroke="rgba(59,130,246,.18)" stroke-width=".7"/>
+                    <text x="531" y="7" text-anchor="middle" fill="#3b82f6" font-size="10.5" font-weight="600">Sessions list</text>
                 </g>
-
-                <!-- Arrow down from box -->
-                <line x1="400" y1="426" x2="400" y2="480" stroke="url(#arrow-grad)" stroke-width="2" marker-end="url(#arrowDown)"/>
-                <text x="415" y="460" fill="#3b82f6" font-size="11" font-weight="600">HTTP Response / AppleScript</text>
-
-                <!-- Bottom: Diverging arrows back to terminals -->
-                <g transform="translate(400, 510)">
-                    <rect x="-170" y="-20" width="340" height="44" rx="22" fill="#12121a" stroke="#22c55e" stroke-width="1.5"/>
-                    <text text-anchor="middle" y="7" fill="#22c55e" font-size="15" font-weight="700">All sessions continue working</text>
-                </g>
-
-                <!-- Diverging lines from bottom pill -->
-                <line x1="260" y1="536" x2="100" y2="570" stroke="#22c55e" stroke-width="1" opacity="0.3"/>
-                <line x1="340" y1="536" x2="270" y2="570" stroke="#22c55e" stroke-width="1" opacity="0.3"/>
-                <line x1="460" y1="536" x2="440" y2="570" stroke="#22c55e" stroke-width="1" opacity="0.3"/>
-                <line x1="540" y1="536" x2="610" y2="570" stroke="#22c55e" stroke-width="1" opacity="0.3"/>
-
-                <!-- Small terminal icons at bottom -->
-                <rect x="80" y="570" width="40" height="22" rx="4" fill="#12121a" stroke="#22c55e" stroke-width="0.8" opacity="0.5"/>
-                <text x="100" y="585" text-anchor="middle" fill="#22c55e" font-size="8" opacity="0.6">T1</text>
-                <rect x="250" y="570" width="40" height="22" rx="4" fill="#12121a" stroke="#22c55e" stroke-width="0.8" opacity="0.5"/>
-                <text x="270" y="585" text-anchor="middle" fill="#22c55e" font-size="8" opacity="0.6">T2</text>
-                <rect x="420" y="570" width="40" height="22" rx="4" fill="#12121a" stroke="#22c55e" stroke-width="0.8" opacity="0.5"/>
-                <text x="440" y="585" text-anchor="middle" fill="#22c55e" font-size="8" opacity="0.6">T3</text>
-                <rect x="590" y="570" width="40" height="22" rx="4" fill="#12121a" stroke="#22c55e" stroke-width="0.8" opacity="0.5"/>
-                <text x="610" y="585" text-anchor="middle" fill="#22c55e" font-size="8" opacity="0.6">TN</text>
             </svg>
         </div>
     </section>

@@ -12,16 +12,23 @@ struct HookResponse: Sendable {
     static func permissionDecisionAlways(permissionSuggestions: [AnyCodable]?, toolName: String) -> HookResponse {
         if let suggestions = permissionSuggestions,
            !suggestions.isEmpty {
-            // Extract raw values from AnyCodable and serialize with JSONSerialization
             let rawValues = suggestions.map(\.value)
             if JSONSerialization.isValidJSONObject(rawValues),
                let data = try? JSONSerialization.data(withJSONObject: rawValues),
                let suggestionsJSON = String(data: data, encoding: .utf8) {
                 return HookResponse(json: #"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow","updatedPermissions":\#(suggestionsJSON)}}}"#)
             }
+            print("[HookResponse] WARNING: permissionSuggestions serialization failed, falling back")
         }
-        // Fallback: construct a toolAlwaysAllow permission from the tool name
-        return HookResponse(json: #"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow","updatedPermissions":[{"type":"toolAlwaysAllow","tool":"\#(toolName)"}]}}}"#)
+        // Fallback: JSON-escape the tool name properly
+        let escapedTool: String
+        if let data = try? JSONSerialization.data(withJSONObject: toolName),
+           let s = String(data: data, encoding: .utf8) {
+            escapedTool = s
+        } else {
+            escapedTool = "\"\(toolName)\""
+        }
+        return HookResponse(json: "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\",\"updatedPermissions\":[{\"type\":\"toolAlwaysAllow\",\"tool\":\(escapedTool)}]}}}")
     }
 
     static func permissionDecision(allow: Bool) -> HookResponse {

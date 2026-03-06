@@ -6,6 +6,22 @@ import AppKit
 final class BodyStyleSettings: ObservableObject {
     static let shared = BodyStyleSettings()
 
+    enum PanelPosition: String, CaseIterable {
+        case menuBar = "menuBar"
+        case left = "left"
+        case right = "right"
+        case fullscreen = "fullscreen"
+
+        var label: String {
+            switch self {
+            case .menuBar: return "Menu Bar"
+            case .left: return "Left"
+            case .right: return "Right"
+            case .fullscreen: return "Fullscreen"
+            }
+        }
+    }
+
     enum Appearance: String, CaseIterable {
         case system = "system"
         case light = "light"
@@ -25,6 +41,12 @@ final class BodyStyleSettings: ObservableObject {
             case .light: return NSAppearance(named: .aqua)
             case .dark: return NSAppearance(named: .darkAqua)
             }
+        }
+    }
+
+    @Published var panelPosition: PanelPosition {
+        didSet {
+            AppDefaults.shared.set(panelPosition.rawValue, forKey: "panelPosition")
         }
     }
 
@@ -88,6 +110,9 @@ final class BodyStyleSettings: ObservableObject {
         self.customFontColor = savedFont ?? .white
 
         self.fontName = AppDefaults.shared.string(forKey: "bodyFontName")
+
+        let savedPosition = AppDefaults.shared.string(forKey: "panelPosition") ?? "menuBar"
+        self.panelPosition = PanelPosition(rawValue: savedPosition) ?? .menuBar
 
         let savedAppearance = AppDefaults.shared.string(forKey: "appAppearance") ?? "system"
         self.appearance = Appearance(rawValue: savedAppearance) ?? .system

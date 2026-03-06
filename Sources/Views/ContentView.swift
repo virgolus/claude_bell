@@ -40,7 +40,12 @@ struct ContentView: View {
                 }
             }
         }
-        .frame(width: 900, height: NSScreen.main.map { $0.visibleFrame.height } ?? 650)
+        .frame(
+            width: bodyStyle.panelPosition == .fullscreen
+                ? (NSScreen.main?.visibleFrame.width ?? 900)
+                : 900,
+            height: NSScreen.main.map { $0.visibleFrame.height } ?? 650
+        )
         .onAppear {
             autoSelectLatest()
             checkWhatsNew()
