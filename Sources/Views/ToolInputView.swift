@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ToolInputView: View {
     let toolInput: [String: AnyCodable]
+    @ObservedObject private var bodyStyle = BodyStyleSettings.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -19,22 +20,22 @@ struct ToolInputView: View {
                     if looksLikeCode(key: key, value: value) {
                         ScrollView {
                             Text(value)
-                                .font(.system(.body, design: .monospaced))
+                                .font(bodyStyle.fontName != nil ? bodyStyle.bodyFont(size: .body) : .system(.body, design: .monospaced))
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(10)
                         }
                         .frame(maxHeight: 300)
-                        .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
+                        .background(bodyStyle.backgroundColor)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                     } else {
                         ScrollView {
-                            MarkdownText(value)
+                            MarkdownText(value, font: bodyStyle.bodyFont(size: .body), textColor: bodyStyle.fontColor)
                                 .padding(8)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .frame(maxHeight: 400)
-                        .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
+                        .background(bodyStyle.backgroundColor)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
                 }

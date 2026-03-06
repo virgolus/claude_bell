@@ -5,6 +5,7 @@ import SwiftUI
 struct ExitPlanModeView: View {
     let request: PendingRequest
     let store: RequestStore
+    @ObservedObject private var bodyStyle = BodyStyleSettings.shared
 
     private var planText: String {
         request.toolInput["plan"]?.description
@@ -28,10 +29,10 @@ struct ExitPlanModeView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
 
-                MarkdownText(planText)
+                MarkdownText(planText, font: bodyStyle.bodyFont(size: .body), textColor: bodyStyle.fontColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(10)
-                    .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
+                    .background(bodyStyle.backgroundColor)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
 

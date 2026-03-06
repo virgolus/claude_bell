@@ -3,6 +3,7 @@ import SwiftUI
 struct QuestionOptionsView: View {
     let questions: [ParsedQuestion]
     let onSend: (String) -> Void
+    @ObservedObject private var bodyStyle = BodyStyleSettings.shared
 
     @State private var selections: [UUID: Set<Int>] = [:]  // questionId -> selected indices
     @State private var customText = ""
@@ -50,7 +51,7 @@ struct QuestionOptionsView: View {
                     .textCase(.uppercase)
             }
 
-            MarkdownText(question.question, font: .body)
+            MarkdownText(question.question, font: bodyStyle.bodyFont(size: .body), textColor: bodyStyle.fontColor)
 
             if question.multiSelect {
                 Text("Select one or more:")
