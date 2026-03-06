@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.5.0",
+    "build": 12,
+    "date": "2026-03-06",
+    "highlights": "Panel position setting with Menu Bar, Left, Right, and Fullscreen options",
+    "changes": [
+      { "type": "new", "text": "Panel position setting: choose between Menu Bar, Left, Right, or Fullscreen" },
+      { "type": "fixed", "text": "HookResponse JSON escaping for tool names" },
+      { "type": "changed", "text": "Landing page architecture diagram refresh" }
+    ]
+  },
+  {
     "version": "1.4.0",
     "build": 11,
     "date": "2026-03-06",

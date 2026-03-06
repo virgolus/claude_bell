@@ -49,6 +49,8 @@ cp .build/arm64-apple-macosx/release/ClaudeBell ClaudeBell.app/Contents/MacOS/Cl
 rm -rf ClaudeBell.app/ClaudeBell_ClaudeBell.bundle && mkdir -p ClaudeBell.app/ClaudeBell_ClaudeBell.bundle
 cp public/changelog.json ClaudeBell.app/ClaudeBell_ClaudeBell.bundle/changelog.json
 rm -f public/ClaudeBell.zip && zip -r public/ClaudeBell.zip ClaudeBell.app -x "*.DS_Store"
-git add public/ClaudeBell.zip && git commit -m "Update release" && git push
+git add Sources/App/AppVersion.swift public/changelog.json public/ClaudeBell.zip
+git commit -m "Release v<version> (build <build>): <highlights>"
+git push
 vercel --prod
 ```
