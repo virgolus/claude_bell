@@ -2,7 +2,6 @@ import SwiftUI
 
 struct HeaderView: View {
     @EnvironmentObject var store: RequestStore
-    @Binding var showSetup: Bool
 
     var body: some View {
         HStack {
@@ -23,7 +22,7 @@ struct HeaderView: View {
             }
 
             Button {
-                showSetup.toggle()
+                SettingsWindowController.shared.showSettings()
             } label: {
                 Image(systemName: "gearshape")
                     .foregroundStyle(.secondary)

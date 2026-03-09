@@ -61,10 +61,14 @@ struct ClaudeBellApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Esc to close panel
+        // Esc to close panel, ⌘, to open settings
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 && !isTextFieldActive() {
                 self?.dismissPanel()
+                return nil
+            }
+            if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "," {
+                SettingsWindowController.shared.showSettings()
                 return nil
             }
             return event
@@ -160,6 +164,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         muteItem.target = self
         menu.addItem(muteItem)
 
+        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+
         let whatsNewItem = NSMenuItem(title: "What's New", action: #selector(showWhatsNew), keyEquivalent: "")
         whatsNewItem.target = self
         menu.addItem(whatsNewItem)
@@ -180,6 +188,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let event = NSApp.currentEvent {
             NSMenu.popUpContextMenu(menu, with: event, for: button)
         }
+    }
+
+    @objc private func openSettings() {
+        SettingsWindowController.shared.showSettings()
     }
 
     @objc private func toggleMute() {

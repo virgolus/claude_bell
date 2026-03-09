@@ -9,20 +9,17 @@ struct ContentView: View {
     @EnvironmentObject var store: RequestStore
     @ObservedObject private var bodyStyle = BodyStyleSettings.shared
     @State private var selectedItem: SidebarItem?
-    @State private var showSetup = false
     @State private var showWhatsNew = false
     @State private var showFullChangelog = false
 
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                HeaderView(showSetup: $showSetup)
+                HeaderView()
 
                 Divider()
 
-                if showSetup {
-                    SetupView()
-                } else if store.pendingRequests.isEmpty && store.notifications.isEmpty {
+                if store.pendingRequests.isEmpty && store.notifications.isEmpty {
                     VStack(spacing: 0) {
                         EmptyStateView()
                         if !store.sessions.isEmpty {

@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.6.0",
+    "build": 15,
+    "date": "2026-03-09",
+    "highlights": "Settings in a dedicated macOS window with tabbed layout",
+    "changes": [
+      { "type": "new", "text": "Settings now open in a separate floating window (macOS best practice)" },
+      { "type": "new", "text": "Tabbed settings layout: General, Notifications, and Appearance" },
+      { "type": "new", "text": "⌘, keyboard shortcut to open Settings from anywhere" },
+      { "type": "new", "text": "\"Settings...\" option in right-click context menu" },
+      { "type": "changed", "text": "Panel now always shows operational content — no more inline settings view" }
+    ]
+  },
+  {
     "version": "1.5.2",
     "build": 14,
     "date": "2026-03-09",
