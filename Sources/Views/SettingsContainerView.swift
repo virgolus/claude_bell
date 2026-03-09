@@ -22,6 +22,12 @@ struct SettingsContainerView: View {
                     Label("Appearance", systemImage: "paintbrush")
                 }
                 .tag(2)
+
+            MiscellaneousSettingsTab()
+                .tabItem {
+                    Label("Miscellaneous", systemImage: "ellipsis.circle")
+                }
+                .tag(3)
         }
         .frame(width: 520, height: 640)
     }
@@ -31,13 +37,11 @@ struct SettingsContainerView: View {
 
 private struct GeneralSettingsTab: View {
     @State private var installed = HookInstaller.isInstalled
-    @State private var statuslineInstalled = StatuslineInstaller.isInstalled
     @State private var errorMessage: String?
     @State private var showSuccess = false
     @State private var showHookConfirm = false
-    @State private var showStatuslineConfirm = false
-    @State private var macOSNotifications = AppDefaults.shared.bool(forKey: "macOSNotificationsEnabled")
-    @ObservedObject private var bodyStyle = BodyStyleSettings.shared
+    @State private var isRecording = false
+    @State private var shortcutLabel = GlobalShortcut.shared.shortcutDescription
 
     var body: some View {
         ScrollView {
@@ -101,123 +105,6 @@ private struct GeneralSettingsTab: View {
                     }
                 }
 
-                // MARK: - Status Line
-                settingsSection(title: "Status Line", icon: "text.line.last.and.arrowtriangle.forward", iconColor: .blue) {
-                    HStack {
-                        Image(systemName: statuslineInstalled ? "checkmark.circle.fill" : "xmark.circle")
-                            .foregroundStyle(statuslineInstalled ? .green : .red)
-                        Text(statuslineInstalled ? "Status line active" : "Status line not configured")
-                            .font(.body.weight(.medium))
-                    }
-
-                    Text("Show model, context usage, duration and git branch in Claude Code's status line.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-
-                    if statuslineInstalled {
-                        Button("Remove Status Line") {
-                            do {
-                                try StatuslineInstaller.uninstall()
-                                statuslineInstalled = false
-                            } catch {
-                                errorMessage = error.localizedDescription
-                            }
-                        }
-                    } else {
-                        Button("Install Status Line") {
-                            showStatuslineConfirm = true
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.blue)
-                        .alert("Install Status Line?", isPresented: $showStatuslineConfirm) {
-                            Button("Install") {
-                                do {
-                                    try StatuslineInstaller.install()
-                                    statuslineInstalled = true
-                                } catch {
-                                    errorMessage = error.localizedDescription
-                                }
-                            }
-                            Button("Cancel", role: .cancel) {}
-                        } message: {
-                            Text("This will modify ~/.claude/settings.json and create a status line script.")
-                        }
-                    }
-                }
-
-                // MARK: - Panel Position
-                settingsSection(title: "Panel Position", icon: "macwindow", iconColor: .teal) {
-                    Text("Choose where the panel appears on screen.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-
-                    Picker("Position:", selection: $bodyStyle.panelPosition) {
-                        ForEach(BodyStyleSettings.PanelPosition.allCases, id: \.self) { pos in
-                            Text(pos.label).tag(pos)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
-
-                // MARK: - macOS Notifications
-                settingsSection(title: "macOS Notifications", icon: "bell.badge.fill", iconColor: .green) {
-                    Text("Show native macOS notification banners for events.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-
-                    Toggle("Enable macOS Notifications", isOn: $macOSNotifications)
-                        .onChange(of: macOSNotifications) { _, enabled in
-                            AppDefaults.shared.set(enabled, forKey: "macOSNotificationsEnabled")
-                            if enabled {
-                                NotificationManager.requestPermission()
-                            }
-                        }
-                }
-
-                versionFooter
-            }
-            .padding()
-        }
-    }
-}
-
-// MARK: - Notifications Tab
-
-private struct NotificationsSettingsTab: View {
-    @State private var selectedSound = RequestStore.selectedSound
-    @State private var isRecording = false
-    @State private var shortcutLabel = GlobalShortcut.shared.shortcutDescription
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // MARK: - Sound
-                settingsSection(title: "Notification Sound", icon: "speaker.wave.2.fill", iconColor: .purple) {
-                    Text("Sound played when a new permission request arrives.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-
-                    Picker("Sound:", selection: $selectedSound) {
-                        ForEach(RequestStore.availableSounds, id: \.self) { sound in
-                            Text(sound).tag(sound)
-                        }
-                    }
-                    .frame(width: 220)
-                    .onChange(of: selectedSound) { _, newValue in
-                        RequestStore.selectedSound = newValue
-                        NSSound(named: newValue)?.play()
-                    }
-                }
-
-                // MARK: - Mute
-                settingsSection(title: "Mute", icon: "bell.slash.fill", iconColor: .gray) {
-                    Text("Temporarily silence all notification sounds.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-
-                    MuteToggle()
-                }
-
                 // MARK: - Shortcut
                 settingsSection(title: "Global Shortcut", icon: "keyboard.fill", iconColor: .orange) {
                     Text("Press the shortcut to toggle the panel from anywhere.")
@@ -267,6 +154,64 @@ private struct NotificationsSettingsTab: View {
     }
 }
 
+// MARK: - Notifications Tab
+
+private struct NotificationsSettingsTab: View {
+    @State private var selectedSound = RequestStore.selectedSound
+    @State private var macOSNotifications = AppDefaults.shared.bool(forKey: "macOSNotificationsEnabled")
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // MARK: - Sound
+                settingsSection(title: "Notification Sound", icon: "speaker.wave.2.fill", iconColor: .purple) {
+                    Text("Sound played when a new permission request arrives.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    Picker("Sound:", selection: $selectedSound) {
+                        ForEach(RequestStore.availableSounds, id: \.self) { sound in
+                            Text(sound).tag(sound)
+                        }
+                    }
+                    .frame(width: 220)
+                    .onChange(of: selectedSound) { _, newValue in
+                        RequestStore.selectedSound = newValue
+                        NSSound(named: newValue)?.play()
+                    }
+                }
+
+                // MARK: - Mute
+                settingsSection(title: "Mute", icon: "bell.slash.fill", iconColor: .gray) {
+                    Text("Temporarily silence all notification sounds.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    MuteToggle()
+                }
+
+                // MARK: - macOS Notifications
+                settingsSection(title: "macOS Notifications", icon: "bell.badge.fill", iconColor: .green) {
+                    Text("Show native macOS notification banners for events.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    Toggle("Enable macOS Notifications", isOn: $macOSNotifications)
+                        .onChange(of: macOSNotifications) { _, enabled in
+                            AppDefaults.shared.set(enabled, forKey: "macOSNotificationsEnabled")
+                            if enabled {
+                                NotificationManager.requestPermission()
+                            }
+                        }
+                }
+
+                versionFooter
+            }
+            .padding()
+        }
+    }
+}
+
 private struct MuteToggle: View {
     @ObservedObject private var store = RequestStore.shared
 
@@ -283,6 +228,20 @@ private struct AppearanceSettingsTab: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                // MARK: - Panel Position
+                settingsSection(title: "Panel Position", icon: "macwindow", iconColor: .teal) {
+                    Text("Choose where the panel appears on screen.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    Picker("Position:", selection: $bodyStyle.panelPosition) {
+                        ForEach(BodyStyleSettings.PanelPosition.allCases, id: \.self) { pos in
+                            Text(pos.label).tag(pos)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
                 settingsSection(title: "Notification Style", icon: "textformat", iconColor: .cyan) {
                     Text("Customize the appearance of notification body text.")
                         .font(.callout)
@@ -349,6 +308,71 @@ private struct AppearanceSettingsTab: View {
             text.foregroundStyle(fc)
         } else {
             text
+        }
+    }
+}
+
+// MARK: - Miscellaneous Tab
+
+private struct MiscellaneousSettingsTab: View {
+    @State private var statuslineInstalled = StatuslineInstaller.isInstalled
+    @State private var errorMessage: String?
+    @State private var showStatuslineConfirm = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // MARK: - Status Line
+                settingsSection(title: "Status Line", icon: "text.line.last.and.arrowtriangle.forward", iconColor: .blue) {
+                    HStack {
+                        Image(systemName: statuslineInstalled ? "checkmark.circle.fill" : "xmark.circle")
+                            .foregroundStyle(statuslineInstalled ? .green : .red)
+                        Text(statuslineInstalled ? "Status line active" : "Status line not configured")
+                            .font(.body.weight(.medium))
+                    }
+
+                    Text("Show model, context usage, duration and git branch in Claude Code's status line.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    if statuslineInstalled {
+                        Button("Remove Status Line") {
+                            do {
+                                try StatuslineInstaller.uninstall()
+                                statuslineInstalled = false
+                            } catch {
+                                errorMessage = error.localizedDescription
+                            }
+                        }
+                    } else {
+                        Button("Install Status Line") {
+                            showStatuslineConfirm = true
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.blue)
+                        .alert("Install Status Line?", isPresented: $showStatuslineConfirm) {
+                            Button("Install") {
+                                do {
+                                    try StatuslineInstaller.install()
+                                    statuslineInstalled = true
+                                } catch {
+                                    errorMessage = error.localizedDescription
+                                }
+                            }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("This will modify ~/.claude/settings.json and create a status line script.")
+                        }
+                    }
+
+                    if let error = errorMessage {
+                        Text(error).font(.callout).foregroundStyle(.red)
+                    }
+                }
+
+                versionFooter
+            }
+            .padding()
         }
     }
 }

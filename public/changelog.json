@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.6.1",
+    "build": 16,
+    "date": "2026-03-09",
+    "highlights": "Reorganized settings tabs with new Miscellaneous section",
+    "changes": [
+      { "type": "changed", "text": "Global Shortcut moved to General tab for easier access" },
+      { "type": "changed", "text": "Panel Position moved to Appearance tab" },
+      { "type": "changed", "text": "macOS Notifications moved to Notifications tab" },
+      { "type": "new", "text": "New Miscellaneous tab for Status Line configuration" }
+    ]
+  },
+  {
     "version": "1.6.0",
     "build": 15,
     "date": "2026-03-09",
