@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.5.1",
+    "build": 13,
+    "date": "2026-03-09",
+    "highlights": "Fix custom text in question notifications, hide session ended noise",
+    "changes": [
+      { "type": "fixed", "text": "Custom text in question notifications now correctly sends the 'type something else' option first, then the typed text" },
+      { "type": "removed", "text": "Session ended notifications no longer clutter the panel" }
+    ]
+  },
+  {
     "version": "1.5.0",
     "build": 12,
     "date": "2026-03-06",
