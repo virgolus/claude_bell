@@ -49,6 +49,8 @@ struct WhatsNewView: View {
         }
         .frame(width: 420, height: 460)
         .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
     }
 
     private func releaseSection(_ release: ChangelogRelease) -> some View {

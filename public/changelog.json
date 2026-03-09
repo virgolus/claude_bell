@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.5.2",
+    "build": 14,
+    "date": "2026-03-09",
+    "highlights": "What's New panel no longer closes the menu bar, changelog accessible from right-click menu",
+    "changes": [
+      { "type": "fixed", "text": "Dismissing \"What's New\" no longer closes the entire panel (replaced sheet with inline overlay)" },
+      { "type": "new", "text": "\"What's New\" option in right-click menu to browse the full changelog anytime" }
+    ]
+  },
+  {
     "version": "1.5.1",
     "build": 13,
     "date": "2026-03-09",

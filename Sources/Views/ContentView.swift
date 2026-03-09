@@ -11,32 +11,49 @@ struct ContentView: View {
     @State private var selectedItem: SidebarItem?
     @State private var showSetup = false
     @State private var showWhatsNew = false
+    @State private var showFullChangelog = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            HeaderView(showSetup: $showSetup)
+        ZStack {
+            VStack(spacing: 0) {
+                HeaderView(showSetup: $showSetup)
 
-            Divider()
+                Divider()
 
-            if showSetup {
-                SetupView()
-            } else if store.pendingRequests.isEmpty && store.notifications.isEmpty {
-                VStack(spacing: 0) {
-                    EmptyStateView()
-                    if !store.sessions.isEmpty {
-                        sessionsSection
+                if showSetup {
+                    SetupView()
+                } else if store.pendingRequests.isEmpty && store.notifications.isEmpty {
+                    VStack(spacing: 0) {
+                        EmptyStateView()
+                        if !store.sessions.isEmpty {
+                            sessionsSection
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    HStack(spacing: 0) {
+                        sidebarList
+                            .frame(width: 220)
+
+                        Divider()
+
+                        detailPanel
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                HStack(spacing: 0) {
-                    sidebarList
-                        .frame(width: 220)
+            }
 
-                    Divider()
+            // What's New overlay (replaces .sheet to avoid closing the panel)
+            if showWhatsNew || showFullChangelog, let releases = showFullChangelog ? loadFullChangelog() : loadChangelog() {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
 
-                    detailPanel
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                WhatsNewView(releases: releases) {
+                    if !showFullChangelog {
+                        AppDefaults.shared.set(AppVersion.current, forKey: "lastSeenVersion")
+                    }
+                    showWhatsNew = false
+                    showFullChangelog = false
                 }
             }
         }
@@ -50,12 +67,10 @@ struct ContentView: View {
             autoSelectLatest()
             checkWhatsNew()
         }
-        .sheet(isPresented: $showWhatsNew) {
-            if let releases = loadChangelog() {
-                WhatsNewView(releases: releases) {
-                    AppDefaults.shared.set(AppVersion.current, forKey: "lastSeenVersion")
-                    showWhatsNew = false
-                }
+        .onChange(of: store.showWhatsNewFromMenu) { _, show in
+            if show {
+                showFullChangelog = true
+                store.showWhatsNewFromMenu = false
             }
         }
     }
@@ -388,5 +403,12 @@ struct ContentView: View {
         }
         // First launch — show latest only
         return all.isEmpty ? nil : [all[0]]
+    }
+
+    private func loadFullChangelog() -> [ChangelogRelease]? {
+        guard let url = Bundle.module.url(forResource: "changelog", withExtension: "json"),
+              let data = try? Data(contentsOf: url) else { return nil }
+        let all = (try? JSONDecoder().decode([ChangelogRelease].self, from: data)) ?? []
+        return all.isEmpty ? nil : all
     }
 }

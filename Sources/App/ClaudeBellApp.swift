@@ -160,6 +160,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         muteItem.target = self
         menu.addItem(muteItem)
 
+        let whatsNewItem = NSMenuItem(title: "What's New", action: #selector(showWhatsNew), keyEquivalent: "")
+        whatsNewItem.target = self
+        menu.addItem(whatsNewItem)
+
         menu.addItem(.separator())
 
         let infoItem = NSMenuItem(title: "About Claude Bell", action: #selector(showAbout), keyEquivalent: "")
@@ -180,6 +184,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleMute() {
         RequestStore.shared.isMuted.toggle()
+    }
+
+    @objc private func showWhatsNew() {
+        // Open the panel first, then trigger the overlay
+        togglePanel()
+        RequestStore.shared.showWhatsNewFromMenu = true
     }
 
     @objc private func showAbout() {

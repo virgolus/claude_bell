@@ -12,6 +12,7 @@ final class RequestStore: ObservableObject {
     @Published var isMuted: Bool = AppDefaults.shared.bool(forKey: "isMuted") {
         didSet { AppDefaults.shared.set(isMuted, forKey: "isMuted") }
     }
+    @Published var showWhatsNewFromMenu = false
 
     /// Set by ClaudeBellApp to auto-show the panel on new requests
     var onNewRequest: (() -> Void)?
