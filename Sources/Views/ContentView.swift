@@ -231,6 +231,11 @@ struct ContentView: View {
                                 TerminalBridge.sendText(text, toCwd: notification.cwd)
                                 store.removeNotification(id: notification.id)
                                 selectedItem = nil
+                            },
+                            cwd: notification.cwd,
+                            onDismiss: {
+                                store.removeNotification(id: notification.id)
+                                selectedItem = nil
                             }
                         )
                     } else if !notification.meta.isPassive {

@@ -26,6 +26,16 @@ enum TerminalBridge {
         if !sent { activateTerminal() }
     }
 
+    /// Sends two texts sequentially: first text + Enter, then after a delay, second text + Enter.
+    /// Used for "type something else" options where Claude Code expects the option number first,
+    /// then the actual text after it prompts.
+    static func sendTextTwoStep(_ first: String, then second: String, toCwd cwd: String) {
+        sendText(first, toCwd: cwd)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            sendText(second, toCwd: cwd)
+        }
+    }
+
     /// Brings the terminal tab running Claude Code to the front.
     static func focusTerminalTab(forCwd cwd: String) {
         if focusiTerm2(cwd: cwd) { return }

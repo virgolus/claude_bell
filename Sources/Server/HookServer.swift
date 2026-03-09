@@ -145,17 +145,6 @@ final class HookServer: Sendable {
             Task { @MainActor in
                 store.sessionAdvanced(id: input.sessionId)
                 store.removeSession(id: input.sessionId)
-
-                let entry = NotificationEntry(
-                    sessionId: input.sessionId,
-                    cwd: input.cwd,
-                    notificationType: "session_end",
-                    message: "",
-                    title: "",
-                    transcriptPath: input.transcriptPath ?? "",
-                    createdAt: Date()
-                )
-                store.addNotification(entry)
             }
 
             return Response(status: .ok)

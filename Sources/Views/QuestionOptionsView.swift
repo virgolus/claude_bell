@@ -3,6 +3,8 @@ import SwiftUI
 struct QuestionOptionsView: View {
     let questions: [ParsedQuestion]
     let onSend: (String) -> Void
+    var cwd: String = ""
+    var onDismiss: (() -> Void)?
     @ObservedObject private var bodyStyle = BodyStyleSettings.shared
 
     @State private var selections: [UUID: Set<Int>] = [:]  // questionId -> selected indices
@@ -145,9 +147,25 @@ struct QuestionOptionsView: View {
         onSend(parts.joined(separator: "\n"))
     }
 
+    private static let freeTextPatterns = ["type something", "something else", "other"]
+
     private func sendCustom() {
         let text = customText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return }
+
+        // Find the "type something else" option to do a two-step send
+        if let firstQuestion = questions.first {
+            let freeTextOption = firstQuestion.options.first { option in
+                let lower = option.label.lowercased()
+                return Self.freeTextPatterns.contains { lower.contains($0) }
+            }
+            if let option = freeTextOption, !cwd.isEmpty {
+                TerminalBridge.sendTextTwoStep("\(option.index)", then: text, toCwd: cwd)
+                onDismiss?()
+                return
+            }
+        }
+
         onSend(text)
     }
 }
