@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.6.2",
+    "build": 18,
+    "date": "2026-03-10",
+    "highlights": "Stop hook detects questions, smarter Always Allow button",
+    "changes": [
+      { "type": "new", "text": "Stop notifications now detect pending questions and show interactive input instead of passive 'Task Completed'" },
+      { "type": "changed", "text": "Always Allow button only appears when permission suggestions are available" }
+    ]
+  },
+  {
     "version": "1.6.1",
     "build": 17,
     "date": "2026-03-10",
