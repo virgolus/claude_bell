@@ -88,7 +88,7 @@ final class HookServer: Sendable {
                 Task { @MainActor in
                     // Clean stale notifications (but NOT permission requests)
                     if notificationType != "permission_prompt" {
-                        store.dismissStaleNotifications(id: input.sessionId)
+                        store.sessionAdvanced(id: input.sessionId)
                     }
                     store.addNotification(entry)
                 }

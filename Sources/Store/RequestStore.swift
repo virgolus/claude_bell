@@ -23,35 +23,31 @@ final class RequestStore: ObservableObject {
         pendingRequests.count + notifications.count
     }
 
-    /// Called when a new hook event arrives for a session — dismiss stale items
+    /// Called when a new hook event arrives for a session — dismiss stale notifications only.
+    /// Does NOT auto-deny pending permission requests, since concurrent hook events
+    /// (e.g. PreToolUse from subagents) should not cancel a user's pending Allow action.
     func sessionAdvanced(id: String) {
-        // Dismiss stale interactive notifications (user already responded in terminal)
-        dismissStaleNotifications(id: id)
-        // Dismiss stale permission requests (user already responded in terminal)
-        let staleRequests = pendingRequests.filter { $0.sessionId == id }
-        for req in staleRequests {
-            req.respond(allow: false) // release the HTTP connection
-            pendingRequests.removeAll { $0.id == req.id }
-        }
+        notifications.removeAll { $0.sessionId == id }
     }
 
-    /// Dismiss stale notifications and permission requests for a session.
-    /// Called from notification handler (excluding permission_prompt) when
-    /// a new event indicates the session has moved on.
-    func dismissStaleNotifications(id: String) {
-        notifications.removeAll {
-            $0.sessionId == id
-        }
+    /// Auto-deny pending permission requests for a session.
+    /// Only called when we're certain the request is stale:
+    /// - A new PermissionRequest arrived (user responded in terminal)
+    /// - Session ended
+    func denyStaleRequests(id: String) {
         let staleRequests = pendingRequests.filter { $0.sessionId == id }
         for req in staleRequests {
+            print("[RequestStore] Auto-denying stale request for session \(id), tool: \(req.toolName)")
             req.respond(allow: false)
             pendingRequests.removeAll { $0.id == req.id }
         }
     }
 
     func addRequest(_ request: PendingRequest) {
-        // New permission request means any previous items for this session are stale
-        sessionAdvanced(id: request.sessionId)
+        // A new permission request means the user responded in terminal — deny stale ones
+        denyStaleRequests(id: request.sessionId)
+        // Also clear stale notifications
+        notifications.removeAll { $0.sessionId == request.sessionId }
         pendingRequests.append(request)
         trackSession(id: request.sessionId, cwd: request.cwd)
         playRequestSound()
@@ -105,6 +101,7 @@ final class RequestStore: ObservableObject {
     }
 
     func removeSession(id: String) {
+        denyStaleRequests(id: id)
         sessions.removeValue(forKey: id)
     }
 
