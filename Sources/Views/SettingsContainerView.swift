@@ -3,33 +3,54 @@ import SwiftUI
 struct SettingsContainerView: View {
     @State private var selectedTab = 0
 
+    private let tabs: [(String, String)] = [
+        ("General", "gearshape"),
+        ("Notifications", "bell"),
+        ("Appearance", "paintbrush"),
+        ("Miscellaneous", "ellipsis.circle"),
+    ]
+
     var body: some View {
-        TabView(selection: $selectedTab) {
-            GeneralSettingsTab()
-                .tabItem {
-                    Label("General", systemImage: "gearshape")
+        VStack(spacing: 0) {
+            // Custom tab bar
+            HStack(spacing: 2) {
+                ForEach(Array(tabs.enumerated()), id: \.offset) { index, tab in
+                    VStack(spacing: 3) {
+                        Image(systemName: tab.1)
+                            .font(.system(size: 16))
+                        Text(tab.0)
+                            .font(.caption)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(selectedTab == index ? Color.accentColor.opacity(0.15) : Color.clear)
+                    )
+                    .foregroundStyle(selectedTab == index ? .primary : .secondary)
+                    .onTapGesture { selectedTab = index }
                 }
-                .tag(0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
 
-            NotificationsSettingsTab()
-                .tabItem {
-                    Label("Notifications", systemImage: "bell")
-                }
-                .tag(1)
+            Divider()
 
-            AppearanceSettingsTab()
-                .tabItem {
-                    Label("Appearance", systemImage: "paintbrush")
+            // Tab content
+            Group {
+                switch selectedTab {
+                case 0: GeneralSettingsTab()
+                case 1: NotificationsSettingsTab()
+                case 2: AppearanceSettingsTab()
+                case 3: MiscellaneousSettingsTab()
+                default: GeneralSettingsTab()
                 }
-                .tag(2)
-
-            MiscellaneousSettingsTab()
-                .tabItem {
-                    Label("Miscellaneous", systemImage: "ellipsis.circle")
-                }
-                .tag(3)
+            }
+            .frame(maxHeight: .infinity)
         }
-        .frame(width: 520, height: 640)
+        .frame(width: 600, height: 640)
     }
 }
 
