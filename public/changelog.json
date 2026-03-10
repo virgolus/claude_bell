@@ -1,6 +1,15 @@
 [
   {
     "version": "1.6.2",
+    "build": 20,
+    "date": "2026-03-10",
+    "highlights": "Enter key now activates highlighted buttons when selectable text has focus",
+    "changes": [
+      { "type": "fixed", "text": "Enter key now correctly activates highlighted buttons (Dismiss, Allow, etc.) even when selectable text in the panel has focus" }
+    ]
+  },
+  {
+    "version": "1.6.2",
     "build": 19,
     "date": "2026-03-10",
     "highlights": "Fix race condition where concurrent hooks auto-denied pending permission requests",
