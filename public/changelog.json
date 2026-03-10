@@ -1,6 +1,15 @@
 [
   {
     "version": "1.6.2",
+    "build": 19,
+    "date": "2026-03-10",
+    "highlights": "Fix race condition where concurrent hooks auto-denied pending permission requests",
+    "changes": [
+      { "type": "fixed", "text": "Concurrent hook events no longer incorrectly auto-deny pending permission requests — only a new PermissionRequest or session end will clear them" }
+    ]
+  },
+  {
+    "version": "1.6.2",
     "build": 18,
     "date": "2026-03-10",
     "highlights": "Stop hook detects questions, smarter Always Allow button",
