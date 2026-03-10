@@ -100,10 +100,15 @@ final class HookServer: Sendable {
         router.post("/hooks/stop") { request, context -> Response in
             let input = try await Self.decodeInput(request, label: "Stop")
 
+            // Check if the last assistant message is actually a question —
+            // if so, show as interactive idle_prompt instead of passive stop.
+            let hasQuestion = Self.transcriptHasPendingQuestion(path: input.transcriptPath ?? "")
+            let effectiveType = hasQuestion ? "idle_prompt" : "stop"
+
             let entry = NotificationEntry(
                 sessionId: input.sessionId,
                 cwd: input.cwd,
-                notificationType: "stop",
+                notificationType: effectiveType,
                 message: input.lastAssistantMessage ?? "",
                 title: "",
                 transcriptPath: input.transcriptPath ?? "",

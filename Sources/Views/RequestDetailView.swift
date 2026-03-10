@@ -33,6 +33,13 @@ struct RequestDetailView: View {
     private var isExitPlanMode: Bool { request.toolName == "ExitPlanMode" }
     private var isSpecialTool: Bool { isAskUserQuestion || isExitPlanMode }
 
+    private var canAlwaysAllow: Bool {
+        if let suggestions = request.permissionSuggestions, !suggestions.isEmpty {
+            return true
+        }
+        return false
+    }
+
     /// Parse questions from toolInput["questions"] — called once in onAppear
     private static func parseQuestions(from toolInput: [String: AnyCodable]) -> [ParsedQuestion]? {
         guard let questionsAnyCodable = toolInput["questions"],
@@ -131,7 +138,9 @@ struct RequestDetailView: View {
                 HStack(spacing: 10) {
                     actionButton(label: "Deny", icon: "xmark.circle", action: .deny, color: .red)
                     actionButton(label: "Allow", icon: "checkmark.circle", action: .allow, color: .orange)
-                    actionButton(label: "Always", icon: "checkmark.circle.fill", action: .allowAlways, color: .green)
+                    if canAlwaysAllow {
+                        actionButton(label: "Always", icon: "checkmark.circle.fill", action: .allowAlways, color: .green)
+                    }
                 }
                 .padding(.horizontal)
                 .padding(.top, 12)
@@ -192,10 +201,13 @@ struct RequestDetailView: View {
         store.removeRequest(id: request.id)
     }
 
-    private static let buttonOrder: [ActionButton] = [.deny, .allow, .allowAlways]
+    private var buttonOrder: [ActionButton] {
+        canAlwaysAllow ? [.deny, .allow, .allowAlways] : [.deny, .allow]
+    }
     private static let footerOrder: [DetailFooterView.FooterButton] = [.dismiss, .openInTerminal]
 
     private func installKeyMonitor() {
+        let buttons = buttonOrder
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             // Don't intercept keys when a text field is active (e.g. renaming a session)
             if isTextFieldActive() { return event }
@@ -203,15 +215,15 @@ struct RequestDetailView: View {
             case 123: // left arrow
                 if isInFooter {
                     footerFocused = .dismiss
-                } else if let current = focused, let idx = Self.buttonOrder.firstIndex(of: current), idx > 0 {
-                    focused = Self.buttonOrder[idx - 1]
+                } else if let current = focused, let idx = buttons.firstIndex(of: current), idx > 0 {
+                    focused = buttons[idx - 1]
                 }
                 return nil
             case 124: // right arrow
                 if isInFooter {
                     footerFocused = .openInTerminal
-                } else if let current = focused, let idx = Self.buttonOrder.firstIndex(of: current), idx < Self.buttonOrder.count - 1 {
-                    focused = Self.buttonOrder[idx + 1]
+                } else if let current = focused, let idx = buttons.firstIndex(of: current), idx < buttons.count - 1 {
+                    focused = buttons[idx + 1]
                 }
                 return nil
             case 125: // down arrow
