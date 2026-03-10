@@ -12,8 +12,14 @@ extension View {
     }
 }
 
-/// Returns true if the current first responder is a text input field.
+/// Returns true if the current first responder is an editable text input field.
 func isTextFieldActive() -> Bool {
     guard let responder = NSApp.keyWindow?.firstResponder else { return false }
-    return responder is NSTextView || responder is NSTextField
+    if let textView = responder as? NSTextView {
+        return textView.isEditable
+    }
+    if let textField = responder as? NSTextField {
+        return textField.isEditable
+    }
+    return false
 }
