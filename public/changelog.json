@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.6.3",
+    "build": 21,
+    "date": "2026-03-11",
+    "highlights": "Follow-up actions for Task Completed notifications with Prompt and Contract modes",
+    "changes": [
+      { "type": "new", "text": "Task Completed notifications now show follow-up action buttons to continue working with Claude directly from the panel" },
+      { "type": "new", "text": "Prompt mode lets you type a follow-up message that gets sent back to Claude after a task finishes" },
+      { "type": "new", "text": "Contract mode provides a focused input field that auto-focuses when the panel opens" },
+      { "type": "new", "text": "Accessibility permission is requested on launch so ClaudeBell can paste follow-up text into Claude" },
+      { "type": "changed", "text": "Paste-to-return delay increased for more reliable follow-up delivery" }
+    ]
+  },
+  {
     "version": "1.6.2",
     "build": 20,
     "date": "2026-03-10",
