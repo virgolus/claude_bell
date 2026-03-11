@@ -1,6 +1,5 @@
 import Foundation
 import AppKit
-
 enum TerminalBridge {
 
     /// Sends text to a Terminal.app tab whose process matches Claude Code.
@@ -66,7 +65,7 @@ enum TerminalBridge {
                             tell application "System Events"
                                 tell process "Terminal"
                                     keystroke "v" using command down
-                                    delay 0.05
+                                    delay 0.2
                                     keystroke return
                                 end tell
                             end tell
@@ -89,7 +88,7 @@ enum TerminalBridge {
                             tell application "System Events"
                                 tell process "Terminal"
                                     keystroke "v" using command down
-                                    delay 0.05
+                                    delay 0.2
                                     keystroke return
                                 end tell
                             end tell
@@ -171,7 +170,7 @@ enum TerminalBridge {
                             tell application "System Events"
                                 tell process "iTerm2"
                                     keystroke "v" using command down
-                                    delay 0.05
+                                    delay 0.2
                                     keystroke return
                                 end tell
                             end tell
@@ -193,7 +192,7 @@ enum TerminalBridge {
                             tell application "System Events"
                                 tell process "iTerm2"
                                     keystroke "v" using command down
-                                    delay 0.05
+                                    delay 0.2
                                     keystroke return
                                 end tell
                             end tell

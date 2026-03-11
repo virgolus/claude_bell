@@ -40,6 +40,14 @@ After modifying Swift code:
 2. `pkill -x ClaudeBell; sleep 1; open ClaudeBell.app` to restart
 3. Trigger a hook from another Claude Code session to test
 
+## Logs
+
+```bash
+log stream --process ClaudeBell --level debug
+```
+
+**Note:** After rebuilding, macOS may invalidate Accessibility permissions (the binary signature changes). If `TerminalBridge` stops working (AppleScript error 1002), go to **System Settings → Privacy & Security → Accessibility**, remove ClaudeBell, and re-add `ClaudeBell.app`.
+
 ## Deploy
 
 The Vercel site serves `public/` as a static landing page with `ClaudeBell.zip` as the download. After a release build, update the zip and deploy:

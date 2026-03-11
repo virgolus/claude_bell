@@ -226,6 +226,16 @@ struct ContentView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
 
+                    if notification.notificationType == "stop" {
+                        FollowUpActionView(
+                            notification: notification,
+                            onSend: { text in
+                                TerminalBridge.sendText(text, toCwd: notification.cwd)
+                                store.removeNotification(id: notification.id)
+                                selectedItem = nil
+                            }
+                        )
+                    }
 
                     // Transcript context (expanded by default, skip for passive types since message already shown above)
                     if !notification.transcriptPath.isEmpty && !notification.meta.isPassive {
