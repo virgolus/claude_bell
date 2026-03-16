@@ -1,6 +1,16 @@
 [
   {
     "version": "1.6.3",
+    "build": 22,
+    "date": "2026-03-16",
+    "highlights": "Permission prompts default to Always Allow, download button shows version number",
+    "changes": [
+      { "type": "changed", "text": "Permission prompts now default to the Always Allow button when it is available, reducing friction for trusted tools" },
+      { "type": "changed", "text": "Website download button now displays the current version number" }
+    ]
+  },
+  {
+    "version": "1.6.3",
     "build": 21,
     "date": "2026-03-11",
     "highlights": "Follow-up actions for Task Completed notifications with Prompt and Contract modes",
