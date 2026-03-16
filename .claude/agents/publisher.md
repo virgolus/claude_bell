@@ -20,7 +20,13 @@ Follow these steps exactly, stopping on any error:
 
 Read `Sources/App/AppVersion.swift` and increment the `build` number by 1. If the changes warrant it (new features, breaking changes), also bump the `current` version string. Use the Edit tool to update the file.
 
-## 2. Generate changelog entry (MANDATORY — DO NOT SKIP)
+## 2. Update download button version
+
+Use the Edit tool to update the download button text in `public/index.html`. Find the line containing `Download v` and `for macOS` and replace it with the new version:
+- Replace: `Download v<old-version> for macOS`
+- With: `Download v<new-version> for macOS`
+
+## 3. Generate changelog entry (MANDATORY — DO NOT SKIP)
 
 Read `public/changelog.json` to see the latest existing entry and its version/build.
 
@@ -51,7 +57,7 @@ Use the Edit tool to update the file. Ensure valid JSON.
 
 **VERIFICATION**: After editing, read back `public/changelog.json` and confirm the new entry is present and the JSON is valid.
 
-## 3. Build release
+## 4. Build release
 
 ```bash
 swift build -c release
@@ -59,7 +65,7 @@ swift build -c release
 
 If the build fails, report the error and stop.
 
-## 4. Update app bundle
+## 5. Update app bundle
 
 Copy the release binary and the SPM resource bundle (including the updated changelog.json):
 
@@ -69,32 +75,32 @@ rm -rf ClaudeBell.app/ClaudeBell_ClaudeBell.bundle && mkdir -p ClaudeBell.app/Cl
 cp public/changelog.json ClaudeBell.app/ClaudeBell_ClaudeBell.bundle/changelog.json
 ```
 
-## 5. Create distribution zip
+## 6. Create distribution zip
 
 ```bash
 rm -f public/ClaudeBell.zip
 zip -r public/ClaudeBell.zip ClaudeBell.app -x "*.DS_Store"
 ```
 
-## 6. Install and restart the app
+## 7. Install and restart the app
 
 ```bash
 rm -rf /Applications/ClaudeBell.app && cp -R ClaudeBell.app /Applications/ClaudeBell.app
 pkill -x ClaudeBell; sleep 1; open /Applications/ClaudeBell.app
 ```
 
-## 7. Commit, push and deploy
+## 8. Commit, push and deploy
 
-Stage ALL changed files — version bump, changelog, and zip:
+Stage ALL changed files — version bump, changelog, index.html, and zip:
 
 ```bash
-git add Sources/App/AppVersion.swift public/changelog.json public/ClaudeBell.zip
+git add Sources/App/AppVersion.swift public/changelog.json public/index.html public/ClaudeBell.zip
 git commit -m "Release v<version> (build <build>): <highlights>"
 git push
 vercel --prod
 ```
 
-## 8. Report
+## 9. Report
 
 When done, report:
 - Commit hash
@@ -108,6 +114,7 @@ Before reporting success, verify:
 - [ ] `Sources/App/AppVersion.swift` has the incremented build number
 - [ ] `public/changelog.json` has a new/updated entry matching the current version
 - [ ] The changelog entry in the JSON has at least one change item
+- [ ] `public/index.html` download button shows the new version
 - [ ] `public/ClaudeBell.zip` was recreated
-- [ ] Git commit includes all three files above
+- [ ] Git commit includes all four files above
 - [ ] `vercel --prod` completed successfully

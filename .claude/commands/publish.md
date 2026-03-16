@@ -4,7 +4,13 @@ Build a release version of ClaudeBell and deploy it to Vercel. Follow these step
 
 Read `Sources/App/AppVersion.swift` and increment the `build` number by 1. If the changes warrant it (new features, breaking changes), also bump the `current` version string. Use the Edit tool to update the file.
 
-## 2. Generate changelog entry (MANDATORY — DO NOT SKIP)
+## 2. Update download button version
+
+Use the Edit tool to update the download button text in `public/index.html`. Find the line containing `Download v` and `for macOS` and replace it with the new version:
+- Replace: `Download v<old-version> for macOS`
+- With: `Download v<new-version> for macOS`
+
+## 3. Generate changelog entry (MANDATORY — DO NOT SKIP)
 
 Read `public/changelog.json` to see the latest existing entry and its version/build.
 
@@ -35,7 +41,7 @@ Use the Edit tool to update the file. Ensure valid JSON.
 
 **VERIFICATION**: After editing, read back `public/changelog.json` and confirm the new entry is present and the JSON is valid.
 
-## 3. Build release binary
+## 4. Build release binary
 
 ```bash
 swift build -c release
@@ -43,7 +49,7 @@ swift build -c release
 
 Wait for the build to complete successfully before proceeding.
 
-## 4. Update the app bundle
+## 5. Update the app bundle
 
 Copy the release binary and the SPM resource bundle (including the updated changelog.json) into the app bundle:
 
@@ -54,7 +60,7 @@ mkdir -p ClaudeBell.app/ClaudeBell_ClaudeBell.bundle
 cp public/changelog.json ClaudeBell.app/ClaudeBell_ClaudeBell.bundle/changelog.json
 ```
 
-## 5. Create the distribution zip
+## 6. Create the distribution zip
 
 Remove the old zip and create a new one from the updated app bundle:
 
@@ -63,7 +69,7 @@ rm -f public/ClaudeBell.zip
 zip -r public/ClaudeBell.zip ClaudeBell.app -x "*.DS_Store"
 ```
 
-## 6. Restart the app
+## 7. Restart the app
 
 Kill the running instance and relaunch with the new binary:
 
@@ -71,12 +77,12 @@ Kill the running instance and relaunch with the new binary:
 pkill -x ClaudeBell; sleep 1; open ClaudeBell.app
 ```
 
-## 7. Commit and push
+## 8. Commit and push
 
-Stage ALL changed files — version bump, changelog, and zip:
+Stage ALL changed files — version bump, changelog, index.html, and zip:
 
 ```bash
-git add Sources/App/AppVersion.swift public/changelog.json public/ClaudeBell.zip
+git add Sources/App/AppVersion.swift public/changelog.json public/index.html public/ClaudeBell.zip
 ```
 
 Then commit with a descriptive message, push to origin, and deploy:
