@@ -44,6 +44,12 @@ final class BodyStyleSettings: ObservableObject {
         }
     }
 
+    @Published var panelWidth: CGFloat {
+        didSet {
+            AppDefaults.shared.set(Double(panelWidth), forKey: "panelWidth")
+        }
+    }
+
     @Published var panelPosition: PanelPosition {
         didSet {
             AppDefaults.shared.set(panelPosition.rawValue, forKey: "panelPosition")
@@ -111,6 +117,9 @@ final class BodyStyleSettings: ObservableObject {
 
         self.fontName = AppDefaults.shared.string(forKey: "bodyFontName")
 
+        let savedWidth = AppDefaults.shared.object(forKey: "panelWidth") as? Double
+        self.panelWidth = savedWidth.map { CGFloat($0) } ?? 900
+
         let savedPosition = AppDefaults.shared.string(forKey: "panelPosition") ?? "menuBar"
         self.panelPosition = PanelPosition(rawValue: savedPosition) ?? .menuBar
 
@@ -154,6 +163,11 @@ final class BodyStyleSettings: ObservableObject {
     func resetFontName() {
         AppDefaults.shared.removeObject(forKey: "bodyFontName")
         fontName = nil
+    }
+
+    func resetPanelWidth() {
+        AppDefaults.shared.removeObject(forKey: "panelWidth")
+        panelWidth = 900
     }
 
     // MARK: - Color persistence via hex

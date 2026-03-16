@@ -9,6 +9,7 @@ struct ContentView: View {
     @EnvironmentObject var store: RequestStore
     @ObservedObject private var bodyStyle = BodyStyleSettings.shared
     @State private var selectedItem: SidebarItem?
+    @State private var showSetup = !AppDefaults.shared.bool(forKey: "hasCompletedSetup")
     @State private var showWhatsNew = false
     @State private var showFullChangelog = false
 
@@ -40,8 +41,18 @@ struct ContentView: View {
                 }
             }
 
+            // First-launch setup overlay
+            if showSetup && !HookInstaller.isInstalled {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+
+                SetupOverlayView {
+                    showSetup = false
+                }
+            }
+
             // What's New overlay (replaces .sheet to avoid closing the panel)
-            if showWhatsNew || showFullChangelog, let releases = showFullChangelog ? loadFullChangelog() : loadChangelog() {
+            if !showSetup, showWhatsNew || showFullChangelog, let releases = showFullChangelog ? loadFullChangelog() : loadChangelog() {
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
 
@@ -56,12 +67,16 @@ struct ContentView: View {
         }
         .frame(
             width: bodyStyle.panelPosition == .fullscreen
-                ? (NSScreen.main?.visibleFrame.width ?? 900)
-                : 900,
+                ? (NSScreen.main?.visibleFrame.width ?? bodyStyle.panelWidth)
+                : bodyStyle.panelWidth,
             height: NSScreen.main.map { $0.visibleFrame.height } ?? 650
         )
         .onAppear {
             autoSelectLatest()
+            if showSetup && HookInstaller.isInstalled {
+                AppDefaults.shared.set(true, forKey: "hasCompletedSetup")
+                showSetup = false
+            }
             checkWhatsNew()
         }
         .onChange(of: store.showWhatsNewFromMenu) { _, show in

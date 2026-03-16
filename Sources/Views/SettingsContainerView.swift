@@ -261,6 +261,18 @@ private struct AppearanceSettingsTab: View {
                         }
                     }
                     .pickerStyle(.segmented)
+
+                    HStack(spacing: 8) {
+                        Text("Width:")
+                            .frame(width: 45, alignment: .leading)
+                        Slider(value: $bodyStyle.panelWidth, in: 500...1400, step: 50)
+                        Text("\(Int(bodyStyle.panelWidth))pt")
+                            .font(.system(.caption, design: .monospaced))
+                            .frame(width: 50, alignment: .trailing)
+                        Button("Reset") { bodyStyle.resetPanelWidth() }
+                            .font(.caption)
+                    }
+                    .disabled(bodyStyle.panelPosition == .fullscreen)
                 }
 
                 settingsSection(title: "Notification Style", icon: "textformat", iconColor: .cyan) {
