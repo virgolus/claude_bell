@@ -44,13 +44,14 @@ enum TerminalBridge {
 
     // MARK: - Terminal.app
 
-    /// Focus the correct Terminal.app tab, paste from clipboard, press Return.
+    /// Focus the correct Terminal.app tab, send text via native `do script`.
     private static func sendTerminalPaste(cwd: String) -> Bool {
         let cwdFolder = (cwd as NSString).lastPathComponent
         let script = """
         tell application "Terminal"
             if not running then return false
-            -- First pass: match by cwd folder
+            set theText to the clipboard as text
+            -- First pass: match by cwd folder + claude process
             repeat with w in windows
                 repeat with i from 1 to count of tabs of w
                     set t to tab i of w
@@ -61,14 +62,7 @@ enum TerminalBridge {
                             set selected tab of w to t
                             set index of w to 1
                             activate
-                            delay 0.15
-                            tell application "System Events"
-                                tell process "Terminal"
-                                    keystroke "v" using command down
-                                    delay 0.2
-                                    keystroke return
-                                end tell
-                            end tell
+                            do script theText in t
                             return true
                         end if
                     end repeat
@@ -84,18 +78,22 @@ enum TerminalBridge {
                             set selected tab of w to t
                             set index of w to 1
                             activate
-                            delay 0.15
-                            tell application "System Events"
-                                tell process "Terminal"
-                                    keystroke "v" using command down
-                                    delay 0.2
-                                    keystroke return
-                                end tell
-                            end tell
+                            do script theText in t
                             return true
                         end if
                     end repeat
                 end repeat
+            end repeat
+            -- Third pass: cwd folder only (claude process may have exited)
+            repeat with w in windows
+                set winName to name of w
+                if winName contains "\(cwdFolder)" then
+                    set selected tab of w to tab 1 of w
+                    set index of w to 1
+                    activate
+                    do script theText in tab 1 of w
+                    return true
+                end if
             end repeat
         end tell
         return false
@@ -148,7 +146,7 @@ enum TerminalBridge {
 
     // MARK: - iTerm2
 
-    /// Focus the correct iTerm2 session, paste from clipboard, press Return.
+    /// Focus the correct iTerm2 session, send text via native `write text`.
     private static func sendiTerm2Paste(cwd: String) -> Bool {
         guard NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == "com.googlecode.iterm2" }) else {
             return false
@@ -156,6 +154,7 @@ enum TerminalBridge {
         let cwdFolder = (cwd as NSString).lastPathComponent
         let script = """
         tell application "iTerm2"
+            set theText to the clipboard as text
             -- First pass: match by cwd path in session
             repeat with w in windows
                 repeat with t in tabs of w
@@ -166,14 +165,7 @@ enum TerminalBridge {
                             select t
                             select s
                             activate
-                            delay 0.15
-                            tell application "System Events"
-                                tell process "iTerm2"
-                                    keystroke "v" using command down
-                                    delay 0.2
-                                    keystroke return
-                                end tell
-                            end tell
+                            tell s to write text theText
                             return true
                         end if
                     end repeat
@@ -188,14 +180,22 @@ enum TerminalBridge {
                             select t
                             select s
                             activate
-                            delay 0.15
-                            tell application "System Events"
-                                tell process "iTerm2"
-                                    keystroke "v" using command down
-                                    delay 0.2
-                                    keystroke return
-                                end tell
-                            end tell
+                            tell s to write text theText
+                            return true
+                        end if
+                    end repeat
+                end repeat
+            end repeat
+            -- Third pass: cwd folder only (claude process may have exited)
+            repeat with w in windows
+                repeat with t in tabs of w
+                    repeat with s in sessions of t
+                        set sessionPath to path of s
+                        if sessionPath contains "\(cwdFolder)" then
+                            select t
+                            select s
+                            activate
+                            tell s to write text theText
                             return true
                         end if
                     end repeat
