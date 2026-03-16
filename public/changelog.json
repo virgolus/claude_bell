@@ -1,11 +1,12 @@
 [
   {
-    "version": "1.6.3",
-    "build": 22,
+    "version": "1.6.4",
+    "build": 23,
     "date": "2026-03-16",
-    "highlights": "Permission prompts default to Always Allow, download button shows version number",
+    "highlights": "Always Allow as default, configurable panel width, download button shows version",
     "changes": [
       { "type": "changed", "text": "Permission prompts now default to the Always Allow button when it is available, reducing friction for trusted tools" },
+      { "type": "new", "text": "Panel width can now be configured in settings" },
       { "type": "changed", "text": "Website download button now displays the current version number" }
     ]
   },
