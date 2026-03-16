@@ -1,12 +1,14 @@
 [
   {
     "version": "1.7.0",
-    "build": 24,
+    "build": 25,
     "date": "2026-03-16",
-    "highlights": "First-launch setup prompt guides new users to install hooks",
+    "highlights": "First-launch setup prompt, reliable follow-up delivery after task complete",
     "changes": [
       { "type": "new", "text": "First-launch setup overlay prompts new users to install Claude Code hooks, explaining that the app won't receive events without them" },
-      { "type": "new", "text": "Skip option lets users defer hook installation and set up later from Settings" }
+      { "type": "new", "text": "Skip option lets users defer hook installation and set up later from Settings" },
+      { "type": "fixed", "text": "Follow-up prompts after Task Complete now reliably deliver to the terminal using native commands instead of simulated keystrokes" },
+      { "type": "fixed", "text": "Terminal tab matching works even after Claude Code exits, using cwd-based fallback" }
     ]
   },
   {
