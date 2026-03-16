@@ -159,7 +159,7 @@ struct RequestDetailView: View {
         .onAppear {
             let elapsed = Int(-request.createdAt.timeIntervalSinceNow)
             remainingSeconds = max(0, 300 - elapsed)
-            focused = isSpecialTool ? nil : .allow
+            focused = isSpecialTool ? nil : (canAlwaysAllow ? .allowAlways : .allow)
             footerFocused = nil
             if isAskUserQuestion {
                 cachedQuestions = Self.parseQuestions(from: request.toolInput)
