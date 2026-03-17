@@ -13,6 +13,7 @@ final class RequestStore: ObservableObject {
         didSet { AppDefaults.shared.set(isMuted, forKey: "isMuted") }
     }
     @Published var showWhatsNewFromMenu = false
+    @Published var availableUpdate: UpdateChecker.UpdateInfo? = nil
 
     /// Set by ClaudeBellApp to auto-show the panel on new requests
     var onNewRequest: (() -> Void)?

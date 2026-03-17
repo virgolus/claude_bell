@@ -90,6 +90,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // Check for updates on launch (5s delay) + every 30 min
+        let updateChecker = UpdateChecker()
+        Task {
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            if let update = await updateChecker.checkForUpdate() {
+                RequestStore.shared.availableUpdate = update
+            }
+        }
+        Timer.scheduledTimer(withTimeInterval: 1800, repeats: true) { _ in
+            Task { @MainActor in
+                if let update = await updateChecker.checkForUpdate() {
+                    RequestStore.shared.availableUpdate = update
+                }
+            }
+        }
+
         // Global shortcut to toggle panel
         GlobalShortcut.shared.onTrigger = {
             self.togglePanel()
@@ -176,6 +192,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         whatsNewItem.target = self
         menu.addItem(whatsNewItem)
 
+        let updateItem = NSMenuItem(title: "Check for Updates...", action: #selector(checkForUpdates), keyEquivalent: "")
+        updateItem.target = self
+        menu.addItem(updateItem)
+
         menu.addItem(.separator())
 
         let infoItem = NSMenuItem(title: "About Claude Bell", action: #selector(showAbout), keyEquivalent: "")
@@ -206,6 +226,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Open the panel first, then trigger the overlay
         togglePanel()
         RequestStore.shared.showWhatsNewFromMenu = true
+    }
+
+    @objc private func checkForUpdates() {
+        Task {
+            // Clear dismissed build so manual check always shows available updates
+            AppDefaults.shared.removeObject(forKey: "dismissedUpdateBuild")
+            let checker = UpdateChecker()
+            if let update = await checker.checkForUpdate() {
+                RequestStore.shared.availableUpdate = update
+                togglePanel()
+            } else {
+                let alert = NSAlert()
+                alert.messageText = "No Updates Available"
+                alert.informativeText = "You're running the latest version of Claude Bell (v\(AppVersion.current))."
+                alert.alertStyle = .informational
+                alert.addButton(withTitle: "OK")
+                alert.runModal()
+            }
+        }
     }
 
     @objc private func showAbout() {

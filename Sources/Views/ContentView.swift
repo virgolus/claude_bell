@@ -18,6 +18,10 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 HeaderView()
 
+                if let update = store.availableUpdate {
+                    UpdateBannerView(update: update)
+                }
+
                 Divider()
 
                 if store.pendingRequests.isEmpty && store.notifications.isEmpty {

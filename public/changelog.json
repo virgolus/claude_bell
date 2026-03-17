@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.9.0",
+    "build": 28,
+    "date": "2026-03-18",
+    "highlights": "Auto-update system: get notified of new versions and update in one click",
+    "changes": [
+      { "type": "new", "text": "Auto-update checker fetches the latest version from the server on launch and every 30 minutes" },
+      { "type": "new", "text": "Update banner appears in the panel when a new version is available, showing version and highlights" },
+      { "type": "new", "text": "One-click \"Update Now\" downloads, installs, and relaunches the app automatically" },
+      { "type": "new", "text": "\"Check for Updates...\" option added to the right-click menu for manual update checks" },
+      { "type": "new", "text": "Dismiss an update to hide it until the next release" }
+    ]
+  },
+  {
     "version": "1.8.0",
     "build": 27,
     "date": "2026-03-17",
