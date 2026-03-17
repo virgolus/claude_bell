@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.7.1",
+    "build": 26,
+    "date": "2026-03-17",
+    "highlights": "Open in Terminal works after Claude exits",
+    "changes": [
+      { "type": "fixed", "text": "\"Open in Terminal\" now finds the correct tab even after the Claude process has exited, using cwd-based fallback matching" }
+    ]
+  },
+  {
     "version": "1.7.0",
     "build": 25,
     "date": "2026-03-16",

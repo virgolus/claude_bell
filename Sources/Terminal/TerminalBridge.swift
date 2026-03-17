@@ -138,6 +138,15 @@ enum TerminalBridge {
                     end repeat
                 end repeat
             end repeat
+            -- Third pass: cwd folder only (claude process may have exited)
+            repeat with w in windows
+                set winName to name of w
+                if winName contains "\(cwdFolder)" then
+                    set selected tab of w to tab 1 of w
+                    set index of w to 1
+                    return true
+                end if
+            end repeat
         end tell
         return false
         """
@@ -235,6 +244,19 @@ enum TerminalBridge {
                     repeat with s in sessions of t
                         set sessionName to name of s
                         if sessionName contains "claude" then
+                            select t
+                            select s
+                            return true
+                        end if
+                    end repeat
+                end repeat
+            end repeat
+            -- Third pass: cwd folder only (claude process may have exited)
+            repeat with w in windows
+                repeat with t in tabs of w
+                    repeat with s in sessions of t
+                        set sessionPath to path of s
+                        if sessionPath contains "\(cwdFolder)" then
                             select t
                             select s
                             return true
