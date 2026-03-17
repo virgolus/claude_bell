@@ -5,6 +5,7 @@ struct SessionInfo: Identifiable, Sendable {
     let cwd: String
     var lastSeen: Date
     var customName: String?
+    var lastPrompt: String?
 
     var projectName: String {
         (cwd as NSString).lastPathComponent

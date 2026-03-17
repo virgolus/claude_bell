@@ -7,6 +7,7 @@ struct DetailFooterView: View {
     let cwd: String
     let isPassive: Bool
     let onDismiss: () -> Void
+    let onOpenInTerminal: (() -> Void)?
 
     /// When non-nil, parent controls which button is highlighted (no local key monitor).
     var focusedButton: FooterButton?
@@ -25,10 +26,11 @@ struct DetailFooterView: View {
 
     private var isStandalone: Bool { focusedButton == nil }
 
-    init(cwd: String, isPassive: Bool = false, focusedButton: FooterButton? = nil, onDismiss: @escaping () -> Void) {
+    init(cwd: String, isPassive: Bool = false, focusedButton: FooterButton? = nil, onOpenInTerminal: (() -> Void)? = nil, onDismiss: @escaping () -> Void) {
         self.cwd = cwd
         self.isPassive = isPassive
         self.focusedButton = focusedButton
+        self.onOpenInTerminal = onOpenInTerminal
         self.onDismiss = onDismiss
     }
 
@@ -51,8 +53,12 @@ struct DetailFooterView: View {
                 Spacer()
 
                 Button {
-                    TerminalBridge.focusTerminalTab(forCwd: cwd)
-                    onDismiss()
+                    if let onOpenInTerminal {
+                        onOpenInTerminal()
+                    } else {
+                        TerminalBridge.focusTerminalTab(forCwd: cwd)
+                        onDismiss()
+                    }
                 } label: {
                     Label("Open in Terminal", systemImage: "terminal")
                 }
@@ -105,8 +111,12 @@ struct DetailFooterView: View {
         case .dismiss:
             onDismiss()
         case .openInTerminal:
-            TerminalBridge.focusTerminalTab(forCwd: cwd)
-            onDismiss()
+            if let onOpenInTerminal {
+                onOpenInTerminal()
+            } else {
+                TerminalBridge.focusTerminalTab(forCwd: cwd)
+                onDismiss()
+            }
         }
     }
 }

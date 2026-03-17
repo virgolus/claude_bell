@@ -105,15 +105,16 @@ final class RequestStore: ObservableObject {
         sessions.removeValue(forKey: id)
     }
 
-    func trackSessionPublic(id: String, cwd: String) {
-        trackSession(id: id, cwd: cwd)
+    func trackSessionPublic(id: String, cwd: String, lastPrompt: String? = nil) {
+        trackSession(id: id, cwd: cwd, lastPrompt: lastPrompt)
     }
 
-    private func trackSession(id: String, cwd: String) {
+    private func trackSession(id: String, cwd: String, lastPrompt: String? = nil) {
         if sessions[id] != nil {
             sessions[id]?.lastSeen = Date()
+            if let lastPrompt { sessions[id]?.lastPrompt = lastPrompt }
         } else {
-            sessions[id] = SessionInfo(id: id, cwd: cwd, lastSeen: Date())
+            sessions[id] = SessionInfo(id: id, cwd: cwd, lastSeen: Date(), lastPrompt: lastPrompt)
         }
     }
 

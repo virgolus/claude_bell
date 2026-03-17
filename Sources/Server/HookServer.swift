@@ -25,8 +25,11 @@ final class HookServer: Sendable {
                 print("[HookServer] PermissionRequest raw body: \(raw)")
             }
 
+            let lastPrompt = Self.lastUserPrompt(from: input.transcriptPath ?? "")
+
             let response = await withCheckedContinuation { (continuation: CheckedContinuation<HookResponse, Never>) in
                 Task { @MainActor in
+                    store.trackSessionPublic(id: input.sessionId, cwd: input.cwd, lastPrompt: lastPrompt)
                     let pending = PendingRequest(
                         sessionId: input.sessionId,
                         cwd: input.cwd,
@@ -157,9 +160,12 @@ final class HookServer: Sendable {
 
         router.post("/hooks/pre-tool-use") { request, context -> Response in
             let input = try await Self.decodeInput(request, label: "PreToolUse")
+            // Check if session already has a prompt before doing I/O
+            let needsPrompt = await MainActor.run { store.sessions[input.sessionId]?.lastPrompt == nil }
+            let lastPrompt = needsPrompt ? Self.lastUserPrompt(from: input.transcriptPath ?? "") : nil
             Task { @MainActor in
                 store.sessionAdvanced(id: input.sessionId)
-                store.trackSessionPublic(id: input.sessionId, cwd: input.cwd)
+                store.trackSessionPublic(id: input.sessionId, cwd: input.cwd, lastPrompt: lastPrompt)
             }
             return Response(status: .ok)
         }
@@ -202,6 +208,46 @@ final class HookServer: Sendable {
     private static func filterGenericMessage(_ text: String) -> String {
         let lower = text.lowercased()
         return genericMessages.contains(where: { lower.contains($0) }) ? "" : text
+    }
+
+    /// Extract the last user prompt from the transcript.
+    static func lastUserPrompt(from path: String) -> String? {
+        guard !path.isEmpty,
+              let data = FileManager.default.contents(atPath: path),
+              let content = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+
+        let lines = content.components(separatedBy: "\n").filter { !$0.isEmpty }
+
+        for line in lines.reversed() {
+            guard let lineData = line.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
+                  let type = json["type"] as? String, type == "user",
+                  let message = json["message"] as? [String: Any] else {
+                continue
+            }
+
+            var textParts: [String] = []
+            if let contentArray = message["content"] as? [[String: Any]] {
+                for block in contentArray {
+                    if let blockType = block["type"] as? String, blockType == "text",
+                       let text = block["text"] as? String {
+                        textParts.append(text)
+                    }
+                }
+            } else if let contentString = message["content"] as? String {
+                textParts.append(contentString)
+            }
+
+            let combined = textParts.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            // Skip system messages like "[Request interrupted by user...]"
+            if !combined.isEmpty && !combined.hasPrefix("[") {
+                return combined
+            }
+        }
+
+        return nil
     }
 
     /// Extract the last assistant text message from the transcript.

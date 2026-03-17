@@ -90,6 +90,12 @@ struct RequestDetailView: View {
                             Text(isAskUserQuestion ? "Question" : isExitPlanMode ? "Plan Review" : request.toolName)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                            if let lastPrompt = store.sessions[request.sessionId]?.lastPrompt {
+                                Text(lastPrompt)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(2)
+                            }
                         }
                         Spacer()
                         Text(formatCountdown(remainingSeconds))
@@ -147,7 +153,10 @@ struct RequestDetailView: View {
                 .padding(.bottom, 4)
             }
 
-            DetailFooterView(cwd: request.cwd, focusedButton: footerFocused) {
+            DetailFooterView(cwd: request.cwd, focusedButton: footerFocused, onOpenInTerminal: {
+                TerminalBridge.focusTerminalTab(forCwd: request.cwd)
+                store.removeRequest(id: request.id)
+            }) {
                 request.respond(allow: false)
                 store.removeRequest(id: request.id)
             }
@@ -265,7 +274,6 @@ struct RequestDetailView: View {
             store.removeRequest(id: request.id)
         case .openInTerminal:
             TerminalBridge.focusTerminalTab(forCwd: request.cwd)
-            request.respond(allow: false)
             store.removeRequest(id: request.id)
         case nil:
             break

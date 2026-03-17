@@ -14,7 +14,12 @@ struct SessionRowView: View {
                     .font(.body.weight(.medium))
                     .lineLimit(1)
 
-                if session.customName != nil {
+                if let lastPrompt = session.lastPrompt {
+                    Text(lastPrompt)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                } else if session.customName != nil {
                     Text(session.projectName)
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
