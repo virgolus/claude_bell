@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.8.0",
+    "build": 27,
+    "date": "2026-03-17",
+    "highlights": "Open in Terminal no longer denies permission, last user prompt shown in session info",
+    "changes": [
+      { "type": "fixed", "text": "\"Open in Terminal\" on permission requests now focuses the terminal and closes the panel without sending a deny response to the webhook" },
+      { "type": "new", "text": "Session rows and permission detail views now display the last user prompt extracted from the conversation transcript" }
+    ]
+  },
+  {
     "version": "1.7.1",
     "build": 26,
     "date": "2026-03-17",
