@@ -75,7 +75,7 @@ enum TerminalBridge {
                     if hasClaude then
                         set tabTty to tty of t
                         try
-                            set cwdCheck to do shell script "lsof -a -d cwd -Fn -- " & quoted form of tabTty & " 2>/dev/null | grep '^n' | tail -1 | cut -c2-"
+                            set cwdCheck to do shell script "lsof -a -d cwd -Fn $(lsof -t " & quoted form of tabTty & " 2>/dev/null | sed 's/^/-p /') 2>/dev/null | grep '^n' | cut -c2-"
                         on error
                             set cwdCheck to ""
                         end try
@@ -109,7 +109,7 @@ enum TerminalBridge {
                     set t to tab i of w
                     set tabTty to tty of t
                     try
-                        set cwdCheck to do shell script "lsof -a -d cwd -Fn -- " & quoted form of tabTty & " 2>/dev/null | grep '^n' | tail -1 | cut -c2-"
+                        set cwdCheck to do shell script "lsof -a -d cwd -Fn $(lsof -t " & quoted form of tabTty & " 2>/dev/null | sed 's/^/-p /') 2>/dev/null | grep '^n' | cut -c2-"
                     on error
                         set cwdCheck to ""
                     end try
