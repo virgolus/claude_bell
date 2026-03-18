@@ -46,31 +46,49 @@ enum TerminalBridge {
 
     // MARK: - Terminal.app
 
-    /// Focus the correct Terminal.app tab, send text via native `do script`.
-    private static func sendTerminalPaste(cwd: String) -> Bool {
-        let cwdFolder = (cwd as NSString).lastPathComponent
-        let script = """
+    /// Builds an AppleScript that finds the correct Terminal.app tab by checking each tab's
+    /// tty via `lsof` to get the real cwd, instead of relying on window name (which only
+    /// reflects the active tab's title).
+    ///
+    /// Pass 1: tab has "claude" in processes AND tty cwd matches → exact match
+    /// Pass 2: tab has "claude" in processes → fallback (any claude tab)
+    /// Pass 3: tty cwd matches (claude may have exited) → cwd-only fallback
+    private static func terminalMatchScript(cwd: String, action: String) -> String {
+        let escaped = cwd.replacingOccurrences(of: "\"", with: "\\\"")
+        return """
         tell application "Terminal"
             if not running then return false
-            set theText to the clipboard as text
-            -- First pass: match by cwd folder + claude process
+            \(action == "focus" ? "activate" : "set theText to the clipboard as text")
+            -- Helper: check if a tab's tty has the target cwd
+            -- Pass 1: claude process + cwd match
             repeat with w in windows
                 repeat with i from 1 to count of tabs of w
                     set t to tab i of w
                     set procs to processes of t
-                    set winName to name of w
+                    set hasClaude to false
                     repeat with p in procs
-                        if p contains "claude" and winName contains "\(cwdFolder)" then
-                            set selected tab of w to t
-                            set index of w to 1
-                            activate
-                            do script theText in t
-                            return true
+                        if p contains "claude" then
+                            set hasClaude to true
+                            exit repeat
                         end if
                     end repeat
+                    if hasClaude then
+                        set tabTty to tty of t
+                        try
+                            set cwdCheck to do shell script "lsof -a -d cwd -Fn -- " & quoted form of tabTty & " 2>/dev/null | grep '^n' | tail -1 | cut -c2-"
+                        on error
+                            set cwdCheck to ""
+                        end try
+                        if cwdCheck contains "\(escaped)" then
+                            set selected tab of w to t
+                            set index of w to 1
+                            \(action == "focus" ? "" : "activate\n                            do script theText in t")
+                            return true
+                        end if
+                    end if
                 end repeat
             end repeat
-            -- Second pass: any claude tab
+            -- Pass 2: any tab with claude process
             repeat with w in windows
                 repeat with i from 1 to count of tabs of w
                     set t to tab i of w
@@ -79,80 +97,50 @@ enum TerminalBridge {
                         if p contains "claude" then
                             set selected tab of w to t
                             set index of w to 1
-                            activate
-                            do script theText in t
+                            \(action == "focus" ? "" : "activate\n                            do script theText in t")
                             return true
                         end if
                     end repeat
                 end repeat
             end repeat
-            -- Third pass: cwd folder only (claude process may have exited)
+            -- Pass 3: cwd match only (claude process may have exited)
             repeat with w in windows
-                set winName to name of w
-                if winName contains "\(cwdFolder)" then
-                    set selected tab of w to tab 1 of w
-                    set index of w to 1
-                    activate
-                    do script theText in tab 1 of w
-                    return true
-                end if
+                repeat with i from 1 to count of tabs of w
+                    set t to tab i of w
+                    set tabTty to tty of t
+                    try
+                        set cwdCheck to do shell script "lsof -a -d cwd -Fn -- " & quoted form of tabTty & " 2>/dev/null | grep '^n' | tail -1 | cut -c2-"
+                    on error
+                        set cwdCheck to ""
+                    end try
+                    if cwdCheck contains "\(escaped)" then
+                        set selected tab of w to t
+                        set index of w to 1
+                        \(action == "focus" ? "" : "activate\n                        do script theText in t")
+                        return true
+                    end if
+                end repeat
             end repeat
         end tell
         return false
         """
-        return runAppleScript(script)
+    }
+
+    /// Focus the correct Terminal.app tab, send text via native `do script`.
+    private static func sendTerminalPaste(cwd: String) -> Bool {
+        logToFile("sendTerminalPaste: cwd=\(cwd)")
+        let script = terminalMatchScript(cwd: cwd, action: "paste")
+        let result = runAppleScript(script)
+        logToFile("sendTerminalPaste: result=\(result)")
+        return result
     }
 
     private static func focusTerminal(cwd: String) -> Bool {
-        let cwdFolder = (cwd as NSString).lastPathComponent
-        let script = """
-        tell application "Terminal"
-            if not running then return false
-            activate
-            -- First pass: match tab whose window name contains the cwd folder
-            repeat with w in windows
-                repeat with i from 1 to count of tabs of w
-                    set t to tab i of w
-                    set procs to processes of t
-                    set winName to name of w
-                    repeat with p in procs
-                        if p contains "claude" then
-                            if winName contains "\(cwdFolder)" then
-                                set selected tab of w to t
-                                set index of w to 1
-                                return true
-                            end if
-                        end if
-                    end repeat
-                end repeat
-            end repeat
-            -- Second pass: fallback to any tab with claude
-            repeat with w in windows
-                repeat with i from 1 to count of tabs of w
-                    set t to tab i of w
-                    set procs to processes of t
-                    repeat with p in procs
-                        if p contains "claude" then
-                            set selected tab of w to t
-                            set index of w to 1
-                            return true
-                        end if
-                    end repeat
-                end repeat
-            end repeat
-            -- Third pass: cwd folder only (claude process may have exited)
-            repeat with w in windows
-                set winName to name of w
-                if winName contains "\(cwdFolder)" then
-                    set selected tab of w to tab 1 of w
-                    set index of w to 1
-                    return true
-                end if
-            end repeat
-        end tell
-        return false
-        """
-        return runAppleScript(script)
+        logToFile("focusTerminal: cwd=\(cwd)")
+        let script = terminalMatchScript(cwd: cwd, action: "focus")
+        let result = runAppleScript(script)
+        logToFile("focusTerminal: result=\(result)")
+        return result
     }
 
     // MARK: - iTerm2
