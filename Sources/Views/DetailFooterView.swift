@@ -12,7 +12,11 @@ struct DetailFooterView: View {
     /// When non-nil, parent controls which button is highlighted (no local key monitor).
     var focusedButton: FooterButton?
 
-    /// When standalone (focusedButton == nil), local state manages focus.
+    /// When true, the footer manages its own keyboard navigation.
+    /// When false, the parent view manages keyboard events (even if focusedButton is nil).
+    let standalone: Bool
+
+    /// When standalone, local state manages focus.
     @State private var localFocused: FooterButton = .dismiss
     @State private var keyMonitor: Any?
 
@@ -24,11 +28,10 @@ struct DetailFooterView: View {
         focusedButton ?? localFocused
     }
 
-    private var isStandalone: Bool { focusedButton == nil }
-
-    init(cwd: String, isPassive: Bool = false, focusedButton: FooterButton? = nil, onOpenInTerminal: (() -> Void)? = nil, onDismiss: @escaping () -> Void) {
+    init(cwd: String, isPassive: Bool = false, standalone: Bool = true, focusedButton: FooterButton? = nil, onOpenInTerminal: (() -> Void)? = nil, onDismiss: @escaping () -> Void) {
         self.cwd = cwd
         self.isPassive = isPassive
+        self.standalone = standalone
         self.focusedButton = focusedButton
         self.onOpenInTerminal = onOpenInTerminal
         self.onDismiss = onDismiss
@@ -72,10 +75,10 @@ struct DetailFooterView: View {
             .padding()
         }
         .onAppear {
-            if isStandalone { installKeyMonitor() }
+            if standalone { installKeyMonitor() }
         }
         .onDisappear {
-            if isStandalone { removeKeyMonitor() }
+            if standalone { removeKeyMonitor() }
         }
     }
 

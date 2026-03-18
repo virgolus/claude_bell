@@ -111,11 +111,19 @@ struct RequestDetailView: View {
                             questions: questions,
                             onSend: { text in
                                 request.respond(.allow)
-                                TerminalBridge.sendText(text, toCwd: request.cwd)
                                 store.removeRequest(id: request.id)
+                                // Delay typing until Claude Code has rendered the prompt
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                    TerminalBridge.sendText(text, toCwd: request.cwd)
+                                }
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                     NSApplication.shared.activate()
                                 }
+                            },
+                            cwd: request.cwd,
+                            onDismiss: {
+                                request.respond(.allow)
+                                store.removeRequest(id: request.id)
                             }
                         )
                     } else if isExitPlanMode {
@@ -153,8 +161,9 @@ struct RequestDetailView: View {
                 .padding(.bottom, 4)
             }
 
-            DetailFooterView(cwd: request.cwd, focusedButton: footerFocused, onOpenInTerminal: {
+            DetailFooterView(cwd: request.cwd, standalone: false, focusedButton: footerFocused, onOpenInTerminal: {
                 TerminalBridge.focusTerminalTab(forCwd: request.cwd)
+                request.respond(allow: false)
                 store.removeRequest(id: request.id)
             }) {
                 request.respond(allow: false)
@@ -274,6 +283,7 @@ struct RequestDetailView: View {
             store.removeRequest(id: request.id)
         case .openInTerminal:
             TerminalBridge.focusTerminalTab(forCwd: request.cwd)
+            request.respond(allow: false)
             store.removeRequest(id: request.id)
         case nil:
             break

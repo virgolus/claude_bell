@@ -9,6 +9,23 @@ struct QuestionOptionsView: View {
 
     @State private var selections: [UUID: Set<Int>] = [:]  // questionId -> selected indices
     @State private var customText = ""
+    @State private var freeTextExpanded = false  // true when "Type something" was clicked
+    @FocusState private var freeTextFocused: Bool
+
+    private static let freeTextPatterns = ["type something", "something else", "other"]
+
+    /// Returns the free-text option for a question, if any.
+    private static func freeTextOption(in question: ParsedQuestion) -> QuestionOption? {
+        question.options.first { option in
+            let lower = option.label.lowercased()
+            return freeTextPatterns.contains { lower.contains($0) }
+        }
+    }
+
+    /// Whether any question has a free-text option.
+    private var hasFreeTextOption: Bool {
+        questions.contains { Self.freeTextOption(in: $0) != nil }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -29,16 +46,31 @@ struct QuestionOptionsView: View {
                 }
             }
 
-            // Free text fallback
-            HStack(spacing: 8) {
-                TextField("Or type a custom response...", text: $customText)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit { sendCustom() }
+            if freeTextExpanded {
+                // Inline text field shown after clicking "Type something"
+                HStack(spacing: 8) {
+                    TextField("Type your response...", text: $customText)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($freeTextFocused)
+                        .onSubmit { sendFreeText() }
 
-                Button("Send") { sendCustom() }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.orange)
-                    .disabled(customText.trimmingCharacters(in: .whitespaces).isEmpty)
+                    Button("Send") { sendFreeText() }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.orange)
+                        .disabled(customText.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            } else if !hasFreeTextOption && questions.count == 1 && !questions.contains(where: { $0.multiSelect }) {
+                // Free text fallback only for single-select without a "Type something" option
+                HStack(spacing: 8) {
+                    TextField("Or type a custom response...", text: $customText)
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit { sendCustom() }
+
+                    Button("Send") { sendCustom() }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.orange)
+                        .disabled(customText.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
             }
         }
     }
@@ -63,13 +95,20 @@ struct QuestionOptionsView: View {
 
             // Options
             ForEach(question.options) { option in
-                let isSelected = selections[question.id, default: []].contains(option.index)
-                optionRow(option: option, isSelected: isSelected, question: question)
+                let isFreeText = Self.freeTextOption(in: question)?.id == option.id
+                let isSelected = freeTextExpanded && isFreeText
+                    ? true
+                    : selections[question.id, default: []].contains(option.index)
+
+                if !(freeTextExpanded && isFreeText) {
+                    // Show normal option row (hide the free-text option when expanded)
+                    optionRow(option: option, isSelected: isSelected, question: question, isFreeText: isFreeText)
+                }
             }
         }
     }
 
-    private func optionRow(option: QuestionOption, isSelected: Bool, question: ParsedQuestion) -> some View {
+    private func optionRow(option: QuestionOption, isSelected: Bool, question: ParsedQuestion, isFreeText: Bool) -> some View {
         HStack(spacing: 8) {
             // Selection indicator
             if question.multiSelect {
@@ -84,8 +123,15 @@ struct QuestionOptionsView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(option.label)
-                    .font(.body.weight(.medium))
+                HStack(spacing: 4) {
+                    Text(option.label)
+                        .font(.body.weight(.medium))
+                    if isFreeText {
+                        Image(systemName: "pencil.line")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 if !option.description.isEmpty {
                     Text(option.description)
                         .font(.caption)
@@ -106,8 +152,17 @@ struct QuestionOptionsView: View {
         )
         .contentShape(RoundedRectangle(cornerRadius: 8))
         .onTapGesture {
-            if question.multiSelect {
+            if isFreeText {
+                // Expand inline text field instead of sending immediately
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    freeTextExpanded = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    freeTextFocused = true
+                }
+            } else if question.multiSelect {
                 // Toggle selection
+                freeTextExpanded = false
                 var current = selections[question.id, default: []]
                 if current.contains(option.index) {
                     current.remove(option.index)
@@ -116,9 +171,9 @@ struct QuestionOptionsView: View {
                 }
                 selections[question.id] = current
             } else {
-                // Single select
+                // Single select → send immediately
+                freeTextExpanded = false
                 selections[question.id] = [option.index]
-                // If single question, single select → send immediately
                 if questions.count == 1 {
                     onSend("\(option.index)")
                 }
@@ -147,25 +202,25 @@ struct QuestionOptionsView: View {
         onSend(parts.joined(separator: "\n"))
     }
 
-    private static let freeTextPatterns = ["type something", "something else", "other"]
-
-    private func sendCustom() {
+    /// Send free-text response via two-step (option number + custom text).
+    private func sendFreeText() {
         let text = customText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return }
 
-        // Find the "type something else" option to do a two-step send
-        if let firstQuestion = questions.first {
-            let freeTextOption = firstQuestion.options.first { option in
-                let lower = option.label.lowercased()
-                return Self.freeTextPatterns.contains { lower.contains($0) }
-            }
-            if let option = freeTextOption, !cwd.isEmpty {
-                TerminalBridge.sendTextTwoStep("\(option.index)", then: text, toCwd: cwd)
-                onDismiss?()
-                return
-            }
+        if let firstQuestion = questions.first,
+           let option = Self.freeTextOption(in: firstQuestion),
+           !cwd.isEmpty {
+            TerminalBridge.sendTextTwoStep("\(option.index)", then: text, toCwd: cwd)
+            onDismiss?()
+        } else {
+            onSend(text)
         }
+    }
 
+    /// Fallback custom text send (when no free-text option exists).
+    private func sendCustom() {
+        let text = customText.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return }
         onSend(text)
     }
 }

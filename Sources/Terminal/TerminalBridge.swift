@@ -5,6 +5,7 @@ enum TerminalBridge {
     /// Sends text to a Terminal.app tab whose process matches Claude Code.
     /// Uses clipboard paste (Cmd+V) + Return for reliability.
     static func sendText(_ text: String, toCwd cwd: String) {
+        logToFile("sendText: \"\(text)\" → cwd: \(cwd)")
         // Save clipboard, put text, paste+enter, restore clipboard
         let pasteboard = NSPasteboard.general
         let oldContents = pasteboard.string(forType: .string)
@@ -29,6 +30,7 @@ enum TerminalBridge {
     /// Used for "type something else" options where Claude Code expects the option number first,
     /// then the actual text after it prompts.
     static func sendTextTwoStep(_ first: String, then second: String, toCwd cwd: String) {
+        logToFile("sendTextTwoStep: first=\"\(first)\", then=\"\(second)\" → cwd: \(cwd)")
         sendText(first, toCwd: cwd)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             sendText(second, toCwd: cwd)
@@ -304,6 +306,19 @@ enum TerminalBridge {
             return false
         }
         return result?.booleanValue ?? false
+    }
+
+    private static func logToFile(_ message: String) {
+        let logPath = "/tmp/claudebell.log"
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let line = "[\(timestamp)] [TerminalBridge] \(message)\n"
+        if let handle = FileHandle(forWritingAtPath: logPath) {
+            handle.seekToEndOfFile()
+            handle.write(line.data(using: .utf8)!)
+            handle.closeFile()
+        } else {
+            FileManager.default.createFile(atPath: logPath, contents: line.data(using: .utf8))
+        }
     }
 
     private static func activateTerminal() {
