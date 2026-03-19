@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.9.2",
+    "build": 30,
+    "date": "2026-03-19",
+    "highlights": "Fix Terminal.app tab matching on non-standard windows",
+    "changes": [
+      { "type": "fixed", "text": "Terminal.app tab matching no longer crashes on non-standard windows (Inspector, Preferences) that don't support tab enumeration" },
+      { "type": "new", "text": "Diagnostic logging dumps all Terminal.app tab info (tty, processes, lsof cwd) before matching, visible in /tmp/claudebell.log" },
+      { "type": "changed", "text": "AppleScript errors now go to the log file instead of stdout for easier debugging" }
+    ]
+  },
+  {
     "version": "1.9.1",
     "build": 29,
     "date": "2026-03-19",

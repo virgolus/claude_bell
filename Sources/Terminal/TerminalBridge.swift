@@ -64,53 +64,59 @@ enum TerminalBridge {
             \(action == "focus" ? "activate" : "set theText to the clipboard as text")
             -- Pass 1: claude process + cwd match via tty lsof
             repeat with w in windows
-                repeat with i from 1 to count of tabs of w
-                    try
-                        set t to tab i of w
-                        set procs to processes of t
-                        set hasClaude to false
-                        repeat with p in procs
-                            if p contains "claude" then
-                                set hasClaude to true
-                                exit repeat
+                try
+                    repeat with i from 1 to count of tabs of w
+                        try
+                            set t to tab i of w
+                            set procs to processes of t
+                            set hasClaude to false
+                            repeat with p in procs
+                                if p contains "claude" then
+                                    set hasClaude to true
+                                    exit repeat
+                                end if
+                            end repeat
+                            if hasClaude then
+                                set tabTty to tty of t
+                                set cwdCheck to do shell script "lsof -a -d cwd -Fn $(lsof -t " & quoted form of tabTty & " 2>/dev/null | sed 's/^/-p /') 2>/dev/null | grep '^n' | cut -c2-"
+                                if cwdCheck contains "\(escaped)" then
+                                    \(onMatch)
+                                end if
                             end if
-                        end repeat
-                        if hasClaude then
+                        end try
+                    end repeat
+                end try
+            end repeat
+            -- Pass 2: any tab with claude process
+            repeat with w in windows
+                try
+                    repeat with i from 1 to count of tabs of w
+                        try
+                            set t to tab i of w
+                            set procs to processes of t
+                            repeat with p in procs
+                                if p contains "claude" then
+                                    \(onMatch)
+                                end if
+                            end repeat
+                        end try
+                    end repeat
+                end try
+            end repeat
+            -- Pass 3: cwd match only (claude process may have exited)
+            repeat with w in windows
+                try
+                    repeat with i from 1 to count of tabs of w
+                        try
+                            set t to tab i of w
                             set tabTty to tty of t
                             set cwdCheck to do shell script "lsof -a -d cwd -Fn $(lsof -t " & quoted form of tabTty & " 2>/dev/null | sed 's/^/-p /') 2>/dev/null | grep '^n' | cut -c2-"
                             if cwdCheck contains "\(escaped)" then
                                 \(onMatch)
                             end if
-                        end if
-                    end try
-                end repeat
-            end repeat
-            -- Pass 2: any tab with claude process
-            repeat with w in windows
-                repeat with i from 1 to count of tabs of w
-                    try
-                        set t to tab i of w
-                        set procs to processes of t
-                        repeat with p in procs
-                            if p contains "claude" then
-                                \(onMatch)
-                            end if
-                        end repeat
-                    end try
-                end repeat
-            end repeat
-            -- Pass 3: cwd match only (claude process may have exited)
-            repeat with w in windows
-                repeat with i from 1 to count of tabs of w
-                    try
-                        set t to tab i of w
-                        set tabTty to tty of t
-                        set cwdCheck to do shell script "lsof -a -d cwd -Fn $(lsof -t " & quoted form of tabTty & " 2>/dev/null | sed 's/^/-p /') 2>/dev/null | grep '^n' | cut -c2-"
-                        if cwdCheck contains "\(escaped)" then
-                            \(onMatch)
-                        end if
-                    end try
-                end repeat
+                        end try
+                    end repeat
+                end try
             end repeat
         end tell
         return false
@@ -120,7 +126,9 @@ enum TerminalBridge {
     /// Focus the correct Terminal.app tab, send text via native `do script`.
     private static func sendTerminalPaste(cwd: String) -> Bool {
         logToFile("sendTerminalPaste: cwd=\(cwd)")
+        logTerminalTabInfo(cwd: cwd)
         let script = terminalMatchScript(cwd: cwd, action: "paste")
+        logToFile("sendTerminalPaste script:\n\(script)")
         let result = runAppleScript(script)
         logToFile("sendTerminalPaste: result=\(result)")
         return result
@@ -128,10 +136,73 @@ enum TerminalBridge {
 
     private static func focusTerminal(cwd: String) -> Bool {
         logToFile("focusTerminal: cwd=\(cwd)")
+        logTerminalTabInfo(cwd: cwd)
         let script = terminalMatchScript(cwd: cwd, action: "focus")
+        logToFile("focusTerminal script:\n\(script)")
         let result = runAppleScript(script)
         logToFile("focusTerminal: result=\(result)")
         return result
+    }
+
+    /// Diagnostic: log all Terminal.app tab info (tty, processes, lsof cwd) before matching.
+    private static func logTerminalTabInfo(cwd: String) {
+        let escaped = cwd.replacingOccurrences(of: "\"", with: "\\\"")
+        let diagScript = """
+        tell application "Terminal"
+            if not running then return "Terminal not running"
+            set info to ""
+            repeat with wIdx from 1 to count of windows
+                try
+                set w to window wIdx
+                repeat with tIdx from 1 to count of tabs of w
+                    set t to tab tIdx of w
+                    set info to info & "--- Window " & wIdx & " Tab " & tIdx & " ---" & linefeed
+                    try
+                        set procs to processes of t
+                        set info to info & "  processes: " & (procs as text) & linefeed
+                    on error errMsg
+                        set info to info & "  processes error: " & errMsg & linefeed
+                    end try
+                    try
+                        set tabTty to tty of t
+                        set info to info & "  tty: " & tabTty & linefeed
+                    on error errMsg
+                        set info to info & "  tty error: " & errMsg & linefeed
+                    end try
+                    try
+                        set tabTty to tty of t
+                        set lsofCmd to "lsof -a -d cwd -Fn $(lsof -t " & quoted form of tabTty & " 2>/dev/null | sed 's/^/-p /') 2>/dev/null | grep '^n' | cut -c2-"
+                        set cwdResult to do shell script lsofCmd
+                        set info to info & "  lsof cwd: " & cwdResult & linefeed
+                    on error errMsg
+                        set info to info & "  lsof error: " & errMsg & linefeed
+                    end try
+                    try
+                        set tabTty to tty of t
+                        set cwdResult to do shell script "lsof -a -d cwd -Fn $(lsof -t " & quoted form of tabTty & " 2>/dev/null | sed 's/^/-p /') 2>/dev/null | grep '^n' | cut -c2-"
+                        if cwdResult contains "\(escaped)" then
+                            set info to info & "  contains check: MATCH for \(escaped)" & linefeed
+                        else
+                            set info to info & "  contains check: NO match (looking for \(escaped))" & linefeed
+                        end if
+                    on error errMsg
+                        set info to info & "  contains check error: " & errMsg & linefeed
+                    end try
+                end repeat
+                end try
+            end repeat
+            return info
+        end tell
+        """
+        var error: NSDictionary?
+        let result = NSAppleScript(source: diagScript)?.executeAndReturnError(&error)
+        if let error {
+            logToFile("logTerminalTabInfo error: \(error)")
+        } else if let info = result?.stringValue {
+            logToFile("Terminal tab diagnostic (looking for cwd: \(cwd)):\n\(info)")
+        } else {
+            logToFile("logTerminalTabInfo: no result returned")
+        }
     }
 
     // MARK: - iTerm2
@@ -281,7 +352,7 @@ enum TerminalBridge {
         var error: NSDictionary?
         let result = NSAppleScript(source: source)?.executeAndReturnError(&error)
         if let error {
-            print("AppleScript error: \(error)")
+            logToFile("AppleScript error: \(error)")
             return false
         }
         return result?.booleanValue ?? false
