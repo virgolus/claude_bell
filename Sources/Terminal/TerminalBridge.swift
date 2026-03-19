@@ -55,70 +55,61 @@ enum TerminalBridge {
     /// Pass 3: tty cwd matches (claude may have exited) → cwd-only fallback
     private static func terminalMatchScript(cwd: String, action: String) -> String {
         let escaped = cwd.replacingOccurrences(of: "\"", with: "\\\"")
+        let onMatch = action == "focus"
+            ? "set selected tab of w to t\n                                set index of w to 1\n                                return true"
+            : "set selected tab of w to t\n                                set index of w to 1\n                                activate\n                                do script theText in t\n                                return true"
         return """
         tell application "Terminal"
             if not running then return false
             \(action == "focus" ? "activate" : "set theText to the clipboard as text")
-            -- Helper: check if a tab's tty has the target cwd
-            -- Pass 1: claude process + cwd match
+            -- Pass 1: claude process + cwd match via tty lsof
             repeat with w in windows
                 repeat with i from 1 to count of tabs of w
-                    set t to tab i of w
-                    set procs to processes of t
-                    set hasClaude to false
-                    repeat with p in procs
-                        if p contains "claude" then
-                            set hasClaude to true
-                            exit repeat
-                        end if
-                    end repeat
-                    if hasClaude then
-                        set tabTty to tty of t
-                        try
+                    try
+                        set t to tab i of w
+                        set procs to processes of t
+                        set hasClaude to false
+                        repeat with p in procs
+                            if p contains "claude" then
+                                set hasClaude to true
+                                exit repeat
+                            end if
+                        end repeat
+                        if hasClaude then
+                            set tabTty to tty of t
                             set cwdCheck to do shell script "lsof -a -d cwd -Fn $(lsof -t " & quoted form of tabTty & " 2>/dev/null | sed 's/^/-p /') 2>/dev/null | grep '^n' | cut -c2-"
-                        on error
-                            set cwdCheck to ""
-                        end try
-                        if cwdCheck contains "\(escaped)" then
-                            set selected tab of w to t
-                            set index of w to 1
-                            \(action == "focus" ? "" : "activate\n                            do script theText in t")
-                            return true
+                            if cwdCheck contains "\(escaped)" then
+                                \(onMatch)
+                            end if
                         end if
-                    end if
+                    end try
                 end repeat
             end repeat
             -- Pass 2: any tab with claude process
             repeat with w in windows
                 repeat with i from 1 to count of tabs of w
-                    set t to tab i of w
-                    set procs to processes of t
-                    repeat with p in procs
-                        if p contains "claude" then
-                            set selected tab of w to t
-                            set index of w to 1
-                            \(action == "focus" ? "" : "activate\n                            do script theText in t")
-                            return true
-                        end if
-                    end repeat
+                    try
+                        set t to tab i of w
+                        set procs to processes of t
+                        repeat with p in procs
+                            if p contains "claude" then
+                                \(onMatch)
+                            end if
+                        end repeat
+                    end try
                 end repeat
             end repeat
             -- Pass 3: cwd match only (claude process may have exited)
             repeat with w in windows
                 repeat with i from 1 to count of tabs of w
-                    set t to tab i of w
-                    set tabTty to tty of t
                     try
+                        set t to tab i of w
+                        set tabTty to tty of t
                         set cwdCheck to do shell script "lsof -a -d cwd -Fn $(lsof -t " & quoted form of tabTty & " 2>/dev/null | sed 's/^/-p /') 2>/dev/null | grep '^n' | cut -c2-"
-                    on error
-                        set cwdCheck to ""
+                        if cwdCheck contains "\(escaped)" then
+                            \(onMatch)
+                        end if
                     end try
-                    if cwdCheck contains "\(escaped)" then
-                        set selected tab of w to t
-                        set index of w to 1
-                        \(action == "focus" ? "" : "activate\n                        do script theText in t")
-                        return true
-                    end if
                 end repeat
             end repeat
         end tell
