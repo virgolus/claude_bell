@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.9.5",
+    "build": 33,
+    "date": "2026-03-27",
+    "highlights": "Simplified follow-up input with reusable SendTextField component",
+    "changes": [
+      { "type": "changed", "text": "Follow-up input is now always visible as a text field with Send button, replacing the previous \"+\" menu that required extra clicks" },
+      { "type": "removed", "text": "Removed Contract mode from follow-up actions in favor of the simpler direct text input" },
+      { "type": "changed", "text": "Unified all text+send input patterns across the app into a single reusable component" }
+    ]
+  },
+  {
     "version": "1.9.4",
     "build": 32,
     "date": "2026-03-27",
