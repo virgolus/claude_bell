@@ -69,12 +69,13 @@ rm -f public/ClaudeBell.zip
 zip -r public/ClaudeBell.zip ClaudeBell.app -x "*.DS_Store"
 ```
 
-## 7. Restart the app
+## 7. Install and restart the app
 
-Kill the running instance and relaunch with the new binary:
+Copy the build to Applications, kill the running instance, and relaunch:
 
 ```bash
-pkill -x ClaudeBell; sleep 1; open ClaudeBell.app
+rm -rf /Applications/ClaudeBell.app && cp -R ClaudeBell.app /Applications/ClaudeBell.app
+pkill -x ClaudeBell; sleep 1; open /Applications/ClaudeBell.app
 ```
 
 ## 8. Commit and push

@@ -151,7 +151,11 @@ final class HookServer: Sendable {
             let input = try await Self.decodeInput(request, label: "SessionEnd")
 
             Task { @MainActor in
-                store.sessionAdvanced(id: input.sessionId)
+                // Only remove interactive notifications (they can't be answered after session ends).
+                // Keep passive ones (stop, tool_error) so the user can still see them.
+                store.notifications.removeAll {
+                    $0.sessionId == input.sessionId && !$0.meta.isPassive
+                }
                 store.removeSession(id: input.sessionId)
             }
 
