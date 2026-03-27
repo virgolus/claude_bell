@@ -98,7 +98,7 @@ struct ExitPlanModeView: View {
 
     private func send(_ text: String) {
         request.respond(.allow)
-        TerminalBridge.sendText(text, toCwd: request.cwd)
+        TerminalBridge.sendText(text, toCwd: request.cwd, transcriptPath: request.transcriptPath)
         store.removeRequest(id: request.id)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             NSApplication.shared.activate()

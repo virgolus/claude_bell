@@ -5,6 +5,7 @@ import SwiftUI
 /// When `focusedButton` is nil (standalone), the footer manages its own keyboard navigation.
 struct DetailFooterView: View {
     let cwd: String
+    let transcriptPath: String
     let isPassive: Bool
     let onDismiss: () -> Void
     let onOpenInTerminal: (() -> Void)?
@@ -28,8 +29,9 @@ struct DetailFooterView: View {
         focusedButton ?? localFocused
     }
 
-    init(cwd: String, isPassive: Bool = false, standalone: Bool = true, focusedButton: FooterButton? = nil, onOpenInTerminal: (() -> Void)? = nil, onDismiss: @escaping () -> Void) {
+    init(cwd: String, transcriptPath: String = "", isPassive: Bool = false, standalone: Bool = true, focusedButton: FooterButton? = nil, onOpenInTerminal: (() -> Void)? = nil, onDismiss: @escaping () -> Void) {
         self.cwd = cwd
+        self.transcriptPath = transcriptPath
         self.isPassive = isPassive
         self.standalone = standalone
         self.focusedButton = focusedButton
@@ -59,7 +61,7 @@ struct DetailFooterView: View {
                     if let onOpenInTerminal {
                         onOpenInTerminal()
                     } else {
-                        TerminalBridge.focusTerminalTab(forCwd: cwd)
+                        TerminalBridge.focusTerminalTab(forCwd: cwd, transcriptPath: transcriptPath)
                         onDismiss()
                     }
                 } label: {

@@ -114,13 +114,14 @@ struct RequestDetailView: View {
                                 store.removeRequest(id: request.id)
                                 // Delay typing until Claude Code has rendered the prompt
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                                    TerminalBridge.sendText(text, toCwd: request.cwd)
+                                    TerminalBridge.sendText(text, toCwd: request.cwd, transcriptPath: request.transcriptPath)
                                 }
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                     NSApplication.shared.activate()
                                 }
                             },
                             cwd: request.cwd,
+                            transcriptPath: request.transcriptPath,
                             onDismiss: {
                                 request.respond(.allow)
                                 store.removeRequest(id: request.id)
@@ -161,8 +162,8 @@ struct RequestDetailView: View {
                 .padding(.bottom, 4)
             }
 
-            DetailFooterView(cwd: request.cwd, standalone: false, focusedButton: footerFocused, onOpenInTerminal: {
-                TerminalBridge.focusTerminalTab(forCwd: request.cwd)
+            DetailFooterView(cwd: request.cwd, transcriptPath: request.transcriptPath, standalone: false, focusedButton: footerFocused, onOpenInTerminal: {
+                TerminalBridge.focusTerminalTab(forCwd: request.cwd, transcriptPath: request.transcriptPath)
                 request.respond(allow: false)
                 store.removeRequest(id: request.id)
             }) {
@@ -282,7 +283,7 @@ struct RequestDetailView: View {
             request.respond(allow: false)
             store.removeRequest(id: request.id)
         case .openInTerminal:
-            TerminalBridge.focusTerminalTab(forCwd: request.cwd)
+            TerminalBridge.focusTerminalTab(forCwd: request.cwd, transcriptPath: request.transcriptPath)
             request.respond(allow: false)
             store.removeRequest(id: request.id)
         case nil:

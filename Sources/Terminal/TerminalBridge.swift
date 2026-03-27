@@ -4,8 +4,10 @@ enum TerminalBridge {
 
     /// Sends text to a Terminal.app tab whose process matches Claude Code.
     /// Uses clipboard paste (Cmd+V) + Return for reliability.
-    static func sendText(_ text: String, toCwd cwd: String) {
-        logToFile("sendText: \"\(text)\" → cwd: \(cwd)")
+    static func sendText(_ text: String, toCwd cwd: String, transcriptPath: String = "") {
+        logToFile("sendText: \"\(text)\" → cwd: \(cwd), transcript: \(transcriptPath)")
+        let resolvedTty = resolveTty(fromTranscriptPath: transcriptPath)
+
         // Save clipboard, put text, paste+enter, restore clipboard
         let pasteboard = NSPasteboard.general
         let oldContents = pasteboard.string(forType: .string)
@@ -13,7 +15,7 @@ enum TerminalBridge {
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
 
-        let sent = sendiTerm2Paste(cwd: cwd) || sendTerminalPaste(cwd: cwd) || sendWarpPaste()
+        let sent = sendiTerm2Paste(cwd: cwd, tty: resolvedTty) || sendTerminalPaste(cwd: cwd, tty: resolvedTty) || sendWarpPaste()
 
         // Restore clipboard after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -29,19 +31,68 @@ enum TerminalBridge {
     /// Sends two texts sequentially: first text + Enter, then after a delay, second text + Enter.
     /// Used for "type something else" options where Claude Code expects the option number first,
     /// then the actual text after it prompts.
-    static func sendTextTwoStep(_ first: String, then second: String, toCwd cwd: String) {
+    static func sendTextTwoStep(_ first: String, then second: String, toCwd cwd: String, transcriptPath: String = "") {
         logToFile("sendTextTwoStep: first=\"\(first)\", then=\"\(second)\" → cwd: \(cwd)")
-        sendText(first, toCwd: cwd)
+        sendText(first, toCwd: cwd, transcriptPath: transcriptPath)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            sendText(second, toCwd: cwd)
+            sendText(second, toCwd: cwd, transcriptPath: transcriptPath)
         }
     }
 
     /// Brings the terminal tab running Claude Code to the front.
-    static func focusTerminalTab(forCwd cwd: String) {
-        if focusiTerm2(cwd: cwd) { return }
-        if focusTerminal(cwd: cwd) { return }
+    static func focusTerminalTab(forCwd cwd: String, transcriptPath: String = "") {
+        let resolvedTty = resolveTty(fromTranscriptPath: transcriptPath)
+        if focusiTerm2(cwd: cwd, tty: resolvedTty) { return }
+        if focusTerminal(cwd: cwd, tty: resolvedTty) { return }
         activateTerminal()
+    }
+
+    // MARK: - TTY Resolution
+
+    /// Resolve the tty of the Claude process that owns a transcript file.
+    /// Chain: lsof <transcriptPath> → PID → ps -o tty= -p <PID> → /dev/ttysXXX
+    private static func resolveTty(fromTranscriptPath path: String) -> String? {
+        guard !path.isEmpty else { return nil }
+        logToFile("resolveTty: looking up transcript \(path)")
+        // Find PID of process with this file open
+        guard let pid = shell("lsof -t \(shellEscape(path)) 2>/dev/null | head -1"),
+              !pid.isEmpty else {
+            logToFile("resolveTty: no PID found for transcript")
+            return nil
+        }
+        logToFile("resolveTty: PID=\(pid)")
+        // Get tty for that PID
+        guard let ttyRaw = shell("ps -o tty= -p \(pid) 2>/dev/null"),
+              !ttyRaw.isEmpty else {
+            logToFile("resolveTty: no tty found for PID \(pid)")
+            return nil
+        }
+        let tty = "/dev/\(ttyRaw)"
+        logToFile("resolveTty: resolved tty=\(tty)")
+        return tty
+    }
+
+    /// Run a shell command and return trimmed stdout, or nil on failure.
+    private static func shell(_ command: String) -> String? {
+        let process = Process()
+        let pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", command]
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            return nil
+        }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Shell-escape a path for use in shell commands.
+    private static func shellEscape(_ path: String) -> String {
+        "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
     // MARK: - Terminal.app
@@ -50,18 +101,35 @@ enum TerminalBridge {
     /// tty via `lsof` to get the real cwd, instead of relying on window name (which only
     /// reflects the active tab's title).
     ///
+    /// Pass 0: exact tty match (resolved from transcript) → most reliable
     /// Pass 1: tab has "claude" in processes AND tty cwd matches → exact match
     /// Pass 2: tab has "claude" in processes → fallback (any claude tab)
     /// Pass 3: tty cwd matches (claude may have exited) → cwd-only fallback
-    private static func terminalMatchScript(cwd: String, action: String) -> String {
+    private static func terminalMatchScript(cwd: String, action: String, tty: String? = nil) -> String {
         let escaped = cwd.replacingOccurrences(of: "\"", with: "\\\"")
         let onMatch = action == "focus"
             ? "set selected tab of w to t\n                                set index of w to 1\n                                return true"
             : "set selected tab of w to t\n                                set index of w to 1\n                                activate\n                                do script theText in t\n                                return true"
+        let ttyLiteral = tty ?? ""
         return """
         tell application "Terminal"
             if not running then return false
             \(action == "focus" ? "activate" : "set theText to the clipboard as text")
+            -- Pass 0: exact tty match (resolved from transcript)
+            if "\(ttyLiteral)" is not "" then
+                repeat with w in windows
+                    try
+                        repeat with i from 1 to count of tabs of w
+                            try
+                                set t to tab i of w
+                                if tty of t is "\(ttyLiteral)" then
+                                    \(onMatch)
+                                end if
+                            end try
+                        end repeat
+                    end try
+                end repeat
+            end if
             -- Pass 1: claude process + cwd match via tty lsof
             repeat with w in windows
                 try
@@ -124,20 +192,20 @@ enum TerminalBridge {
     }
 
     /// Focus the correct Terminal.app tab, send text via native `do script`.
-    private static func sendTerminalPaste(cwd: String) -> Bool {
-        logToFile("sendTerminalPaste: cwd=\(cwd)")
+    private static func sendTerminalPaste(cwd: String, tty: String? = nil) -> Bool {
+        logToFile("sendTerminalPaste: cwd=\(cwd), tty=\(tty ?? "nil")")
         logTerminalTabInfo(cwd: cwd)
-        let script = terminalMatchScript(cwd: cwd, action: "paste")
+        let script = terminalMatchScript(cwd: cwd, action: "paste", tty: tty)
         logToFile("sendTerminalPaste script:\n\(script)")
         let result = runAppleScript(script)
         logToFile("sendTerminalPaste: result=\(result)")
         return result
     }
 
-    private static func focusTerminal(cwd: String) -> Bool {
-        logToFile("focusTerminal: cwd=\(cwd)")
+    private static func focusTerminal(cwd: String, tty: String? = nil) -> Bool {
+        logToFile("focusTerminal: cwd=\(cwd), tty=\(tty ?? "nil")")
         logTerminalTabInfo(cwd: cwd)
-        let script = terminalMatchScript(cwd: cwd, action: "focus")
+        let script = terminalMatchScript(cwd: cwd, action: "focus", tty: tty)
         logToFile("focusTerminal script:\n\(script)")
         let result = runAppleScript(script)
         logToFile("focusTerminal: result=\(result)")
@@ -208,14 +276,31 @@ enum TerminalBridge {
     // MARK: - iTerm2
 
     /// Focus the correct iTerm2 session, send text via native `write text`.
-    private static func sendiTerm2Paste(cwd: String) -> Bool {
+    private static func sendiTerm2Paste(cwd: String, tty: String? = nil) -> Bool {
         guard NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == "com.googlecode.iterm2" }) else {
             return false
         }
         let cwdFolder = (cwd as NSString).lastPathComponent
+        let ttyLiteral = tty ?? ""
         let script = """
         tell application "iTerm2"
             set theText to the clipboard as text
+            -- Pass 0: exact tty match (resolved from transcript)
+            if "\(ttyLiteral)" is not "" then
+                repeat with w in windows
+                    repeat with t in tabs of w
+                        repeat with s in sessions of t
+                            if tty of s is "\(ttyLiteral)" then
+                                select t
+                                select s
+                                activate
+                                tell s to write text theText
+                                return true
+                            end if
+                        end repeat
+                    end repeat
+                end repeat
+            end if
             -- First pass: match by cwd path in session
             repeat with w in windows
                 repeat with t in tabs of w
@@ -268,14 +353,29 @@ enum TerminalBridge {
         return runAppleScript(script)
     }
 
-    private static func focusiTerm2(cwd: String) -> Bool {
+    private static func focusiTerm2(cwd: String, tty: String? = nil) -> Bool {
         guard NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == "com.googlecode.iterm2" }) else {
             return false
         }
         let cwdFolder = (cwd as NSString).lastPathComponent
+        let ttyLiteral = tty ?? ""
         let script = """
         tell application "iTerm2"
             activate
+            -- Pass 0: exact tty match (resolved from transcript)
+            if "\(ttyLiteral)" is not "" then
+                repeat with w in windows
+                    repeat with t in tabs of w
+                        repeat with s in sessions of t
+                            if tty of s is "\(ttyLiteral)" then
+                                select t
+                                select s
+                                return true
+                            end if
+                        end repeat
+                    end repeat
+                end repeat
+            end if
             -- First pass: match by cwd path
             repeat with w in windows
                 repeat with t in tabs of w

@@ -4,6 +4,7 @@ struct QuestionOptionsView: View {
     let questions: [ParsedQuestion]
     let onSend: (String) -> Void
     var cwd: String = ""
+    var transcriptPath: String = ""
     var onDismiss: (() -> Void)?
     @ObservedObject private var bodyStyle = BodyStyleSettings.shared
 
@@ -210,7 +211,7 @@ struct QuestionOptionsView: View {
         if let firstQuestion = questions.first,
            let option = Self.freeTextOption(in: firstQuestion),
            !cwd.isEmpty {
-            TerminalBridge.sendTextTwoStep("\(option.index)", then: text, toCwd: cwd)
+            TerminalBridge.sendTextTwoStep("\(option.index)", then: text, toCwd: cwd, transcriptPath: transcriptPath)
             onDismiss?()
         } else {
             onSend(text)

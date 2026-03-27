@@ -249,7 +249,7 @@ struct ContentView: View {
                         FollowUpActionView(
                             notification: notification,
                             onSend: { text in
-                                TerminalBridge.sendText(text, toCwd: notification.cwd)
+                                TerminalBridge.sendText(text, toCwd: notification.cwd, transcriptPath: notification.transcriptPath)
                                 store.removeNotification(id: notification.id)
                                 selectedItem = nil
                             }
@@ -269,11 +269,12 @@ struct ContentView: View {
                         QuestionOptionsView(
                             questions: questions,
                             onSend: { text in
-                                TerminalBridge.sendText(text, toCwd: notification.cwd)
+                                TerminalBridge.sendText(text, toCwd: notification.cwd, transcriptPath: notification.transcriptPath)
                                 store.removeNotification(id: notification.id)
                                 selectedItem = nil
                             },
                             cwd: notification.cwd,
+                            transcriptPath: notification.transcriptPath,
                             onDismiss: {
                                 store.removeNotification(id: notification.id)
                                 selectedItem = nil
@@ -284,12 +285,12 @@ struct ContentView: View {
                         TextInputView(
                             notification: notification,
                             onSend: { text in
-                                TerminalBridge.sendText(text, toCwd: notification.cwd)
+                                TerminalBridge.sendText(text, toCwd: notification.cwd, transcriptPath: notification.transcriptPath)
                                 store.removeNotification(id: notification.id)
                                 selectedItem = nil
                             },
                             onOpenTerminal: {
-                                TerminalBridge.focusTerminalTab(forCwd: notification.cwd)
+                                TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath)
                             }
                         )
                     }
@@ -297,7 +298,7 @@ struct ContentView: View {
                 .padding()
             }
 
-            DetailFooterView(cwd: notification.cwd, isPassive: notification.meta.isPassive) {
+            DetailFooterView(cwd: notification.cwd, transcriptPath: notification.transcriptPath, isPassive: notification.meta.isPassive) {
                 store.removeNotification(id: notification.id)
                 selectedItem = nil
             }
