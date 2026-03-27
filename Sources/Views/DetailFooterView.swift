@@ -119,7 +119,7 @@ struct DetailFooterView: View {
             if let onOpenInTerminal {
                 onOpenInTerminal()
             } else {
-                TerminalBridge.focusTerminalTab(forCwd: cwd)
+                TerminalBridge.focusTerminalTab(forCwd: cwd, transcriptPath: transcriptPath)
                 onDismiss()
             }
         }

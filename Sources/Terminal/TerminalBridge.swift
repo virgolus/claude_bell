@@ -40,11 +40,14 @@ enum TerminalBridge {
     }
 
     /// Brings the terminal tab running Claude Code to the front.
+    /// Runs AppleScript matching off the main thread to avoid blocking the UI.
     static func focusTerminalTab(forCwd cwd: String, transcriptPath: String = "") {
         let resolvedTty = resolveTty(fromTranscriptPath: transcriptPath)
-        if focusiTerm2(cwd: cwd, tty: resolvedTty) { return }
-        if focusTerminal(cwd: cwd, tty: resolvedTty) { return }
-        activateTerminal()
+        DispatchQueue.global(qos: .userInitiated).async {
+            if focusiTerm2(cwd: cwd, tty: resolvedTty) { return }
+            if focusTerminal(cwd: cwd, tty: resolvedTty) { return }
+            DispatchQueue.main.async { activateTerminal() }
+        }
     }
 
     // MARK: - TTY Resolution
@@ -191,86 +194,14 @@ enum TerminalBridge {
         """
     }
 
-    /// Focus the correct Terminal.app tab, send text via native `do script`.
     private static func sendTerminalPaste(cwd: String, tty: String? = nil) -> Bool {
-        logToFile("sendTerminalPaste: cwd=\(cwd), tty=\(tty ?? "nil")")
-        logTerminalTabInfo(cwd: cwd)
         let script = terminalMatchScript(cwd: cwd, action: "paste", tty: tty)
-        logToFile("sendTerminalPaste script:\n\(script)")
-        let result = runAppleScript(script)
-        logToFile("sendTerminalPaste: result=\(result)")
-        return result
+        return runAppleScript(script)
     }
 
     private static func focusTerminal(cwd: String, tty: String? = nil) -> Bool {
-        logToFile("focusTerminal: cwd=\(cwd), tty=\(tty ?? "nil")")
-        logTerminalTabInfo(cwd: cwd)
         let script = terminalMatchScript(cwd: cwd, action: "focus", tty: tty)
-        logToFile("focusTerminal script:\n\(script)")
-        let result = runAppleScript(script)
-        logToFile("focusTerminal: result=\(result)")
-        return result
-    }
-
-    /// Diagnostic: log all Terminal.app tab info (tty, processes, lsof cwd) before matching.
-    private static func logTerminalTabInfo(cwd: String) {
-        let escaped = cwd.replacingOccurrences(of: "\"", with: "\\\"")
-        let diagScript = """
-        tell application "Terminal"
-            if not running then return "Terminal not running"
-            set info to ""
-            repeat with wIdx from 1 to count of windows
-                try
-                set w to window wIdx
-                repeat with tIdx from 1 to count of tabs of w
-                    set t to tab tIdx of w
-                    set info to info & "--- Window " & wIdx & " Tab " & tIdx & " ---" & linefeed
-                    try
-                        set procs to processes of t
-                        set info to info & "  processes: " & (procs as text) & linefeed
-                    on error errMsg
-                        set info to info & "  processes error: " & errMsg & linefeed
-                    end try
-                    try
-                        set tabTty to tty of t
-                        set info to info & "  tty: " & tabTty & linefeed
-                    on error errMsg
-                        set info to info & "  tty error: " & errMsg & linefeed
-                    end try
-                    try
-                        set tabTty to tty of t
-                        set lsofCmd to "lsof -a -d cwd -Fn $(lsof -t " & quoted form of tabTty & " 2>/dev/null | sed 's/^/-p /') 2>/dev/null | grep '^n' | cut -c2-"
-                        set cwdResult to do shell script lsofCmd
-                        set info to info & "  lsof cwd: " & cwdResult & linefeed
-                    on error errMsg
-                        set info to info & "  lsof error: " & errMsg & linefeed
-                    end try
-                    try
-                        set tabTty to tty of t
-                        set cwdResult to do shell script "lsof -a -d cwd -Fn $(lsof -t " & quoted form of tabTty & " 2>/dev/null | sed 's/^/-p /') 2>/dev/null | grep '^n' | cut -c2-"
-                        if cwdResult contains "\(escaped)" then
-                            set info to info & "  contains check: MATCH for \(escaped)" & linefeed
-                        else
-                            set info to info & "  contains check: NO match (looking for \(escaped))" & linefeed
-                        end if
-                    on error errMsg
-                        set info to info & "  contains check error: " & errMsg & linefeed
-                    end try
-                end repeat
-                end try
-            end repeat
-            return info
-        end tell
-        """
-        var error: NSDictionary?
-        let result = NSAppleScript(source: diagScript)?.executeAndReturnError(&error)
-        if let error {
-            logToFile("logTerminalTabInfo error: \(error)")
-        } else if let info = result?.stringValue {
-            logToFile("Terminal tab diagnostic (looking for cwd: \(cwd)):\n\(info)")
-        } else {
-            logToFile("logTerminalTabInfo: no result returned")
-        }
+        return runAppleScript(script)
     }
 
     // MARK: - iTerm2
