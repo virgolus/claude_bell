@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.9.6",
+    "build": 34,
+    "date": "2026-03-27",
+    "highlights": "Improved button press styling",
+    "changes": [
+      { "type": "fixed", "text": "Submit and Send buttons now darken on press instead of flashing yellow, keeping the orange accent consistent" }
+    ]
+  },
+  {
     "version": "1.9.5",
     "build": 33,
     "date": "2026-03-27",
