@@ -174,7 +174,9 @@ enum TranscriptParser {
     }
 
     /// Parses numbered options from the last assistant message text in the transcript.
-    /// Looks for patterns like "1. Option text" or "❯ 1. Option text"
+    /// Looks for patterns like "1. Option text" or "❯ 1. Option text" near the end
+    /// of the message, only when they look like real interactive choices (short labels,
+    /// preceded by a question).
     static func parseNumberedOptions(from path: String) -> [ParsedQuestion]? {
         guard let data = FileManager.default.contents(atPath: path),
               let content = String(data: data, encoding: .utf8) else {
@@ -215,26 +217,43 @@ enum TranscriptParser {
             let matches = regex.matches(in: fullText, range: NSRange(fullText.startIndex..., in: fullText))
             guard matches.count >= 2 else { continue }
 
+            // Filter: only keep options with short labels (≤120 chars) — real choices are concise
             var options: [QuestionOption] = []
             for match in matches {
                 guard let numRange = Range(match.range(at: 1), in: fullText),
                       let textRange = Range(match.range(at: 2), in: fullText),
                       let num = Int(fullText[numRange]) else { continue }
-                options.append(QuestionOption(
-                    index: num,
-                    label: String(fullText[textRange]).trimmingCharacters(in: .whitespaces),
-                    description: ""
-                ))
+                let label = String(fullText[textRange]).trimmingCharacters(in: .whitespaces)
+                if label.count <= 120 {
+                    options.append(QuestionOption(
+                        index: num,
+                        label: label,
+                        description: ""
+                    ))
+                }
             }
 
-            if !options.isEmpty {
-                return [ParsedQuestion(
-                    header: "",
-                    question: "",
-                    options: options,
-                    multiSelect: false
-                )]
+            // Require at least 2 short options and they must be near the end of the message.
+            // Check that the last option ends within the final 30% of the text.
+            guard options.count >= 2,
+                  let lastMatch = matches.last,
+                  lastMatch.range.upperBound > (fullText.utf16.count * 7 / 10) else {
+                continue
             }
+
+            // Verify there's a question mark somewhere before the first option
+            if let firstMatch = matches.first {
+                let preOptionsEnd = fullText.index(fullText.startIndex, offsetBy: firstMatch.range.location, limitedBy: fullText.endIndex) ?? fullText.endIndex
+                let preOptions = fullText[fullText.startIndex..<preOptionsEnd]
+                guard preOptions.contains("?") else { continue }
+            }
+
+            return [ParsedQuestion(
+                header: "",
+                question: "",
+                options: options,
+                multiSelect: false
+            )]
         }
 
         return nil
