@@ -19,8 +19,6 @@ struct ExitPlanModeView: View {
         (3, "Yes, manually approve edits", "Review and approve each edit"),
     ]
 
-    @State private var customText = ""
-
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Plan content as rendered markdown
@@ -47,15 +45,8 @@ struct ExitPlanModeView: View {
             }
 
             // Custom response
-            HStack(spacing: 8) {
-                TextField("Or type feedback...", text: $customText)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit { sendCustom() }
-
-                Button("Send") { sendCustom() }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.orange)
-                    .disabled(customText.trimmingCharacters(in: .whitespaces).isEmpty)
+            SendTextField(placeholder: "Or type feedback...", tint: .orange) { text in
+                send(text)
             }
         }
     }
@@ -105,9 +96,4 @@ struct ExitPlanModeView: View {
         }
     }
 
-    private func sendCustom() {
-        let text = customText.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return }
-        send(text)
-    }
 }

@@ -9,9 +9,7 @@ struct QuestionOptionsView: View {
     @ObservedObject private var bodyStyle = BodyStyleSettings.shared
 
     @State private var selections: [UUID: Set<Int>] = [:]  // questionId -> selected indices
-    @State private var customText = ""
     @State private var freeTextExpanded = false  // true when "Type something" was clicked
-    @FocusState private var freeTextFocused: Bool
 
     private static let freeTextPatterns = ["type something", "something else", "other"]
 
@@ -48,30 +46,11 @@ struct QuestionOptionsView: View {
             }
 
             if freeTextExpanded {
-                // Inline text field shown after clicking "Type something"
-                HStack(spacing: 8) {
-                    TextField("Type your response...", text: $customText)
-                        .textFieldStyle(.roundedBorder)
-                        .focused($freeTextFocused)
-                        .onSubmit { sendFreeText() }
-
-                    Button("Send") { sendFreeText() }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.orange)
-                        .disabled(customText.trimmingCharacters(in: .whitespaces).isEmpty)
+                SendTextField(placeholder: "Type your response...", tint: .orange) { text in
+                    sendFreeText(text)
                 }
             } else if !hasFreeTextOption && questions.count == 1 && !questions.contains(where: { $0.multiSelect }) {
-                // Free text fallback only for single-select without a "Type something" option
-                HStack(spacing: 8) {
-                    TextField("Or type a custom response...", text: $customText)
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit { sendCustom() }
-
-                    Button("Send") { sendCustom() }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.orange)
-                        .disabled(customText.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
+                SendTextField(placeholder: "Or type a custom response...", tint: .orange, onSend: onSend)
             }
         }
     }
@@ -158,9 +137,6 @@ struct QuestionOptionsView: View {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     freeTextExpanded = true
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    freeTextFocused = true
-                }
             } else if question.multiSelect {
                 // Toggle selection
                 freeTextExpanded = false
@@ -204,10 +180,7 @@ struct QuestionOptionsView: View {
     }
 
     /// Send free-text response via two-step (option number + custom text).
-    private func sendFreeText() {
-        let text = customText.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return }
-
+    private func sendFreeText(_ text: String) {
         if let firstQuestion = questions.first,
            let option = Self.freeTextOption(in: firstQuestion),
            !cwd.isEmpty {
@@ -216,12 +189,5 @@ struct QuestionOptionsView: View {
         } else {
             onSend(text)
         }
-    }
-
-    /// Fallback custom text send (when no free-text option exists).
-    private func sendCustom() {
-        let text = customText.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return }
-        onSend(text)
     }
 }

@@ -6,8 +6,6 @@ struct TextInputView: View {
     let onOpenTerminal: () -> Void
     @ObservedObject private var bodyStyle = BodyStyleSettings.shared
 
-    @State private var inputText = ""
-
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if !notification.message.isEmpty {
@@ -18,29 +16,7 @@ struct TextInputView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             }
 
-            HStack(spacing: 8) {
-                TextField("Type your response...", text: $inputText, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(1...5)
-                    .onSubmit {
-                        send()
-                    }
-
-                Button("Send") {
-                    send()
-                }
-                .keyboardShortcut(.return, modifiers: .command)
-                .buttonStyle(.borderedProminent)
-                .tint(.blue)
-                .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
+            SendTextField(onSend: onSend)
         }
-    }
-
-    private func send() {
-        let text = inputText.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return }
-        onSend(text)
-        inputText = ""
     }
 }
