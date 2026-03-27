@@ -95,8 +95,7 @@ private struct GeneralSettingsTab: View {
                         Button("Install Hooks") {
                             showHookConfirm = true
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.orange)
+                        .buttonStyle(.orangeProminent)
                         .alert("Install Hooks?", isPresented: $showHookConfirm) {
                             Button("Install") {
                                 do {
@@ -381,8 +380,7 @@ private struct MiscellaneousSettingsTab: View {
                         Button("Install Status Line") {
                             showStatuslineConfirm = true
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.blue)
+                        .buttonStyle(.orangeProminent)
                         .alert("Install Status Line?", isPresented: $showStatuslineConfirm) {
                             Button("Install") {
                                 do {

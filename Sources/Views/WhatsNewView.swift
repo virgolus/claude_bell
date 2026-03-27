@@ -43,8 +43,7 @@ struct WhatsNewView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.orange)
+            .buttonStyle(.orangeProminent)
             .padding(16)
         }
         .frame(width: 420, height: 460)

@@ -32,7 +32,7 @@ struct UpdateBannerView: View {
                         Text("Update Now")
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.orangeProminent)
                 .controlSize(.small)
                 .disabled(checker.isDownloading)
 

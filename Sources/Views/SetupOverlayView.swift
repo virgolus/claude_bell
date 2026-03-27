@@ -75,8 +75,7 @@ struct SetupOverlayView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.orange)
+                .buttonStyle(.orangeProminent)
 
                 Button {
                     AppDefaults.shared.set(true, forKey: "hasCompletedSetup")

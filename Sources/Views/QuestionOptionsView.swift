@@ -39,8 +39,7 @@ struct QuestionOptionsView: View {
                     Button("Submit") {
                         submitAll()
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.blue)
+                    .buttonStyle(.orangeProminent)
                     .disabled(!allQuestionsAnswered)
                 }
             }

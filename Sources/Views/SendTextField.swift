@@ -3,7 +3,6 @@ import SwiftUI
 /// Reusable text field + Send button row.
 struct SendTextField: View {
     var placeholder: String = "Type your response..."
-    var tint: Color = .blue
     var onSend: (String) -> Void
 
     @State private var text = ""
@@ -19,8 +18,7 @@ struct SendTextField: View {
 
             Button("Send") { send() }
                 .keyboardShortcut(.return, modifiers: .command)
-                .buttonStyle(.borderedProminent)
-                .tint(tint)
+                .buttonStyle(.orangeProminent)
                 .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
         }
     }
