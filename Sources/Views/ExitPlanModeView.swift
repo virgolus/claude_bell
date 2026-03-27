@@ -45,7 +45,7 @@ struct ExitPlanModeView: View {
             }
 
             // Custom response
-            SendTextField(placeholder: "Or type feedback...", tint: .orange) { text in
+            SendTextField(placeholder: "Or type feedback...") { text in
                 send(text)
             }
         }

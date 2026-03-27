@@ -40,17 +40,17 @@ struct QuestionOptionsView: View {
                         submitAll()
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.orange)
+                    .tint(.blue)
                     .disabled(!allQuestionsAnswered)
                 }
             }
 
             if freeTextExpanded {
-                SendTextField(placeholder: "Type your response...", tint: .orange) { text in
+                SendTextField(placeholder: "Type your response...") { text in
                     sendFreeText(text)
                 }
             } else if !hasFreeTextOption && questions.count == 1 && !questions.contains(where: { $0.multiSelect }) {
-                SendTextField(placeholder: "Or type a custom response...", tint: .orange, onSend: onSend)
+                SendTextField(placeholder: "Or type a custom response...", onSend: onSend)
             }
         }
     }
