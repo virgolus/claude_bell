@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.9.4",
+    "build": 32,
+    "date": "2026-03-27",
+    "highlights": "Fix response routing to correct terminal tab",
+    "changes": [
+      { "type": "fixed", "text": "AskUserQuestion and elicitation responses now route to the correct terminal tab using transcript-based tty resolution, even with multiple concurrent sessions" },
+      { "type": "fixed", "text": "Numbered lists in conversation content no longer appear as false interactive option buttons" },
+      { "type": "fixed", "text": "Open in Terminal is now faster and reliably closes the panel after switching" },
+      { "type": "removed", "text": "Removed heavy per-tab diagnostic logging that slowed down terminal matching" }
+    ]
+  },
+  {
     "version": "1.9.3",
     "build": 31,
     "date": "2026-03-23",
