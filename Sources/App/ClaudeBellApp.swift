@@ -61,10 +61,6 @@ struct ClaudeBellApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Prompt for Accessibility permission if not yet granted (needed for TerminalBridge keystrokes)
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
-        AXIsProcessTrustedWithOptions(options)
-
         // Esc to close panel, ⌘, to open settings
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 && !isTextFieldActive() {
