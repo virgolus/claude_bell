@@ -69,11 +69,17 @@ final class UpdateChecker: ObservableObject {
             try FileManager.default.removeItem(at: currentBundle)
             try FileManager.default.moveItem(at: newApp, to: currentBundle)
 
-            // Relaunch
-            let open = Process()
-            open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-            open.arguments = [currentBundle.path]
-            try open.run()
+            // Relaunch: spawn a background shell that waits for us to exit, then opens the new app
+            let pid = ProcessInfo.processInfo.processIdentifier
+            let relaunch = Process()
+            relaunch.executableURL = URL(fileURLWithPath: "/bin/sh")
+            relaunch.arguments = [
+                "-c",
+                "while kill -0 \(pid) 2>/dev/null; do sleep 0.2; done; open \"\(currentBundle.path)\""
+            ]
+            relaunch.standardOutput = FileHandle.nullDevice
+            relaunch.standardError = FileHandle.nullDevice
+            try relaunch.run()
 
             // Clean up temp
             try? FileManager.default.removeItem(at: tempDir)

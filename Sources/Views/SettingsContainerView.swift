@@ -125,6 +125,9 @@ private struct GeneralSettingsTab: View {
                     }
                 }
 
+                // MARK: - Auto Mode
+                AutoModeSection()
+
                 // MARK: - Shortcut
                 settingsSection(title: "Global Shortcut", icon: "keyboard.fill", iconColor: .orange) {
                     Text("Press the shortcut to toggle the panel from anywhere.")
@@ -171,6 +174,51 @@ private struct GeneralSettingsTab: View {
             GlobalShortcut.shared.restart()
             shortcutLabel = GlobalShortcut.shared.shortcutDescription
         }))
+    }
+}
+
+// MARK: - Auto Mode Section
+
+private struct AutoModeSection: View {
+    @State private var enabled = AutoModeInstaller.isEnabled
+    @State private var errorMessage: String?
+
+    var body: some View {
+        settingsSection(title: "Auto Mode", icon: "bolt.fill", iconColor: .orange) {
+            HStack {
+                Image(systemName: enabled ? "checkmark.circle.fill" : "xmark.circle")
+                    .foregroundStyle(enabled ? .green : .red)
+                Text(enabled ? "Auto mode enabled" : "Auto mode disabled")
+                    .font(.body.weight(.medium))
+            }
+
+            Text("When enabled, Claude Code automatically approves or denies tool use based on an AI classifier instead of prompting you each time.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            Toggle("Enable Auto Mode", isOn: $enabled)
+                .onChange(of: enabled) { _, newValue in
+                    do {
+                        if newValue {
+                            try AutoModeInstaller.enable()
+                        } else {
+                            try AutoModeInstaller.disable()
+                        }
+                        errorMessage = nil
+                    } catch {
+                        enabled = !newValue
+                        errorMessage = error.localizedDescription
+                    }
+                }
+
+            Label("Requires restarting the Claude Code session to take effect.", systemImage: "exclamationmark.triangle.fill")
+                .font(.callout)
+                .foregroundStyle(.orange)
+
+            if let error = errorMessage {
+                Text(error).font(.callout).foregroundStyle(.red)
+            }
+        }
     }
 }
 

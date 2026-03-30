@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.9.7",
+    "build": 35,
+    "date": "2026-03-30",
+    "highlights": "Auto Mode toggle in settings, fix app relaunch after update",
+    "changes": [
+      { "type": "new", "text": "Auto Mode toggle in General settings to enable Claude Code auto mode via ~/.claude/settings.local.json" },
+      { "type": "fixed", "text": "App now reliably relaunches after applying an update (waits for old process to exit before opening new instance)" }
+    ]
+  },
+  {
     "version": "1.9.6",
     "build": 34,
     "date": "2026-03-27",

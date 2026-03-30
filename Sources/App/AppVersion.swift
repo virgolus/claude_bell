@@ -1,4 +1,4 @@
 enum AppVersion {
-    static let current = "1.9.6"
-    static let build = 34
+    static let current = "1.9.7"
+    static let build = 35
 }
