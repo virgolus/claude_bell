@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.9.8",
+    "build": 36,
+    "date": "2026-04-03",
+    "highlights": "Toggle to disable tool error notifications, deferred Accessibility prompt",
+    "changes": [
+      { "type": "new", "text": "Setting to disable tool error notifications in the Notifications tab" },
+      { "type": "changed", "text": "Accessibility permission prompt is now deferred to first use instead of appearing at app launch" }
+    ]
+  },
+  {
     "version": "1.9.7",
     "build": 35,
     "date": "2026-03-30",
