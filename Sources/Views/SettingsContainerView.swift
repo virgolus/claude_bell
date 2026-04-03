@@ -227,6 +227,7 @@ private struct AutoModeSection: View {
 private struct NotificationsSettingsTab: View {
     @State private var selectedSound = RequestStore.selectedSound
     @State private var macOSNotifications = AppDefaults.shared.bool(forKey: "macOSNotificationsEnabled")
+    @State private var toolErrorNotifications = AppDefaults.shared.bool(forKey: "toolErrorNotificationsEnabled")
 
     var body: some View {
         ScrollView {
@@ -256,6 +257,18 @@ private struct NotificationsSettingsTab: View {
                         .foregroundStyle(.secondary)
 
                     MuteToggle()
+                }
+
+                // MARK: - Tool Error Notifications
+                settingsSection(title: "Tool Errors", icon: "exclamationmark.triangle.fill", iconColor: .orange) {
+                    Text("Show notifications when a tool fails during execution.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    Toggle("Show tool error notifications", isOn: $toolErrorNotifications)
+                        .onChange(of: toolErrorNotifications) { _, enabled in
+                            AppDefaults.shared.set(enabled, forKey: "toolErrorNotificationsEnabled")
+                        }
                 }
 
                 // MARK: - macOS Notifications

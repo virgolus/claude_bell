@@ -64,6 +64,10 @@ final class RequestStore: ObservableObject {
     }
 
     func addNotification(_ notification: NotificationEntry) {
+        if notification.notificationType == "tool_error"
+            && !AppDefaults.shared.bool(forKey: "toolErrorNotificationsEnabled") {
+            return
+        }
         if !notification.meta.isPassive {
             // Skip if session already has a pending permission request (avoids duplicate)
             let sessionHasRequest = pendingRequests.contains {
