@@ -379,10 +379,17 @@ enum TerminalBridge {
 
     // MARK: - Helpers
 
-    /// Prompt for Accessibility permission if not yet granted (lazy — only when actually needed).
+    /// Whether we've already prompted for Accessibility permission this session.
+    private static var hasPromptedAccessibility = false
+
+    /// Prompt for Accessibility permission once per app session; check silently afterward.
     private static func ensureAccessibility() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
-        AXIsProcessTrustedWithOptions(options)
+        if AXIsProcessTrusted() { return }
+        if !hasPromptedAccessibility {
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+            AXIsProcessTrustedWithOptions(options)
+            hasPromptedAccessibility = true
+        }
     }
 
     private static func runAppleScript(_ source: String) -> Bool {
