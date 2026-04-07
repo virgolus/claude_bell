@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.9.9",
+    "build": 37,
+    "date": "2026-04-07",
+    "highlights": "Fix repeated Accessibility permission prompt",
+    "changes": [
+      { "type": "fixed", "text": "Accessibility permission dialog now only appears once per app session instead of on every interaction" }
+    ]
+  },
+  {
     "version": "1.9.8",
     "build": 36,
     "date": "2026-04-03",
