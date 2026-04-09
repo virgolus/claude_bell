@@ -1,12 +1,13 @@
 [
   {
-    "version": "1.9.11",
-    "build": 39,
+    "version": "1.9.12",
+    "build": 40,
     "date": "2026-04-09",
-    "highlights": "Fix panel positioning on macOS Tahoe",
+    "highlights": "Fix panel positioning on macOS Tahoe, updated statusline",
     "changes": [
       { "type": "fixed", "text": "Panel positioning (left, right, fullscreen) now works on macOS Tahoe where Apple blocks window repositioning for MenuBarExtra windows" },
-      { "type": "fixed", "text": "Robust window detection that no longer relies on private Apple class names, compatible across all macOS versions" }
+      { "type": "fixed", "text": "Robust window detection that no longer relies on private Apple class names, compatible across all macOS versions" },
+      { "type": "changed", "text": "Statusline script now shows total and per-message token usage (input/output)" }
     ]
   },
   {
