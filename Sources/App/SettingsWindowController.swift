@@ -6,6 +6,7 @@ final class SettingsWindowController {
     static let shared = SettingsWindowController()
 
     private var window: NSWindow?
+    var windowRef: NSWindow? { window }
 
     private init() {}
 

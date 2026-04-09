@@ -60,6 +60,27 @@ struct ClaudeBellApp: App {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private weak var panelWindow: NSWindow?
+
+    private func isPanelWindow(_ window: NSWindow) -> Bool {
+        if let known = panelWindow {
+            return window === known
+        }
+        // Exclude settings window
+        if window === SettingsWindowController.shared.windowRef {
+            return false
+        }
+        // Exclude status bar button's window
+        if let button = findStatusButton(), window === button.window {
+            return false
+        }
+        // Must have content (not a transient system window)
+        guard window.contentView != nil else { return false }
+        // In this accessory app, any remaining key window is the panel
+        panelWindow = window
+        return true
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Esc to close panel, ⌘, to open settings
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
@@ -120,34 +141,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             forName: NSWindow.didBecomeKeyNotification,
             object: nil,
             queue: .main
-        ) { note in
+        ) { [weak self] note in
             guard let window = note.object as? NSWindow else { return }
-            let name = String(describing: type(of: window))
-            if name.contains("MenuBarExtra") || name.contains("StatusItemWindow") || name.contains("_NSPopoverWindow") {
-                window.level = .floating
-                // Adjust position on next run loop to ensure frame is settled
-                DispatchQueue.main.async {
-                    guard let screen = window.screen ?? NSScreen.main else { return }
-                    let visible = screen.visibleFrame
-                    let position = BodyStyleSettings.shared.panelPosition
+            // Small delay to ensure SwiftUI has settled the frame
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                guard let self, self.isPanelWindow(window) else { return }
 
-                    switch position {
-                    case .menuBar:
-                        var frame = window.frame
-                        if frame.minX < visible.minX { frame.origin.x = visible.minX }
-                        if frame.maxX > visible.maxX { frame.origin.x = visible.maxX - frame.width }
-                        if frame.origin != window.frame.origin {
-                            window.setFrameOrigin(frame.origin)
-                        }
-                    case .left:
-                        let frame = NSRect(x: visible.minX, y: visible.minY, width: window.frame.width, height: visible.height)
-                        window.setFrame(frame, display: true)
-                    case .right:
-                        let frame = NSRect(x: visible.maxX - window.frame.width, y: visible.minY, width: window.frame.width, height: visible.height)
-                        window.setFrame(frame, display: true)
-                    case .fullscreen:
-                        window.setFrame(visible, display: true)
+                window.level = .floating
+
+                guard let screen = window.screen ?? NSScreen.main else { return }
+                let visible = screen.visibleFrame
+                let position = BodyStyleSettings.shared.panelPosition
+
+                switch position {
+                case .menuBar:
+                    var frame = window.frame
+                    if frame.minX < visible.minX { frame.origin.x = visible.minX }
+                    if frame.maxX > visible.maxX { frame.origin.x = visible.maxX - frame.width }
+                    if frame.origin != window.frame.origin {
+                        window.setFrameOrigin(frame.origin)
                     }
+                case .left:
+                    let frame = NSRect(x: visible.minX, y: visible.minY, width: window.frame.width, height: visible.height)
+                    window.setFrame(frame, display: true)
+                case .right:
+                    let frame = NSRect(x: visible.maxX - window.frame.width, y: visible.minY, width: window.frame.width, height: visible.height)
+                    window.setFrame(frame, display: true)
+                case .fullscreen:
+                    window.setFrame(visible, display: true)
                 }
             }
         }
@@ -265,12 +286,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func dismissPanel() {
-        // Only dismiss if the panel is currently visible
-        let panelVisible = NSApp.windows.contains { window in
-            let name = String(describing: type(of: window))
-            return window.isVisible && (name.contains("MenuBarExtra") || name.contains("StatusItem") || name.contains("Popover"))
-        }
-        guard panelVisible else { return }
+        guard let panel = panelWindow, panel.isVisible else { return }
         if let button = findStatusButton() {
             button.performClick(nil)
         }
@@ -278,11 +294,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func findStatusButton() -> NSStatusBarButton? {
         for window in NSApp.windows {
-            let name = String(describing: type(of: window))
-            if name.contains("StatusBar") || name.contains("NSStatusBar") {
-                if let contentView = window.contentView {
-                    return findButtonInView(contentView)
-                }
+            if let contentView = window.contentView,
+               let button = findButtonInView(contentView) {
+                return button
             }
         }
         return nil
