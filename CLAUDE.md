@@ -20,13 +20,14 @@ See [BUILDING.md](BUILDING.md) for the full release + deploy workflow.
 - **HookServer** (`Sources/Server/HookServer.swift`) — Hummingbird HTTP server. Routes map 1:1 to Claude Code hook types. Decodes `HookInput`, creates model objects, dispatches to `RequestStore`.
 - **Notification lifecycle**: interactive notifications (permission_prompt, idle_prompt, elicitation_dialog) stay in the panel until answered or dismissed. Passive notifications (stop, tool_error, session_end) only appear as bell badge updates and clear stale interactive notifications.
 - **Session tracking**: sessions are created on first hook event and removed on `SessionEnd` hook or manual dismissal.
+- **UpdateChecker** (`Sources/Update/UpdateChecker.swift`) — checks for new versions via changelog.json and handles in-app download + install.
 
 ## Key conventions
 
 - All UI state is in `RequestStore.shared` — views observe `@Published` properties
 - Hook endpoints follow the pattern: decode input → dispatch to `@MainActor` store method → return HTTP response
 - `NotificationMeta` centralizes all per-type metadata (icon, color, passive/interactive, deduplication)
-- `HookInstaller` manages writing/removing hooks from `~/.claude/settings.json`
+- `HookInstaller`, `AutoModeInstaller`, and `StatuslineInstaller` in `Sources/Setup/` manage writing/removing hooks, auto-mode config, and statusline script respectively
 - The app bundle `ClaudeBell.app` in the repo root has its binary in `.gitignore` — only `public/ClaudeBell.zip` is tracked
 
 ## Hooks configuration

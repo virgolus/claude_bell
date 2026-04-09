@@ -46,10 +46,12 @@ Sources/
   App/            — App entry point, global shortcut, AppDelegate
   Models/         — Data models (HookInput, NotificationEntry, PendingRequest, SessionInfo)
   Server/         — HTTP server receiving Claude Code hooks (Hummingbird)
-  Setup/          — Hook and statusline installers
+  Resources/      — Bundle resources (changelog.json)
+  Setup/          — Hook, auto-mode, and statusline installers
   Store/          — RequestStore (central state management)
   Terminal/       — Terminal tab detection and focus (TerminalBridge)
   Transcript/     — Claude Code transcript parser
+  Update/         — Auto-update checker and installer
   Utilities/      — Markdown renderer, formatters, helpers
   Views/          — SwiftUI views (panel, detail views, setup)
 public/           — Vercel-served landing page + ClaudeBell.zip download
