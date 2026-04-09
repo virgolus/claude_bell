@@ -1,11 +1,12 @@
 [
   {
-    "version": "1.9.10",
-    "build": 38,
+    "version": "1.9.11",
+    "build": 39,
     "date": "2026-04-09",
-    "highlights": "Fix panel positioning on new Macs",
+    "highlights": "Fix panel positioning on macOS Tahoe",
     "changes": [
-      { "type": "fixed", "text": "Panel positioning (left, right, fullscreen) now works reliably across all macOS versions by removing dependency on private Apple class names" }
+      { "type": "fixed", "text": "Panel positioning (left, right, fullscreen) now works on macOS Tahoe where Apple blocks window repositioning for MenuBarExtra windows" },
+      { "type": "fixed", "text": "Robust window detection that no longer relies on private Apple class names, compatible across all macOS versions" }
     ]
   },
   {

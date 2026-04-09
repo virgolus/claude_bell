@@ -66,17 +66,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let known = panelWindow {
             return window === known
         }
-        // Exclude settings window
         if window === SettingsWindowController.shared.windowRef {
             return false
         }
-        // Exclude status bar button's window
         if let button = findStatusButton(), window === button.window {
             return false
         }
-        // Must have content (not a transient system window)
         guard window.contentView != nil else { return false }
-        // In this accessory app, any remaining key window is the panel
         panelWindow = window
         return true
     }
@@ -143,34 +139,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             queue: .main
         ) { [weak self] note in
             guard let window = note.object as? NSWindow else { return }
-            // Small delay to ensure SwiftUI has settled the frame
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 guard let self, self.isPanelWindow(window) else { return }
-
-                window.level = .floating
-
-                guard let screen = window.screen ?? NSScreen.main else { return }
-                let visible = screen.visibleFrame
-                let position = BodyStyleSettings.shared.panelPosition
-
-                switch position {
-                case .menuBar:
-                    var frame = window.frame
-                    if frame.minX < visible.minX { frame.origin.x = visible.minX }
-                    if frame.maxX > visible.maxX { frame.origin.x = visible.maxX - frame.width }
-                    if frame.origin != window.frame.origin {
-                        window.setFrameOrigin(frame.origin)
-                    }
-                case .left:
-                    let frame = NSRect(x: visible.minX, y: visible.minY, width: window.frame.width, height: visible.height)
-                    window.setFrame(frame, display: true)
-                case .right:
-                    let frame = NSRect(x: visible.maxX - window.frame.width, y: visible.minY, width: window.frame.width, height: visible.height)
-                    window.setFrame(frame, display: true)
-                case .fullscreen:
-                    window.setFrame(visible, display: true)
-                }
+                self.applyPanelPosition(window)
             }
+        }
+
+        // Also reposition on visibility changes (needed on macOS Tahoe)
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didChangeOcclusionStateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            guard let window = note.object as? NSWindow,
+                  window.occlusionState.contains(.visible) else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                guard let self, self.isPanelWindow(window) else { return }
+                self.applyPanelPosition(window)
+            }
+        }
+    }
+
+    private func applyPanelPosition(_ window: NSWindow) {
+        window.level = .floating
+
+        guard let screen = window.screen ?? NSScreen.main else { return }
+        let visible = screen.visibleFrame
+        let position = BodyStyleSettings.shared.panelPosition
+
+        let targetOrigin: NSPoint?
+        switch position {
+        case .menuBar:
+            var origin = window.frame.origin
+            if window.frame.minX < visible.minX { origin.x = visible.minX }
+            if window.frame.maxX > visible.maxX { origin.x = visible.maxX - window.frame.width }
+            targetOrigin = (origin != window.frame.origin) ? origin : nil
+        case .left:
+            targetOrigin = NSPoint(x: visible.minX, y: visible.minY)
+        case .right:
+            targetOrigin = NSPoint(x: visible.maxX - window.frame.width, y: visible.minY)
+        case .fullscreen:
+            targetOrigin = NSPoint(x: visible.minX, y: visible.minY)
+        }
+
+        guard let target = targetOrigin else { return }
+
+        // Try direct repositioning first; if blocked (macOS Tahoe),
+        // hide the window, reposition, then show again.
+        window.setFrameOrigin(target)
+        if window.frame.origin != target {
+            window.orderOut(nil)
+            window.setFrameOrigin(target)
+            window.orderFront(nil)
+            window.makeKeyAndOrderFront(nil)
         }
     }
 
