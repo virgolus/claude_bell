@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.9.10",
+    "build": 38,
+    "date": "2026-04-09",
+    "highlights": "Fix panel positioning on new Macs",
+    "changes": [
+      { "type": "fixed", "text": "Panel positioning (left, right, fullscreen) now works reliably across all macOS versions by removing dependency on private Apple class names" }
+    ]
+  },
+  {
     "version": "1.9.9",
     "build": 37,
     "date": "2026-04-07",
