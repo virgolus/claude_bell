@@ -3,8 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Claude Bell</title>
+    <title>ClaudeBell — Native macOS notification center for Claude Code</title>
+    <meta name="description" content="ClaudeBell is a lightweight native macOS menu bar app that unifies notifications, permission prompts, and hook events from all your Claude Code sessions in one place.">
+    <meta name="keywords" content="Claude Code, macOS, menu bar, notifications, hooks, permission prompt, SwiftUI, Anthropic, Claude notifications, Claude Code app">
+    <meta name="author" content="Ezio Vergine">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://claude-bell.vercel.app/">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://claude-bell.vercel.app/">
+    <meta property="og:title" content="ClaudeBell — Native macOS notification center for Claude Code">
+    <meta property="og:description" content="A unified notification and action center for all your Claude Code sessions, right in your macOS menu bar.">
+    <meta property="og:image" content="https://claude-bell.vercel.app/app-preview.webp">
+    <meta property="og:image:width" content="1920">
+    <meta property="og:image:height" content="1440">
+    <meta property="og:image:alt" content="ClaudeBell panel showing a permission request for a Bash command">
+    <meta property="og:site_name" content="ClaudeBell">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://claude-bell.vercel.app/">
+    <meta name="twitter:title" content="ClaudeBell — Native macOS notification center for Claude Code">
+    <meta name="twitter:description" content="A unified notification and action center for all your Claude Code sessions, right in your macOS menu bar.">
+    <meta name="twitter:image" content="https://claude-bell.vercel.app/app-preview.webp">
+    <meta name="twitter:image:alt" content="ClaudeBell panel showing a permission request for a Bash command">
+
+    <!-- Structured data for search engines & LLMs -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "ClaudeBell",
+      "description": "A native macOS menu bar app that receives Claude Code hook events and presents notifications, permission prompts, and session updates in a unified panel.",
+      "url": "https://claude-bell.vercel.app/",
+      "image": "https://claude-bell.vercel.app/app-preview.webp",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "macOS",
+      "downloadUrl": "https://claude-bell.vercel.app/ClaudeBell.zip",
+      "softwareVersion": "1.9.12",
+      "author": {
+        "@type": "Person",
+        "name": "Ezio Vergine"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Unified notification center for all Claude Code sessions",
+        "Interactive permission prompts",
+        "Idle prompts and elicitation dialogs",
+        "Session tracking across multiple terminals",
+        "One-click hook installation",
+        "Auto-update via changelog"
+      ]
+    }
+    </script>
     <style>
         :root {
             --bg: #0a0a0f;
@@ -193,6 +251,28 @@
             font-size: 13px;
             color: var(--text-secondary);
             margin-top: 4px;
+        }
+
+        /* ─── Hero showcase ─── */
+        .hero-showcase {
+            max-width: 960px;
+            margin: -20px auto 80px;
+            padding: 0 24px;
+            position: relative;
+        }
+        .hero-showcase img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow:
+                0 40px 80px -20px rgba(0, 0, 0, 0.6),
+                0 0 120px -20px var(--accent-glow);
+        }
+        @media (max-width: 720px) {
+            .hero-showcase { margin: 0 auto 48px; }
+            .hero-showcase img { border-radius: 12px; }
         }
 
         /* ─── Section ─── */
@@ -512,10 +592,6 @@
 
 <!-- Hero -->
 <section class="hero">
-    <div class="hero-badge">
-        <span class="dot"></span>
-        Native macOS app for Claude Code
-    </div>
     <h1>
         <span class="accent">Claude</span><br>
         Bell
@@ -536,26 +612,8 @@
     </div>
 </section>
 
-<!-- Stats -->
-<div class="container">
-    <div class="stats">
-        <div class="stat">
-            <div class="stat-value">100%</div>
-            <div class="stat-label">Native Swift & SwiftUI</div>
-        </div>
-        <div class="stat">
-            <div class="stat-value">5</div>
-            <div class="stat-label">Claude Code Hooks</div>
-        </div>
-        <div class="stat">
-            <div class="stat-value">&lt;1MB</div>
-            <div class="stat-label">Lightweight binary</div>
-        </div>
-        <div class="stat">
-            <div class="stat-value">0</div>
-            <div class="stat-label">Electron bloat</div>
-        </div>
-    </div>
+<div class="hero-showcase">
+    <img src="app-preview.webp" alt="ClaudeBell panel showing a permission request for a Bash command" width="1920" height="1440" loading="eager" />
 </div>
 
 <!-- Features -->
