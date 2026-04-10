@@ -10,7 +10,7 @@ final class UpdateChecker: ObservableObject {
         let highlights: String
     }
 
-    static let baseURL = "https://claude-bell.vercel.app"
+    static let baseURL = "https://claude-bell.com"
 
     @Published var isDownloading = false
     @Published var downloadError: String?

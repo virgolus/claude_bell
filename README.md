@@ -33,7 +33,7 @@ Claude Bell runs a local HTTP server on `localhost:19485` that receives events f
 
 ## Install
 
-Download `ClaudeBell.zip` from the [releases page](https://claude-bell.vercel.app), unzip, and move to Applications. On first launch, open Settings in the app and click "Enable Hooks" to configure Claude Code.
+Download `ClaudeBell.zip` from the [releases page](https://claude-bell.com), unzip, and move to Applications. On first launch, open Settings in the app and click "Enable Hooks" to configure Claude Code.
 
 ## Build
 

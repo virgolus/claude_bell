@@ -32,4 +32,4 @@ Allow: /
 User-agent: Applebot-Extended
 Allow: /
 
-Sitemap: https://claude-bell.vercel.app/sitemap.xml
+Sitemap: https://claude-bell.com/sitemap.xml

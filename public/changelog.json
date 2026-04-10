@@ -1,14 +1,15 @@
 [
   {
     "version": "1.9.12",
-    "build": 41,
+    "build": 42,
     "date": "2026-04-10",
-    "highlights": "Panel positioning on macOS Tahoe, statusline tokens, landing page refresh",
+    "highlights": "Panel positioning on macOS Tahoe, statusline tokens, custom domain",
     "changes": [
       { "type": "fixed", "text": "Panel positioning (left, right, fullscreen) now works on macOS Tahoe where Apple blocks window repositioning for MenuBarExtra windows" },
       { "type": "fixed", "text": "Robust window detection that no longer relies on private Apple class names, compatible across all macOS versions" },
       { "type": "changed", "text": "Statusline script now shows total and per-message token usage (input/output)" },
-      { "type": "changed", "text": "Refreshed landing page with product screenshot and full SEO metadata (Open Graph, Twitter Card, JSON-LD, sitemap) so search engines and LLM crawlers can index the app" }
+      { "type": "changed", "text": "Refreshed landing page with product screenshot and full SEO metadata (Open Graph, Twitter Card, JSON-LD, sitemap) so search engines and LLM crawlers can index the app" },
+      { "type": "changed", "text": "Update checker and website now use the custom domain claude-bell.com" }
     ]
   },
   {
