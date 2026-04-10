@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — ClaudeBell</title>
+    <meta name="description" content="Privacy policy for ClaudeBell, a native macOS menu bar app for Claude Code.">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://claude-bell.com/privacy">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --bg-card: #12121a;
+            --border: #2a2a3a;
+            --text: #e8e8f0;
+            --text-secondary: #8888a0;
+            --accent: #f97316;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            font-size: 16px;
+        }
+        .container {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 80px 24px 120px;
+        }
+        .back {
+            display: inline-block;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 32px;
+            transition: color 0.2s;
+        }
+        .back:hover { color: var(--accent); }
+        h1 {
+            font-size: 40px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 48px;
+        }
+        h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+        p, li {
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        strong { color: var(--text); }
+        ul { padding-left: 24px; margin-bottom: 16px; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .tldr {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-bottom: 32px;
+            font-size: 15px;
+        }
+        .tldr strong { color: var(--accent); }
+        .notice {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0 24px;
+            font-size: 14px;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+            vertical-align: top;
+        }
+        th { color: var(--text); font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back">← Back to ClaudeBell</a>
+
+        <h1>Privacy Policy</h1>
+        <p class="subtitle">Last updated: <!-- TODO: update date on each revision -->2026-04-10 · Version 1.0</p>
+
+        <div class="tldr">
+            <strong>TL;DR.</strong> ClaudeBell runs entirely on your Mac. It does not collect telemetry, analytics, or personal data. The only network calls it makes are to validate your license key, check for updates, and download new versions. We don't track you, we don't see your Claude Code conversations, and we don't share anything with third parties beyond what is strictly required to sell and deliver the software.
+        </div>
+
+        <div class="notice">
+            <strong>Template notice.</strong> This policy is a working template based on the actual technical behavior of the ClaudeBell application. Before publishing, have it reviewed by a lawyer qualified in your jurisdiction, especially regarding GDPR and national consumer protection rules. Fields marked with <code>&lt;!-- TODO --&gt;</code> in the source must be confirmed or replaced.
+        </div>
+
+        <p>This Privacy Policy describes how <!-- TODO: replace with legal entity name -->Ezio Vergine ("<strong>we</strong>", "<strong>us</strong>", "the Licensor") collects, uses, and protects information in connection with the ClaudeBell macOS application (the "<strong>Software</strong>") and the website <a href="https://claude-bell.com">claude-bell.com</a> (the "<strong>Website</strong>").</p>
+
+        <p>We have designed ClaudeBell to minimize data collection. Most of your interaction with the Software happens locally on your Mac and never reaches us.</p>
+
+        <h2>1. Who is the data controller</h2>
+        <p>The data controller for the purposes of the EU General Data Protection Regulation (GDPR) is:</p>
+        <ul>
+            <li><!-- TODO: replace with legal entity name and address -->Ezio Vergine, Italy</li>
+            <li>Contact: <a href="mailto:support@claude-bell.com">support@claude-bell.com</a></li>
+        </ul>
+
+        <h2>2. What ClaudeBell does locally (and never sends anywhere)</h2>
+        <p>When you use ClaudeBell, the following activities happen entirely on your Mac:</p>
+        <ul>
+            <li>Claude Code hook events (permission prompts, notifications, tool errors, session lifecycle) are received by a local HTTP server bound to <code>localhost:19485</code> and never leave your machine.</li>
+            <li>Conversation transcripts, prompts, tool outputs, and file paths are read only from your local Claude Code state directory (<code>~/.claude/</code>) and displayed inside the app. They are never transmitted to us or any third party.</li>
+            <li>App preferences, notification sounds, window positions, hook installation state, and auto-mode settings are stored locally in macOS user defaults or in the Claude Code settings file.</li>
+            <li>Your license key, activation date, and trial start date are stored in the macOS Keychain on your device.</li>
+        </ul>
+
+        <h2>3. What ClaudeBell sends over the network</h2>
+        <p>The Software makes a limited number of outbound network requests, all of which are necessary for it to function:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Destination</th>
+                    <th>Purpose</th>
+                    <th>Data sent</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>api.lemonsqueezy.com</code></td>
+                    <td>License key activation and periodic validation (every 7 days)</td>
+                    <td>Your license key, a hostname label for the device (e.g. your Mac's name), and the ClaudeBell version</td>
+                </tr>
+                <tr>
+                    <td><code>claude-bell.com</code></td>
+                    <td>Fetch the public changelog and download updates</td>
+                    <td>Standard HTTP headers (IP address, user agent, ClaudeBell version). No user-identifying data.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>No other outbound connections are made by the Software. In particular, we do <strong>not</strong> use analytics SDKs, crash reporters that transmit personal data, advertising networks, or third-party trackers.</p>
+
+        <h2>4. What the Website collects</h2>
+        <p>The Website is a static landing page hosted on <a href="https://vercel.com">Vercel</a>. Vercel processes standard server access logs (IP address, user agent, request path, timestamp) for security, abuse prevention, and operational purposes. These logs are controlled by Vercel under <a href="https://vercel.com/legal/privacy-policy">Vercel's own privacy policy</a>.</p>
+
+        <p>The Website does not set cookies, does not use analytics trackers (no Google Analytics, no Plausible, no Fathom), and does not embed third-party iframes or social sharing widgets that would track you.</p>
+
+        <h2>5. Purchases and payments</h2>
+        <p>All purchases of ClaudeBell licenses are processed by <strong>Lemon Squeezy</strong>, which acts as the <strong>merchant of record</strong>. This means Lemon Squeezy handles payment processing, tax collection, invoicing, fraud prevention, and issuing license keys. We receive only the information we need to deliver the license and provide support:</p>
+        <ul>
+            <li>Your email address</li>
+            <li>Your license key</li>
+            <li>Country of purchase (for tax purposes)</li>
+            <li>Order identifier and timestamp</li>
+        </ul>
+        <p>We do <strong>not</strong> receive or store your full payment card details, billing address, or any other sensitive financial information. For details on how Lemon Squeezy processes your data, see the <a href="https://www.lemonsqueezy.com/privacy">Lemon Squeezy Privacy Policy</a>.</p>
+
+        <h2>6. Legal basis for processing (GDPR)</h2>
+        <p>We process personal data on the following legal bases under Article 6 GDPR:</p>
+        <ul>
+            <li><strong>Performance of a contract</strong> — to deliver the license you purchased, validate activation, and provide updates and support (Art. 6(1)(b)).</li>
+            <li><strong>Legitimate interest</strong> — to prevent license abuse and secure the Software against unauthorized use (Art. 6(1)(f)).</li>
+            <li><strong>Legal obligation</strong> — to comply with tax, accounting, and consumer protection laws (Art. 6(1)(c)).</li>
+        </ul>
+
+        <h2>7. How long we retain data</h2>
+        <ul>
+            <li><strong>License and order data</strong> — for as long as your license is active, plus the period required by applicable accounting and tax laws (typically 10 years in Italy).</li>
+            <li><strong>Support correspondence</strong> — for up to 2 years after the last contact, then deleted.</li>
+            <li><strong>Website access logs</strong> — retained by Vercel according to their own retention schedule (typically 30 days).</li>
+        </ul>
+
+        <h2>8. Third parties we rely on</h2>
+        <p>The following service providers process limited data on our behalf:</p>
+        <ul>
+            <li><strong>Vercel Inc.</strong> (USA) — website hosting. <a href="https://vercel.com/legal/privacy-policy">Privacy policy</a></li>
+            <li><strong>Lemon Squeezy</strong> (USA, part of Stripe Inc.) — payment processing, license delivery, merchant of record. <a href="https://www.lemonsqueezy.com/privacy">Privacy policy</a></li>
+            <li><strong>GitHub Inc.</strong> (USA, owned by Microsoft) — public issue tracker only, used if you voluntarily file a bug report. <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">Privacy policy</a></li>
+        </ul>
+        <p>Where data is transferred outside the European Economic Area, we rely on Standard Contractual Clauses or equivalent safeguards provided by each processor.</p>
+
+        <h2>9. Your rights under GDPR</h2>
+        <p>If you are located in the European Economic Area, the United Kingdom, or another jurisdiction with comparable data protection rights, you have the right to:</p>
+        <ul>
+            <li>Access the personal data we hold about you;</li>
+            <li>Request correction of inaccurate data;</li>
+            <li>Request deletion of your data (subject to our legal retention obligations);</li>
+            <li>Object to or restrict processing based on legitimate interest;</li>
+            <li>Request a portable copy of your data;</li>
+            <li>Withdraw consent, where processing is based on consent;</li>
+            <li>Lodge a complaint with your national data protection authority (in Italy, the <a href="https://www.garanteprivacy.it/">Garante per la protezione dei dati personali</a>).</li>
+        </ul>
+        <p>To exercise any of these rights, email us at <a href="mailto:support@claude-bell.com">support@claude-bell.com</a>. We will respond within 30 days.</p>
+
+        <h2>10. Children</h2>
+        <p>ClaudeBell is a developer tool and is not directed at children under 16. We do not knowingly collect personal data from children. If you believe a child has provided us with personal data, please contact us and we will delete it.</p>
+
+        <h2>11. Security</h2>
+        <p>License keys are stored in the macOS Keychain, encrypted by the operating system. All network traffic between ClaudeBell and external services uses HTTPS (TLS 1.2 or higher). We rely on our service providers (Vercel, Lemon Squeezy) to maintain industry-standard security practices for the data they process on our behalf.</p>
+
+        <h2>12. Changes to this policy</h2>
+        <p>We may update this Privacy Policy from time to time. When we do, we will update the "Last updated" date at the top of this page and, for material changes, notify license holders via the email address associated with their purchase. Your continued use of the Software after the changes take effect constitutes your acceptance of the updated policy.</p>
+
+        <h2>13. Contact</h2>
+        <p>If you have questions about this Privacy Policy or how we handle your data, contact us at:</p>
+        <ul>
+            <li>Email: <a href="mailto:support@claude-bell.com">support@claude-bell.com</a></li>
+            <li>Website: <a href="https://claude-bell.com">claude-bell.com</a></li>
+        </ul>
+
+        <p style="margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 13px;">© 2026 <!-- TODO: replace with legal entity name -->Ezio Vergine. All rights reserved.</p>
+    </div>
+</body>
+</html>
