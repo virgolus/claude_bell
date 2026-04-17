@@ -95,7 +95,7 @@ struct QuestionOptionsView: View {
                     .foregroundStyle(isSelected ? .orange : .secondary)
                     .frame(width: 20)
             } else {
-                Text("\(option.index).")
+                Text("\(option.token ?? String(option.index)).")
                     .font(.body.monospacedDigit().weight(.semibold))
                     .foregroundStyle(isSelected ? .orange : .secondary)
                     .frame(width: 24, alignment: .trailing)
@@ -151,7 +151,7 @@ struct QuestionOptionsView: View {
                 freeTextExpanded = false
                 selections[question.id] = [option.index]
                 if questions.count == 1 {
-                    onSend("\(option.index)")
+                    onSend(option.token ?? "\(option.index)")
                 }
             }
         }
@@ -168,22 +168,26 @@ struct QuestionOptionsView: View {
     }
 
     private func submitAll() {
-        // Build response: for each question, send the selected option numbers
-        // Format: "1\n2,3" (one line per question, comma-separated for multiSelect)
+        // Build response: for each question, send the selected option tokens.
+        // Format: "1\n2,3" (one line per question, comma-separated for multiSelect).
         var parts: [String] = []
         for question in questions {
-            let selected = selections[question.id, default: []].sorted()
-            parts.append(selected.map(String.init).joined(separator: ","))
+            let selectedIndices = selections[question.id, default: []].sorted()
+            let tokens = selectedIndices.compactMap { idx -> String? in
+                guard let opt = question.options.first(where: { $0.index == idx }) else { return nil }
+                return opt.token ?? String(opt.index)
+            }
+            parts.append(tokens.joined(separator: ","))
         }
         onSend(parts.joined(separator: "\n"))
     }
 
-    /// Send free-text response via two-step (option number + custom text).
+    /// Send free-text response via two-step (option token + custom text).
     private func sendFreeText(_ text: String) {
         if let firstQuestion = questions.first,
            let option = Self.freeTextOption(in: firstQuestion),
            !cwd.isEmpty {
-            TerminalBridge.sendTextTwoStep("\(option.index)", then: text, toCwd: cwd, transcriptPath: transcriptPath)
+            TerminalBridge.sendTextTwoStep(option.token ?? "\(option.index)", then: text, toCwd: cwd, transcriptPath: transcriptPath)
             onDismiss?()
         } else {
             onSend(text)

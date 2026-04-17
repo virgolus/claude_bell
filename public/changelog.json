@@ -1,6 +1,17 @@
 [
   {
     "version": "1.9.12",
+    "build": 43,
+    "date": "2026-04-17",
+    "highlights": "Fix waiting-for-input notification rendering and letter-based choice buttons",
+    "changes": [
+      { "type": "fixed", "text": "Waiting-for-input and elicitation notifications no longer render the message twice with different font sizes" },
+      { "type": "new", "text": "Lettered choices (A/B/C) in Claude responses are now detected and rendered as clickable buttons, not just numeric options" },
+      { "type": "changed", "text": "Removed the 120-character label limit on auto-detected choice options so longer explanations can still be selected from the panel" }
+    ]
+  },
+  {
+    "version": "1.9.12",
     "build": 42,
     "date": "2026-04-10",
     "highlights": "Fix panel positioning on macOS Tahoe, updated statusline",

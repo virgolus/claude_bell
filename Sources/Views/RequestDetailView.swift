@@ -61,7 +61,8 @@ struct RequestDetailView: View {
                         options.append(QuestionOption(
                             index: i + 1,
                             label: opt["label"] as? String ?? "Option \(i + 1)",
-                            description: opt["description"] as? String ?? ""
+                            description: opt["description"] as? String ?? "",
+                            token: nil
                         ))
                     }
                 }

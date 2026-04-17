@@ -19,6 +19,9 @@ struct QuestionOption: Identifiable {
     let index: Int      // 1-based
     let label: String
     let description: String
+    /// Literal to send when selected (e.g. "A" for letter-based options).
+    /// When nil, the sender uses `"\(index)"`.
+    let token: String?
 }
 
 struct ParsedQuestion: Identifiable {
@@ -150,7 +153,8 @@ enum TranscriptParser {
                                 options.append(QuestionOption(
                                     index: i + 1,
                                     label: opt["label"] as? String ?? "Option \(i + 1)",
-                                    description: opt["description"] as? String ?? ""
+                                    description: opt["description"] as? String ?? "",
+                                    token: nil
                                 ))
                             }
                         }
@@ -173,10 +177,10 @@ enum TranscriptParser {
         return nil
     }
 
-    /// Parses numbered options from the last assistant message text in the transcript.
-    /// Looks for patterns like "1. Option text" or "❯ 1. Option text" near the end
-    /// of the message, only when they look like real interactive choices (short labels,
-    /// preceded by a question).
+    /// Parses enumerated options from the last assistant message text in the transcript.
+    /// Accepts either numeric ("1. ...", "1) ...") or letter ("A. ...", "A) ...") markers,
+    /// near the end of the message and preceded by a question mark.
+    /// Options must be sequential (1,2,3… or A,B,C…) and all of the same type.
     static func parseNumberedOptions(from path: String) -> [ParsedQuestion]? {
         guard let data = FileManager.default.contents(atPath: path),
               let content = String(data: data, encoding: .utf8) else {
@@ -185,7 +189,6 @@ enum TranscriptParser {
 
         let lines = content.components(separatedBy: "\n").filter { !$0.isEmpty }
 
-        // Find the last assistant message
         for line in lines.reversed() {
             guard let lineData = line.data(using: .utf8),
                   let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
@@ -208,8 +211,8 @@ enum TranscriptParser {
 
             let fullText = textParts.joined(separator: "\n")
 
-            // Look for numbered options: "1. ...", "2. ...", etc.
-            let optionPattern = #"^\s*(?:❯\s*)?(\d+)\.\s+(.+)$"#
+            // Matches "1.", "1)", "A.", "A)" optionally preceded by ❯.
+            let optionPattern = #"^\s*(?:❯\s*)?([A-Za-z]|\d+)[\.\)]\s+(.+)$"#
             guard let regex = try? NSRegularExpression(pattern: optionPattern, options: .anchorsMatchLines) else {
                 continue
             }
@@ -217,36 +220,60 @@ enum TranscriptParser {
             let matches = regex.matches(in: fullText, range: NSRange(fullText.startIndex..., in: fullText))
             guard matches.count >= 2 else { continue }
 
-            // Filter: only keep options with short labels (≤120 chars) — real choices are concise
-            var options: [QuestionOption] = []
+            // Extract markers (raw) + labels in order.
+            struct Raw { let marker: String; let label: String; let range: NSRange }
+            var raws: [Raw] = []
             for match in matches {
-                guard let numRange = Range(match.range(at: 1), in: fullText),
-                      let textRange = Range(match.range(at: 2), in: fullText),
-                      let num = Int(fullText[numRange]) else { continue }
+                guard let markerRange = Range(match.range(at: 1), in: fullText),
+                      let textRange = Range(match.range(at: 2), in: fullText) else { continue }
+                let marker = String(fullText[markerRange])
                 let label = String(fullText[textRange]).trimmingCharacters(in: .whitespaces)
-                if label.count <= 120 {
-                    options.append(QuestionOption(
-                        index: num,
-                        label: label,
-                        description: ""
-                    ))
+                raws.append(Raw(marker: marker, label: label, range: match.range))
+            }
+            guard raws.count >= 2 else { continue }
+
+            // Classify: all digits, or all single letters. Reject mixed.
+            let allDigits = raws.allSatisfy { Int($0.marker) != nil }
+            let allLetters = raws.allSatisfy { $0.marker.count == 1 && $0.marker.unicodeScalars.first.map { CharacterSet.letters.contains($0) } == true }
+            guard allDigits || allLetters else { continue }
+
+            // Build options with sequential check (1,2,3… or A,B,C…).
+            var options: [QuestionOption] = []
+            var valid = true
+            for (i, raw) in raws.enumerated() {
+                let expectedIndex = i + 1
+                let token: String?
+                if allDigits {
+                    guard let n = Int(raw.marker), n == expectedIndex else { valid = false; break }
+                    token = nil
+                } else {
+                    let upper = raw.marker.uppercased()
+                    let scalars = Array(upper.unicodeScalars)
+                    guard let first = scalars.first,
+                          let aScalar = "A".unicodeScalars.first,
+                          Int(first.value) - Int(aScalar.value) + 1 == expectedIndex else {
+                        valid = false; break
+                    }
+                    token = upper
                 }
+                options.append(QuestionOption(
+                    index: expectedIndex,
+                    label: raw.label,
+                    description: "",
+                    token: token
+                ))
             }
+            guard valid, options.count >= 2 else { continue }
 
-            // Require at least 2 short options and they must be near the end of the message.
-            // Check that the last option ends within the final 30% of the text.
-            guard options.count >= 2,
-                  let lastMatch = matches.last,
-                  lastMatch.range.upperBound > (fullText.utf16.count * 7 / 10) else {
-                continue
-            }
+            // Last option must end in the final 30% of text.
+            guard let lastRange = raws.last?.range,
+                  lastRange.upperBound > (fullText.utf16.count * 7 / 10) else { continue }
 
-            // Verify there's a question mark somewhere before the first option
-            if let firstMatch = matches.first {
-                let preOptionsEnd = fullText.index(fullText.startIndex, offsetBy: firstMatch.range.location, limitedBy: fullText.endIndex) ?? fullText.endIndex
-                let preOptions = fullText[fullText.startIndex..<preOptionsEnd]
-                guard preOptions.contains("?") else { continue }
-            }
+            // A question mark must appear before the first option.
+            let firstLocation = raws[0].range.location
+            let preOptionsEnd = fullText.index(fullText.startIndex, offsetBy: firstLocation, limitedBy: fullText.endIndex) ?? fullText.endIndex
+            let preOptions = fullText[fullText.startIndex..<preOptionsEnd]
+            guard preOptions.contains("?") else { continue }
 
             return [ParsedQuestion(
                 header: "",
