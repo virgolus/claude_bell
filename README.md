@@ -37,7 +37,7 @@ Download the pre-compiled app from **[claude-bell.com](https://claude-bell.com)*
 
 ## Build from source
 
-See [BUILDING.md](BUILDING.md) for debug, release, and deploy instructions.
+See [BUILDING.md](BUILDING.md) for debug and release build instructions.
 
 ## License
 

@@ -12,7 +12,7 @@ swift build -c release     # release build
 open ClaudeBell.app        # run the app (uses binary in Contents/MacOS/)
 ```
 
-See [BUILDING.md](BUILDING.md) for the full release + deploy workflow.
+See [BUILDING.md](BUILDING.md) for the build workflow.
 
 ## Architecture
 

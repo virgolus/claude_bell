@@ -19,64 +19,27 @@ swift build
 .build/arm64-apple-macosx/debug/ClaudeBell
 ```
 
-## Release (distribuzione)
+## Release (build locale)
 
 ```bash
-# 1. Aggiorna versione in Sources/App/AppVersion.swift (incrementa build)
-# 2. Aggiorna public/changelog.json con le modifiche della release
-# 3. Build release
+# 1. (opzionale) Aggiorna versione in Sources/App/AppVersion.swift
+# 2. Build release
 swift build -c release
 
-# 4. Copia il binario e il resource bundle nell'app
+# 3. Copia il binario e il resource bundle nell'app
 cp .build/arm64-apple-macosx/release/ClaudeBell ClaudeBell.app/Contents/MacOS/ClaudeBell
 rm -rf ClaudeBell.app/ClaudeBell_ClaudeBell.bundle && mkdir -p ClaudeBell.app/ClaudeBell_ClaudeBell.bundle
 cp public/changelog.json ClaudeBell.app/ClaudeBell_ClaudeBell.bundle/changelog.json
 
-# 5. Crea lo zip per il download
-rm -f public/ClaudeBell.zip
-zip -r public/ClaudeBell.zip ClaudeBell.app -x "*.DS_Store"
+# 4. Crea lo zip (opzionale, per distribuzione manuale)
+zip -r ClaudeBell.zip ClaudeBell.app -x "*.DS_Store"
 
-# 6. Riavvia l'app
+# 5. Riavvia l'app
 pkill -x ClaudeBell; sleep 1; open ClaudeBell.app
-```
-
-## Deploy su Vercel
-
-Il sito serve la cartella `public/`. Lo zip `public/ClaudeBell.zip` **non è tracciato da git** (è in `.gitignore`): viene costruito in locale e caricato su Vercel al momento del deploy.
-
-```bash
-# Commit solo dei sorgenti (NON lo zip)
-git add Sources/App/AppVersion.swift public/changelog.json public/index.html
-git commit -m "Release v<version> (build <build>): <highlights>"
-git push
-
-# Deploy: vercel --prod carica tutto ciò che è in public/ (incluso lo zip appena generato)
-vercel --prod
-```
-
-## Flusso completo (build release + deploy)
-
-```bash
-# 1. Aggiorna Sources/App/AppVersion.swift (incrementa build)
-# 2. Aggiorna public/changelog.json con le modifiche della release
-swift build -c release
-cp .build/arm64-apple-macosx/release/ClaudeBell ClaudeBell.app/Contents/MacOS/ClaudeBell
-rm -rf ClaudeBell.app/ClaudeBell_ClaudeBell.bundle && mkdir -p ClaudeBell.app/ClaudeBell_ClaudeBell.bundle
-cp public/changelog.json ClaudeBell.app/ClaudeBell_ClaudeBell.bundle/changelog.json
-rm -f public/ClaudeBell.zip
-zip -r public/ClaudeBell.zip ClaudeBell.app -x "*.DS_Store"
-pkill -x ClaudeBell; sleep 1; open ClaudeBell.app
-
-# Commit sorgenti (zip escluso) + deploy
-git add Sources/App/AppVersion.swift public/changelog.json public/index.html
-git commit -m "Release v<version> (build <build>): <highlights>"
-git push
-vercel --prod
 ```
 
 ## Note
 
-- Il binario in `ClaudeBell.app/Contents/MacOS/` e `public/ClaudeBell.zip` sono in `.gitignore`: esistono solo in locale e vengono caricati su Vercel tramite `vercel --prod`
-- `swift build` senza `-c release` crea una debug build (piu grande, con simboli di debug)
-- Il server HTTP gira su `localhost:19485`
-- **Non saltare mai l'aggiornamento del changelog** — alimenta sia il sito web che il pannello "What's New" nell'app
+- `swift build` senza `-c release` crea una debug build (più grande, con simboli di debug)
+- Il binario in `ClaudeBell.app/Contents/MacOS/` è in `.gitignore`: va rigenerato ad ogni release build
+- Il server HTTP in-app gira su `localhost:19485`
