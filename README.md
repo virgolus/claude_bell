@@ -31,21 +31,25 @@ Claude Bell runs a local HTTP server on `localhost:19485` that receives events f
 - Swift 5.10+
 - Claude Code with hooks support
 
-## Install
+## Install (no build required)
 
-Download `ClaudeBell.zip` from the [releases page](https://claude-bell.com), unzip, and move to Applications. On first launch, open Settings in the app and click "Enable Hooks" to configure Claude Code.
+Download the pre-compiled app from **[claude-bell.com](https://claude-bell.com)**, unzip, and drag `ClaudeBell.app` into `/Applications`. On first launch, open Settings in the app and click "Enable Hooks" to configure Claude Code.
 
-## Build
+## Build from source
 
 See [BUILDING.md](BUILDING.md) for debug, release, and deploy instructions.
 
 ## License
 
-Released under the [MIT License](LICENSE).
+Released under the [MIT License](LICENSE). The app is free and always will be — no license keys, no trials, no accounts.
 
-## Support the project
+## Support the project ☕
 
-If ClaudeBell is useful to you, consider [buying me a coffee](https://buymeacoffee.com/virgolus) ☕. It's entirely optional — the app is and will remain free.
+ClaudeBell is built and maintained in my spare time. If it saves you time or makes your Claude Code workflow better, consider supporting the project:
+
+[**☕ Buy me a coffee**](https://buymeacoffee.com/virgolus)
+
+Every coffee helps cover the macOS developer account, code signing, and the time spent on fixes and new features. It's entirely optional — the app stays fully functional and free either way.
 
 ## Project structure
 

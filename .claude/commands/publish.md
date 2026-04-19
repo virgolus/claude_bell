@@ -78,12 +78,12 @@ rm -rf /Applications/ClaudeBell.app && cp -R ClaudeBell.app /Applications/Claude
 pkill -x ClaudeBell; sleep 1; open /Applications/ClaudeBell.app
 ```
 
-## 8. Commit and push
+## 8. Commit, push and deploy
 
-Stage ALL changed files — version bump, changelog, index.html, and zip:
+The release zip (`public/ClaudeBell.zip`) is **not** tracked by git — it lives only on your local filesystem and is uploaded to Vercel at deploy time. Stage source changes only:
 
 ```bash
-git add Sources/App/AppVersion.swift public/changelog.json public/index.html public/ClaudeBell.zip
+git add Sources/App/AppVersion.swift public/changelog.json public/index.html
 ```
 
 Then commit with a descriptive message, push to origin, and deploy:
@@ -94,11 +94,14 @@ git push
 vercel --prod
 ```
 
+`vercel --prod` uploads everything currently in `public/` (including the freshly-built `ClaudeBell.zip`), so the download on claude-bell.com always serves the matching binary without committing it to git.
+
 ## Important notes
 
 - Always build with `-c release` for distribution — debug builds are larger and slower
 - The Vercel site serves the `public/` folder as a static site; `ClaudeBell.zip` is the download link
-- Only `public/ClaudeBell.zip` is tracked in git — the binary inside `ClaudeBell.app/Contents/MacOS/` is gitignored
+- `public/ClaudeBell.zip` is gitignored — it is built locally and shipped to Vercel, never committed
+- The binary inside `ClaudeBell.app/Contents/MacOS/` is also gitignored
 - Verify the build succeeds before creating the zip
 - Always increment the build number in `Sources/App/AppVersion.swift` before building
 - **Never skip the changelog step** — it feeds both the website and the in-app "What's New" panel

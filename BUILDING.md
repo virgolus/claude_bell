@@ -42,13 +42,15 @@ pkill -x ClaudeBell; sleep 1; open ClaudeBell.app
 
 ## Deploy su Vercel
 
-Il sito serve la cartella `public/` che contiene `ClaudeBell.zip` come download.
+Il sito serve la cartella `public/`. Lo zip `public/ClaudeBell.zip` **non è tracciato da git** (è in `.gitignore`): viene costruito in locale e caricato su Vercel al momento del deploy.
 
 ```bash
-# Commit, push e deploy
-git add Sources/App/AppVersion.swift public/changelog.json public/ClaudeBell.zip
+# Commit solo dei sorgenti (NON lo zip)
+git add Sources/App/AppVersion.swift public/changelog.json public/index.html
 git commit -m "Release v<version> (build <build>): <highlights>"
 git push
+
+# Deploy: vercel --prod carica tutto ciò che è in public/ (incluso lo zip appena generato)
 vercel --prod
 ```
 
@@ -64,7 +66,9 @@ cp public/changelog.json ClaudeBell.app/ClaudeBell_ClaudeBell.bundle/changelog.j
 rm -f public/ClaudeBell.zip
 zip -r public/ClaudeBell.zip ClaudeBell.app -x "*.DS_Store"
 pkill -x ClaudeBell; sleep 1; open ClaudeBell.app
-git add Sources/App/AppVersion.swift public/changelog.json public/ClaudeBell.zip
+
+# Commit sorgenti (zip escluso) + deploy
+git add Sources/App/AppVersion.swift public/changelog.json public/index.html
 git commit -m "Release v<version> (build <build>): <highlights>"
 git push
 vercel --prod
@@ -72,7 +76,7 @@ vercel --prod
 
 ## Note
 
-- Il binario in `ClaudeBell.app/Contents/MacOS/` è in `.gitignore` — solo lo zip in `public/` viene tracciato
+- Il binario in `ClaudeBell.app/Contents/MacOS/` e `public/ClaudeBell.zip` sono in `.gitignore`: esistono solo in locale e vengono caricati su Vercel tramite `vercel --prod`
 - `swift build` senza `-c release` crea una debug build (piu grande, con simboli di debug)
 - Il server HTTP gira su `localhost:19485`
 - **Non saltare mai l'aggiornamento del changelog** — alimenta sia il sito web che il pannello "What's New" nell'app

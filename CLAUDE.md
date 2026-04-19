@@ -28,7 +28,7 @@ See [BUILDING.md](BUILDING.md) for the full release + deploy workflow.
 - Hook endpoints follow the pattern: decode input → dispatch to `@MainActor` store method → return HTTP response
 - `NotificationMeta` centralizes all per-type metadata (icon, color, passive/interactive, deduplication)
 - `HookInstaller`, `AutoModeInstaller`, and `StatuslineInstaller` in `Sources/Setup/` manage writing/removing hooks, auto-mode config, and statusline script respectively
-- The app bundle `ClaudeBell.app` in the repo root has its binary in `.gitignore` — only `public/ClaudeBell.zip` is tracked
+- The app bundle `ClaudeBell.app` in the repo root has its binary in `.gitignore`; `public/ClaudeBell.zip` is also gitignored and ships to Vercel via the CLI deploy, never via git
 
 ## Hooks configuration
 
@@ -51,14 +51,14 @@ log stream --process ClaudeBell --level debug
 
 ## Deploy
 
-The Vercel site serves `public/` as a static landing page with `ClaudeBell.zip` as the download. After a release build, update the zip and deploy:
+The Vercel site serves `public/` as a static landing page with `ClaudeBell.zip` as the download. **The zip is NOT committed to git** — it is gitignored and uploaded to Vercel at deploy time (`vercel --prod` ships the local `public/` directory, binary included). After a release build, update the zip and deploy:
 ```bash
 swift build -c release
 cp .build/arm64-apple-macosx/release/ClaudeBell ClaudeBell.app/Contents/MacOS/ClaudeBell
 rm -rf ClaudeBell.app/ClaudeBell_ClaudeBell.bundle && mkdir -p ClaudeBell.app/ClaudeBell_ClaudeBell.bundle
 cp public/changelog.json ClaudeBell.app/ClaudeBell_ClaudeBell.bundle/changelog.json
 rm -f public/ClaudeBell.zip && zip -r public/ClaudeBell.zip ClaudeBell.app -x "*.DS_Store"
-git add Sources/App/AppVersion.swift public/changelog.json public/index.html public/ClaudeBell.zip
+git add Sources/App/AppVersion.swift public/changelog.json public/index.html
 git commit -m "Release v<version> (build <build>): <highlights>"
 git push
 vercel --prod

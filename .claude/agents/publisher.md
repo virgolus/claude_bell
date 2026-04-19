@@ -91,14 +91,16 @@ pkill -x ClaudeBell; sleep 1; open /Applications/ClaudeBell.app
 
 ## 8. Commit, push and deploy
 
-Stage ALL changed files — version bump, changelog, index.html, and zip:
+The release zip (`public/ClaudeBell.zip`) is **not** tracked by git — it is uploaded to Vercel at deploy time from the local filesystem. Stage source changes only:
 
 ```bash
-git add Sources/App/AppVersion.swift public/changelog.json public/index.html public/ClaudeBell.zip
+git add Sources/App/AppVersion.swift public/changelog.json public/index.html
 git commit -m "Release v<version> (build <build>): <highlights>"
 git push
 vercel --prod
 ```
+
+Vercel picks up `public/ClaudeBell.zip` from the local `public/` directory during the `vercel --prod` deploy, so the download on claude-bell.com serves the freshly-built binary without ever committing it to the repo.
 
 ## 9. Report
 
@@ -115,6 +117,6 @@ Before reporting success, verify:
 - [ ] `public/changelog.json` has a new/updated entry matching the current version
 - [ ] The changelog entry in the JSON has at least one change item
 - [ ] `public/index.html` download button shows the new version
-- [ ] `public/ClaudeBell.zip` was recreated
-- [ ] Git commit includes all four files above
+- [ ] `public/ClaudeBell.zip` was recreated (present on local filesystem, but NOT in git)
+- [ ] Git commit includes the three source files above (AppVersion.swift, changelog.json, index.html) — the zip must NOT be committed
 - [ ] `vercel --prod` completed successfully
