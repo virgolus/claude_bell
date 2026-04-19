@@ -4,7 +4,7 @@ import Foundation
 /// Uses a group suite name (different from bundle ID) so it works in both contexts.
 enum AppDefaults {
     static let shared: UserDefaults = {
-        let defaults = UserDefaults(suiteName: "group.com.posatapelosa.claudebell")!
+        let defaults = UserDefaults(suiteName: "group.com.virgolus.claudebell")!
         defaults.register(defaults: [
             "toolErrorNotificationsEnabled": true
         ])

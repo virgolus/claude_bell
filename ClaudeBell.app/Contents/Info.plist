@@ -5,7 +5,7 @@
     <key>CFBundleExecutable</key>
     <string>ClaudeBell</string>
     <key>CFBundleIdentifier</key>
-    <string>com.posatapelosa.claudebell</string>
+    <string>com.virgolus.claudebell</string>
     <key>CFBundleName</key>
     <string>Claude Bell</string>
     <key>CFBundleIconFile</key>

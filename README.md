@@ -39,6 +39,14 @@ Download `ClaudeBell.zip` from the [releases page](https://claude-bell.com), unz
 
 See [BUILDING.md](BUILDING.md) for debug, release, and deploy instructions.
 
+## License
+
+Released under the [MIT License](LICENSE).
+
+## Support the project
+
+If ClaudeBell is useful to you, consider [buying me a coffee](https://buymeacoffee.com/virgolus) ☕. It's entirely optional — the app is and will remain free.
+
 ## Project structure
 
 ```
