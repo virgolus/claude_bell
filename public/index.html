@@ -275,6 +275,192 @@
             .hero-showcase img { border-radius: 12px; }
         }
 
+        /* ─── Demo strip (GIF inside window chrome) ─── */
+        .demo-strip {
+            max-width: 1000px;
+            margin: 0 auto 100px;
+            padding: 0 24px;
+        }
+
+        .demo-strip .eyebrow {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+            margin-bottom: 14px;
+            justify-content: center;
+        }
+
+        .demo-strip .eyebrow::before,
+        .demo-strip .eyebrow::after {
+            content: '';
+            height: 1px;
+            width: 40px;
+            background: linear-gradient(to right, transparent, rgba(249,115,22,.6));
+        }
+        .demo-strip .eyebrow::after {
+            background: linear-gradient(to left, transparent, rgba(249,115,22,.6));
+        }
+
+        .demo-strip h2 {
+            text-align: center;
+            font-size: clamp(28px, 4vw, 40px);
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 10px;
+        }
+
+        .demo-strip .sub {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 16px;
+            max-width: 560px;
+            margin: 0 auto 36px;
+        }
+
+        .window-frame {
+            position: relative;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #0e0e16;
+            border: 1px solid var(--border);
+            box-shadow:
+                0 50px 100px -30px rgba(0,0,0,.75),
+                0 0 140px -30px var(--accent-glow);
+        }
+
+        .window-frame::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 14px;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(249,115,22,.35), rgba(168,85,247,.15) 40%, rgba(59,130,246,.3));
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+                    mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .window-chrome {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: linear-gradient(to bottom, rgba(255,255,255,.03), rgba(255,255,255,0));
+            border-bottom: 1px solid var(--border);
+        }
+
+        .window-chrome .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            box-shadow: inset 0 0 0 .5px rgba(0,0,0,.25);
+        }
+        .window-chrome .dot.r { background: #ff5f56; }
+        .window-chrome .dot.y { background: #ffbd2e; }
+        .window-chrome .dot.g { background: #27c93f; }
+        .window-chrome .title {
+            margin-left: 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-family: 'SF Mono', 'JetBrains Mono', monospace;
+            letter-spacing: .4px;
+        }
+        .window-chrome .tag {
+            margin-left: auto;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 100px;
+            background: rgba(34,197,94,.1);
+            color: var(--green);
+            border: 1px solid rgba(34,197,94,.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .window-chrome .tag::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+            animation: pulse 1.8s ease-in-out infinite;
+        }
+
+        .window-frame img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .demo-highlights {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-top: 28px;
+        }
+
+        .demo-chip {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 16px 18px;
+            border-radius: 14px;
+            background: rgba(18, 18, 26, 0.6);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(8px);
+            transition: all 0.25s ease;
+        }
+        .demo-chip:hover {
+            border-color: rgba(249,115,22,.35);
+            transform: translateY(-2px);
+        }
+
+        .demo-chip .k {
+            flex-shrink: 0;
+            font-family: 'SF Mono', 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .5px;
+            padding: 5px 9px;
+            border-radius: 6px;
+            background: #0a0a0f;
+            border: 1px solid var(--border);
+            border-bottom-width: 2px;
+            color: var(--accent);
+            line-height: 1;
+            white-space: nowrap;
+            box-shadow: inset 0 -1px 0 rgba(249,115,22,.1);
+        }
+
+        .demo-chip .txt strong {
+            display: block;
+            font-size: 13.5px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            color: var(--text);
+        }
+        .demo-chip .txt span {
+            display: block;
+            font-size: 12.5px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        @media (max-width: 780px) {
+            .demo-highlights { grid-template-columns: 1fr; }
+            .demo-strip { margin-bottom: 60px; }
+        }
+
         /* ─── Section ─── */
         .section {
             padding: 60px 0;
@@ -666,9 +852,47 @@
     </div>
 </section>
 
-<div class="hero-showcase">
-    <img src="app-preview.webp" alt="ClaudeBell panel showing a permission request for a Bash command" width="1920" height="1440" loading="eager" />
-</div>
+<!-- Live demo -->
+<section class="demo-strip">
+    <div class="eyebrow">Live demo</div>
+    <h2>Hands off the mouse.</h2>
+    <p class="sub">Pop open the panel, answer with the keyboard, and jump back to the exact terminal that asked.</p>
+
+    <div class="window-frame">
+        <div class="window-chrome">
+            <span class="dot r"></span>
+            <span class="dot y"></span>
+            <span class="dot g"></span>
+            <span class="title">claude-bell · /Users/you/project</span>
+            <span class="tag">Recording</span>
+        </div>
+        <img src="demo.gif" alt="ClaudeBell in action: keyboard shortcut opens the panel, Enter confirms the action, a click opens the originating terminal tab" width="1024" height="665" loading="lazy" />
+    </div>
+
+    <div class="demo-highlights">
+        <div class="demo-chip">
+            <span class="k">⌘⇧B</span>
+            <div class="txt">
+                <strong>Open with a shortcut</strong>
+                <span>Global hotkey surfaces the notification from any app. Remap it in Settings.</span>
+            </div>
+        </div>
+        <div class="demo-chip">
+            <span class="k">↵</span>
+            <div class="txt">
+                <strong>Enter to confirm</strong>
+                <span>Navigate with arrow keys, Return fires the focused action. Mouse optional.</span>
+            </div>
+        </div>
+        <div class="demo-chip">
+            <span class="k">→&nbsp;↵</span>
+            <div class="txt">
+                <strong>Jump to the terminal</strong>
+                <span>Focus the exact Terminal.app or iTerm2 tab that sent the request — one keypress away.</span>
+            </div>
+        </div>
+    </div>
+</section>
 
 <!-- Features -->
 <div class="container">
@@ -702,8 +926,18 @@
             </div>
             <div class="feature-card">
                 <div class="feature-icon icon-red">⌨️</div>
-                <h3>Global Shortcut</h3>
-                <p>Toggle the panel from anywhere with a customizable hotkey. No Accessibility permissions needed — uses native Carbon API.</p>
+                <h3>Shortcut to open</h3>
+                <p>Surface the latest notification from any app with a global hotkey (default <code style="color:var(--accent);font-family:'SF Mono',monospace">⌘⇧B</code>). Fully remappable — no Accessibility permissions.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon icon-purple">↵</div>
+                <h3>Enter to confirm</h3>
+                <p>Arrow keys move focus between Allow, Deny, and Dismiss. <strong>Return</strong> fires the focused action. Answer without ever reaching for the mouse.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon icon-blue">💻</div>
+                <h3>Open in Terminal</h3>
+                <p>Jump straight back to the originating Terminal.app or iTerm2 tab — Claude Bell tracks each session by working directory and transcript path.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon icon-orange">🔔</div>

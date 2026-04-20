@@ -10,7 +10,9 @@ A macOS menu bar app that bridges Claude Code notifications to a native UI. When
 - **Interactive notifications** — respond to questions and elicitation dialogs without switching to the terminal
 - **Session tracking** — see all active Claude Code sessions at a glance
 - **Conversation context** — view transcript history for each notification
-- **Global shortcut** — toggle the panel with a keyboard shortcut
+- **Shortcut to open** — a global hotkey (default `⌘⇧B`, fully remappable) surfaces the latest notification from any app
+- **Enter to confirm** — arrow keys move focus between actions, `Return` fires the focused one — keyboard-only flow, mouse optional
+- **Open in Terminal** — one click jumps back to the originating Terminal.app or iTerm2 tab that triggered the request
 - **Sound alerts** — configurable notification sound when Claude needs attention
 - **One-click setup** — installs Claude Code hooks automatically from the app settings
 
