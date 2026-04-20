@@ -2,6 +2,8 @@
 
 A macOS menu bar app that bridges Claude Code notifications to a native UI. When Claude Code needs your attention (permission requests, questions, task completions), Claude Bell shows them in a panel accessible from the menu bar bell icon.
 
+![Claude Bell demo](docs/video2gif.gif)
+
 ## Features
 
 - **Permission requests** — approve or deny tool usage directly from the panel
