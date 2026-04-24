@@ -51,15 +51,9 @@ log stream --process ClaudeBell --level debug
 
 ## Deploy
 
-The Vercel site serves `public/` as a static landing page with `ClaudeBell.zip` as the download. **The zip is NOT committed to git** — it is gitignored and uploaded to Vercel at deploy time (`vercel --prod` ships the local `public/` directory, binary included). After a release build, update the zip and deploy:
-```bash
-swift build -c release
-cp .build/arm64-apple-macosx/release/ClaudeBell ClaudeBell.app/Contents/MacOS/ClaudeBell
-rm -rf ClaudeBell.app/ClaudeBell_ClaudeBell.bundle && mkdir -p ClaudeBell.app/ClaudeBell_ClaudeBell.bundle
-cp public/changelog.json ClaudeBell.app/ClaudeBell_ClaudeBell.bundle/changelog.json
-rm -f public/ClaudeBell.zip && zip -r public/ClaudeBell.zip ClaudeBell.app -x "*.DS_Store"
-git add Sources/App/AppVersion.swift public/changelog.json public/index.html
-git commit -m "Release v<version> (build <build>): <highlights>"
-git push
-vercel --prod
-```
+The Vercel site serves `public/` as a static landing page with `ClaudeBell.zip` as the download. **The zip is NOT committed to git** — it is gitignored and uploaded to Vercel at deploy time (`vercel --prod` ships the local `public/` directory, binary included).
+
+Use the `/publish` command for the full release flow. Two things are critical and non-obvious:
+
+1. **Resource bundle location**: the SPM resource bundle must live under `Contents/Resources/ClaudeBell_ClaudeBell.bundle`, NOT in the `.app` root. Placing it in root leaves unsealed content and breaks `codesign --verify`.
+2. **Re-sign after updating the binary**: `swift build` only signs the binary ad-hoc (linker-signed). The surrounding `.app` has no `CodeResources`, so quarantined downloads get rejected as "damaged and can't be opened". Always run `codesign --force --deep --sign - ClaudeBell.app` after copying the binary, then verify with `codesign --verify --deep --strict ClaudeBell.app` (must exit 0). Use `ditto -c -k --keepParent` instead of `zip` to preserve the signature envelope.

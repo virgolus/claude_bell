@@ -51,25 +51,38 @@ Wait for the build to complete successfully before proceeding.
 
 ## 5. Update the app bundle
 
-Copy the release binary and the SPM resource bundle (including the updated changelog.json) into the app bundle:
+Copy the release binary and the SPM resource bundle (including the updated changelog.json) into the app bundle. The resource bundle MUST live under `Contents/Resources/` — placing it in the `.app` root produces an unsealable layout and users get a "damaged and can't be opened" dialog on download.
 
 ```bash
 cp .build/arm64-apple-macosx/release/ClaudeBell ClaudeBell.app/Contents/MacOS/ClaudeBell
-rm -rf ClaudeBell.app/ClaudeBell_ClaudeBell.bundle
-mkdir -p ClaudeBell.app/ClaudeBell_ClaudeBell.bundle
-cp public/changelog.json ClaudeBell.app/ClaudeBell_ClaudeBell.bundle/changelog.json
+rm -rf ClaudeBell.app/ClaudeBell_ClaudeBell.bundle ClaudeBell.app/Contents/Resources/ClaudeBell_ClaudeBell.bundle
+mkdir -p ClaudeBell.app/Contents/Resources/ClaudeBell_ClaudeBell.bundle
+cp public/changelog.json ClaudeBell.app/Contents/Resources/ClaudeBell_ClaudeBell.bundle/changelog.json
 ```
 
-## 6. Create the distribution zip
+## 6. Re-sign the bundle (ad-hoc)
 
-Remove the old zip and create a new one from the updated app bundle:
+`swift build` only signs the binary (linker ad-hoc). The surrounding `.app` has no `CodeResources` file, which makes the whole bundle fail `codesign --verify` — and a quarantined download gets rejected as "damaged". Re-sign the full bundle ad-hoc so `CodeResources` is generated and the seal matches the binary:
+
+```bash
+codesign --force --deep --sign - ClaudeBell.app
+codesign --verify --deep --strict ClaudeBell.app
+```
+
+The second command MUST exit 0. If it doesn't, stop and investigate — shipping a zip that fails verification means every user sees "damaged".
+
+(Ad-hoc means `spctl -a` will still reject the app — that's expected for an unsigned app and produces the normal "unidentified developer" dialog with an "Open Anyway" option. Getting past that requires a Developer ID certificate + notarization, which this skill does not do.)
+
+## 7. Create the distribution zip
+
+Remove the old zip and create a new one from the updated app bundle. Use `ditto` (not `zip`) so extended attributes and the signature envelope are preserved correctly when Safari downloads and macOS extracts it:
 
 ```bash
 rm -f public/ClaudeBell.zip
-zip -r public/ClaudeBell.zip ClaudeBell.app -x "*.DS_Store"
+ditto -c -k --keepParent ClaudeBell.app public/ClaudeBell.zip
 ```
 
-## 7. Install and restart the app
+## 8. Install and restart the app
 
 Copy the build to Applications, kill the running instance, and relaunch:
 
@@ -78,7 +91,7 @@ rm -rf /Applications/ClaudeBell.app && cp -R ClaudeBell.app /Applications/Claude
 pkill -x ClaudeBell; sleep 1; open /Applications/ClaudeBell.app
 ```
 
-## 8. Commit, push and deploy
+## 9. Commit, push and deploy
 
 The release zip (`public/ClaudeBell.zip`) is **not** tracked by git — it lives only on your local filesystem and is uploaded to Vercel at deploy time. Stage source changes only:
 

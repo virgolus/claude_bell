@@ -6,6 +6,7 @@ DerivedData/
 .DS_Store
 ClaudeBell.app/Contents/MacOS/
 ClaudeBell.app/ClaudeBell_ClaudeBell.bundle/
+ClaudeBell.app/Contents/Resources/ClaudeBell_ClaudeBell.bundle/
 .vercel
 
 # Release artifact — built locally, uploaded to Vercel on deploy, never committed

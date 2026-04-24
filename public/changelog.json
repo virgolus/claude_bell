@@ -1,6 +1,15 @@
 [
   {
     "version": "1.9.12",
+    "build": 44,
+    "date": "2026-04-24",
+    "highlights": "Fix \"damaged and can't be opened\" error on fresh downloads",
+    "changes": [
+      { "type": "fixed", "text": "Newly downloaded app no longer shows \"ClaudeBell is damaged and can't be opened\" on first launch — the distributed bundle is now properly ad-hoc signed with a valid resource seal" }
+    ]
+  },
+  {
+    "version": "1.9.12",
     "build": 43,
     "date": "2026-04-17",
     "highlights": "Fix waiting-for-input notification rendering and letter-based choice buttons",

@@ -8,6 +8,10 @@
 		<data>
 		Sm7Y3++Ws37zfJQevGeUqSwKipE=
 		</data>
+		<key>Resources/ClaudeBell_ClaudeBell.bundle/changelog.json</key>
+		<data>
+		aOpKIphJfVDm8wApXQH5I05mnPA=
+		</data>
 	</dict>
 	<key>files2</key>
 	<dict>
@@ -16,6 +20,13 @@
 			<key>hash2</key>
 			<data>
 			FmwP3WFeom6f9cgb49q5cjH4y9wrTtuq6Csfm+WZkGs=
+			</data>
+		</dict>
+		<key>Resources/ClaudeBell_ClaudeBell.bundle/changelog.json</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			XRTyeUaOehs1NBRL076GZOi3eqZPqDkPU2UQGPBXByQ=
 			</data>
 		</dict>
 	</dict>
