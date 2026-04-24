@@ -51,13 +51,14 @@ Wait for the build to complete successfully before proceeding.
 
 ## 5. Update the app bundle
 
-Copy the release binary and the SPM resource bundle (including the updated changelog.json) into the app bundle. The resource bundle MUST live under `Contents/Resources/` — placing it in the `.app` root produces an unsealable layout and users get a "damaged and can't be opened" dialog on download.
+Copy the release binary and the changelog directly into the app bundle. The changelog lives at `Contents/Resources/changelog.json` (flat, NOT inside an SPM-style sub-bundle) — `Sources/Views/ContentView.swift` loads it via `Bundle.main.url(forResource:withExtension:)`.
+
+Also clean up any leftover SPM sub-bundle from older builds, since `swift build` may still emit `.build/.../ClaudeBell_ClaudeBell.bundle/` even though the target no longer declares resources.
 
 ```bash
 cp .build/arm64-apple-macosx/release/ClaudeBell ClaudeBell.app/Contents/MacOS/ClaudeBell
 rm -rf ClaudeBell.app/ClaudeBell_ClaudeBell.bundle ClaudeBell.app/Contents/Resources/ClaudeBell_ClaudeBell.bundle
-mkdir -p ClaudeBell.app/Contents/Resources/ClaudeBell_ClaudeBell.bundle
-cp public/changelog.json ClaudeBell.app/Contents/Resources/ClaudeBell_ClaudeBell.bundle/changelog.json
+cp public/changelog.json ClaudeBell.app/Contents/Resources/changelog.json
 ```
 
 ## 6. Re-sign the bundle (ad-hoc)

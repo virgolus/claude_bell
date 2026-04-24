@@ -419,7 +419,7 @@ struct ContentView: View {
     }
 
     private func loadChangelog() -> [ChangelogRelease]? {
-        guard let url = Bundle.module.url(forResource: "changelog", withExtension: "json"),
+        guard let url = Bundle.main.url(forResource: "changelog", withExtension: "json"),
               let data = try? Data(contentsOf: url) else { return nil }
         let all = (try? JSONDecoder().decode([ChangelogRelease].self, from: data)) ?? []
         let lastSeen = AppDefaults.shared.string(forKey: "lastSeenVersion")
@@ -433,7 +433,7 @@ struct ContentView: View {
     }
 
     private func loadFullChangelog() -> [ChangelogRelease]? {
-        guard let url = Bundle.module.url(forResource: "changelog", withExtension: "json"),
+        guard let url = Bundle.main.url(forResource: "changelog", withExtension: "json"),
               let data = try? Data(contentsOf: url) else { return nil }
         let all = (try? JSONDecoder().decode([ChangelogRelease].self, from: data)) ?? []
         return all.isEmpty ? nil : all

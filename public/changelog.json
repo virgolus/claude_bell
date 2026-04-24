@@ -1,10 +1,11 @@
 [
   {
     "version": "1.9.12",
-    "build": 44,
+    "build": 45,
     "date": "2026-04-24",
-    "highlights": "Fix \"damaged and can't be opened\" error on fresh downloads",
+    "highlights": "Fix crash on first click after a clean install",
     "changes": [
+      { "type": "fixed", "text": "App no longer crashes the first time you open the panel on a fresh install — changelog resources are now loaded from the standard .app Resources directory instead of a package-relative bundle that could not be located at runtime" },
       { "type": "fixed", "text": "Newly downloaded app no longer shows \"ClaudeBell is damaged and can't be opened\" on first launch — the distributed bundle is now properly ad-hoc signed with a valid resource seal" }
     ]
   },

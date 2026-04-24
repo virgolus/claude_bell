@@ -15,7 +15,7 @@ let package = Package(
                 .product(name: "Hummingbird", package: "hummingbird"),
             ],
             path: "Sources",
-            resources: [.copy("Resources/changelog.json")]
+            exclude: ["Resources"]
         ),
         .testTarget(
             name: "ClaudeBellTests",
