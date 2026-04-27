@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.10.0",
+    "build": 46,
+    "date": "2026-04-27",
+    "highlights": "Settings panel rebuilt with native macOS design",
+    "changes": [
+      { "type": "changed", "text": "Settings now open in a native macOS preferences window with the standard ⌘, shortcut, native toolbar tabs, and grouped Form sections matching the look of System Settings" },
+      { "type": "changed", "text": "Action buttons now follow the system accent color, color picker uses the macOS system color panel, and section headers carry SF Symbol icons for easier scanning" },
+      { "type": "changed", "text": "Notification body background defaults to the system surface color so text remains readable in light mode without configuring custom colors" },
+      { "type": "changed", "text": "Status Line moved into the General tab next to Hooks and Auto Mode; the Miscellaneous tab is gone" },
+      { "type": "removed", "text": "Removed the redundant gear button from the panel header — Settings is reachable via ⌘, and the menu bar context menu" },
+      { "type": "fixed", "text": "Settings window no longer floats above other apps and now closes the menu bar panel automatically when opened, so it is never hidden behind it" }
+    ]
+  },
+  {
     "version": "1.9.12",
     "build": 45,
     "date": "2026-04-24",
