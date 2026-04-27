@@ -5,21 +5,22 @@ struct ConversationContextView: View {
     var startExpanded: Bool = false
     @State private var messages: [TranscriptMessage] = []
     @State private var isExpanded = false
+    @ObservedObject private var bodyStyle = BodyStyleSettings.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 10) {
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     isExpanded.toggle()
                 }
             } label: {
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.caption2)
+                        .font(.subheadline)
                     Text("Conversation Context")
-                        .font(.caption.weight(.semibold))
+                        .font(.headline)
                     Text("(\(messages.count) messages)")
-                        .font(.caption2)
+                        .font(.subheadline)
                         .foregroundStyle(.tertiary)
                     Spacer()
                 }
@@ -28,12 +29,11 @@ struct ConversationContextView: View {
             .buttonStyle(.plain)
 
             if isExpanded {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 10) {
                     ForEach(messages) { message in
-                        MessageBubble(message: message)
+                        MessageBubble(message: message, bodyStyle: bodyStyle)
                     }
                 }
-                .padding(.vertical, 4)
             }
         }
         .onAppear {
@@ -45,38 +45,46 @@ struct ConversationContextView: View {
 
 private struct MessageBubble: View {
     let message: TranscriptMessage
+    @ObservedObject var bodyStyle: BodyStyleSettings
 
     var isUser: Bool { message.role == "user" }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 6) {
-            Image(systemName: isUser ? "person.fill" : "brain")
-                .font(.caption)
-                .foregroundStyle(isUser ? .blue : .purple)
-                .frame(width: 16)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: isUser ? "person.circle.fill" : "sparkle")
+                    .font(.callout)
+                    .foregroundStyle(isUser ? Color.blue : Color.orange)
+                Text(isUser ? "You" : "Claude")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
 
-            VStack(alignment: .leading, spacing: 2) {
-                if !message.textContent.isEmpty {
-                    MarkdownText(message.textContent, font: .callout)
-                }
+            if !message.textContent.isEmpty {
+                MarkdownText(
+                    message.textContent,
+                    font: bodyStyle.bodyFont(size: .body),
+                    textColor: bodyStyle.fontColor
+                )
+            }
 
-                ForEach(message.toolUses) { tool in
-                    HStack(spacing: 4) {
-                        Image(systemName: ToolIconMapper.icon(for: tool.name))
-                            .font(.caption)
-                        Text(tool.name)
-                            .font(.callout.weight(.medium))
-                    }
-                    .foregroundStyle(.orange)
+            ForEach(message.toolUses) { tool in
+                HStack(spacing: 6) {
+                    Image(systemName: ToolIconMapper.icon(for: tool.name))
+                        .font(.callout)
+                    Text(tool.name)
+                        .font(.body.weight(.medium))
                 }
+                .foregroundStyle(.orange)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isUser ? Color.blue.opacity(0.08) : Color.purple.opacity(0.08))
+        .background(bodyStyle.backgroundColor)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Color.secondary.opacity(0.15), lineWidth: 1)
         )
     }
 }

@@ -265,14 +265,27 @@ enum TranscriptParser {
             }
             guard valid, options.count >= 2 else { continue }
 
+            // Reject markdown list items: real CLI options are plain text, while
+            // numbered lists in assistant prose typically use **bold** / `code` / *italic*.
+            let looksLikeMarkdown = raws.contains { raw in
+                raw.label.contains("**") || raw.label.contains("`") || raw.label.hasPrefix("*")
+            }
+            guard !looksLikeMarkdown else { continue }
+
+            // Reject overly long labels: CLI options are concise (< ~120 chars).
+            let hasLongLabel = raws.contains { $0.label.count > 120 }
+            guard !hasLongLabel else { continue }
+
             // Last option must end in the final 30% of text.
             guard let lastRange = raws.last?.range,
                   lastRange.upperBound > (fullText.utf16.count * 7 / 10) else { continue }
 
-            // A question mark must appear before the first option.
+            // A question mark must appear close to the first option (within ~300 chars),
+            // not just anywhere in the preceding prose.
             let firstLocation = raws[0].range.location
-            let preOptionsEnd = fullText.index(fullText.startIndex, offsetBy: firstLocation, limitedBy: fullText.endIndex) ?? fullText.endIndex
-            let preOptions = fullText[fullText.startIndex..<preOptionsEnd]
+            let nsFullText = fullText as NSString
+            let windowStart = max(0, firstLocation - 300)
+            let preOptions = nsFullText.substring(with: NSRange(location: windowStart, length: firstLocation - windowStart))
             guard preOptions.contains("?") else { continue }
 
             return [ParsedQuestion(
