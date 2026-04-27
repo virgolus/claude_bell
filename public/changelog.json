@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.10.1",
+    "build": 47,
+    "date": "2026-04-27",
+    "highlights": "Auto-resizing Settings window and conversation context polish",
+    "changes": [
+      { "type": "changed", "text": "Settings window now resizes automatically when you switch tabs so each section fits perfectly, matching System Settings behavior" },
+      { "type": "changed", "text": "Conversation Context preview in notifications now uses the same body style as the rest of the panel for a consistent look and a larger, more readable font" },
+      { "type": "fixed", "text": "Numbered lists inside Claude responses are no longer mistaken for clickable choice options when they contain bold or code formatting" }
+    ]
+  },
+  {
     "version": "1.10.0",
     "build": 46,
     "date": "2026-04-27",
