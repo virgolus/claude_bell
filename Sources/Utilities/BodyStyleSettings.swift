@@ -97,8 +97,11 @@ final class BodyStyleSettings: ObservableObject {
     }
 
     /// The effective background color: custom or system default.
+    /// Default is `controlBackgroundColor` — a solid, mode-aware card surface
+    /// (white in light, near-black in dark) that gives the notification body
+    /// strong contrast against the panel background.
     var backgroundColor: Color {
-        hasCustomBackground ? customBackgroundColor : Color.secondary.opacity(0.06)
+        hasCustomBackground ? customBackgroundColor : Color(nsColor: .controlBackgroundColor)
     }
 
     /// The effective font color: custom or nil (= use system .primary via foregroundStyle inheritance).

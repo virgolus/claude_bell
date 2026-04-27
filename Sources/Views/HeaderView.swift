@@ -22,14 +22,6 @@ struct HeaderView: View {
             }
 
             Button {
-                SettingsWindowController.shared.showSettings()
-            } label: {
-                Image(systemName: "gearshape")
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-
-            Button {
                 store.onDismissPanel?()
             } label: {
                 Image(systemName: "xmark.circle")

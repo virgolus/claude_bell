@@ -13,6 +13,8 @@ struct ContentView: View {
     @State private var showWhatsNew = false
     @State private var showFullChangelog = false
 
+    @Environment(\.openSettings) private var openSettings
+
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
@@ -82,6 +84,10 @@ struct ContentView: View {
                 showSetup = false
             }
             checkWhatsNew()
+            // Capture the SwiftUI `openSettings` action so AppKit call sites
+            // (context menu, ⌘, monitor, header gear button) can open the
+            // native Settings scene in a `.accessory` app.
+            SettingsWindowController.shared.openAction = { openSettings() }
         }
         .onChange(of: store.showWhatsNewFromMenu) { _, show in
             if show {

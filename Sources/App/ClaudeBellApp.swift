@@ -24,6 +24,10 @@ struct ClaudeBellApp: App {
             }
         }
         .menuBarExtraStyle(.window)
+
+        Settings {
+            SettingsContainerView()
+        }
     }
 
     private func startServerIfNeeded() {

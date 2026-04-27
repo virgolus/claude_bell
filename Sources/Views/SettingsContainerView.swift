@@ -1,174 +1,210 @@
 import SwiftUI
+import AppKit
+
+// MARK: - Root container
 
 struct SettingsContainerView: View {
-    @State private var selectedTab = 0
-
-    private let tabs: [(String, String)] = [
-        ("General", "gearshape"),
-        ("Notifications", "bell"),
-        ("Appearance", "paintbrush"),
-        ("Miscellaneous", "ellipsis.circle"),
-    ]
-
     var body: some View {
-        VStack(spacing: 0) {
-            // Custom tab bar
-            HStack(spacing: 2) {
-                ForEach(Array(tabs.enumerated()), id: \.offset) { index, tab in
-                    VStack(spacing: 3) {
-                        Image(systemName: tab.1)
-                            .font(.system(size: 16))
-                        Text(tab.0)
-                            .font(.caption)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                    .contentShape(Rectangle())
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(selectedTab == index ? Color.accentColor.opacity(0.15) : Color.clear)
-                    )
-                    .foregroundStyle(selectedTab == index ? .primary : .secondary)
-                    .onTapGesture { selectedTab = index }
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 8)
-            .padding(.bottom, 4)
+        TabView {
+            GeneralSettingsTab()
+                .tabItem { Label("General", systemImage: "gearshape") }
 
-            Divider()
+            NotificationsSettingsTab()
+                .tabItem { Label("Notifications", systemImage: "bell") }
 
-            // Tab content
-            Group {
-                switch selectedTab {
-                case 0: GeneralSettingsTab()
-                case 1: NotificationsSettingsTab()
-                case 2: AppearanceSettingsTab()
-                case 3: MiscellaneousSettingsTab()
-                default: GeneralSettingsTab()
-                }
-            }
-            .frame(maxHeight: .infinity)
+            AppearanceSettingsTab()
+                .tabItem { Label("Appearance", systemImage: "paintbrush") }
         }
-        .frame(width: 600, height: 640)
+        .frame(minWidth: 560, minHeight: 520)
+        .background(SettingsWindowAccessor())
     }
 }
 
-// MARK: - General Tab
+// MARK: - General tab
 
 private struct GeneralSettingsTab: View {
-    @State private var installed = HookInstaller.isInstalled
-    @State private var errorMessage: String?
-    @State private var showSuccess = false
+    @State private var hooksInstalled = HookInstaller.isInstalled
+    @State private var hooksError: String?
     @State private var showHookConfirm = false
-    @State private var isRecording = false
+
+    @State private var autoModeEnabled = AutoModeInstaller.isEnabled
+    @State private var autoModeError: String?
+
+    @State private var statuslineInstalled = StatuslineInstaller.isInstalled
+    @State private var statuslineError: String?
+    @State private var showStatuslineConfirm = false
+
+    @State private var isRecordingShortcut = false
     @State private var shortcutLabel = GlobalShortcut.shared.shortcutDescription
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // MARK: - Hooks
-                settingsSection(title: "Claude Code Hooks", icon: "link.circle.fill", iconColor: .orange) {
-                    HStack {
-                        Image(systemName: installed ? "checkmark.circle.fill" : "xmark.circle")
-                            .foregroundStyle(installed ? .green : .red)
-                        Text(installed ? "Hooks installed" : "Hooks not installed")
-                            .font(.body.weight(.medium))
+        Form {
+            // MARK: Hooks
+            Section {
+                LabeledContent("Status") {
+                    statusBadge(installed: hooksInstalled,
+                                installedText: "Installed",
+                                missingText: "Not installed")
+                }
+                if hooksInstalled {
+                    Button(role: .destructive) {
+                        do {
+                            try HookInstaller.uninstall()
+                            hooksInstalled = false
+                            hooksError = nil
+                        } catch {
+                            hooksError = error.localizedDescription
+                        }
+                    } label: {
+                        Label("Remove Hooks", systemImage: "trash")
                     }
-
-                    Text("Intercept permission requests and notifications from Claude Code.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-
-                    if installed {
-                        Button("Remove Hooks") {
-                            do {
-                                try HookInstaller.uninstall()
-                                installed = false
-                                showSuccess = true
-                                errorMessage = nil
-                            } catch {
-                                errorMessage = error.localizedDescription
-                            }
-                        }
-                    } else {
-                        Button("Install Hooks") {
-                            showHookConfirm = true
-                        }
-                        .buttonStyle(.orangeProminent)
+                } else {
+                    Button { showHookConfirm = true } label: {
+                        Label("Install Hooks…", systemImage: "arrow.down.circle")
+                    }
+                        .buttonStyle(.borderedProminent)
                         .alert("Install Hooks?", isPresented: $showHookConfirm) {
                             Button("Install") {
                                 do {
                                     try HookInstaller.install()
-                                    installed = true
-                                    showSuccess = true
-                                    errorMessage = nil
+                                    hooksInstalled = true
+                                    hooksError = nil
                                 } catch {
-                                    errorMessage = error.localizedDescription
+                                    hooksError = error.localizedDescription
                                 }
                             }
                             Button("Cancel", role: .cancel) {}
                         } message: {
                             Text("This will modify ~/.claude/settings.json to register Claude Bell hooks.")
                         }
-                    }
-
-                    if let error = errorMessage {
-                        Text(error).font(.callout).foregroundStyle(.red)
-                    }
-                    if showSuccess {
-                        Text("Done! Changes apply to new Claude Code sessions.")
-                            .font(.callout).foregroundStyle(.green)
-                            .onAppear {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { showSuccess = false }
-                            }
-                    }
                 }
-
-                // MARK: - Auto Mode
-                AutoModeSection()
-
-                // MARK: - Shortcut
-                settingsSection(title: "Global Shortcut", icon: "keyboard.fill", iconColor: .orange) {
-                    Text("Press the shortcut to toggle the panel from anywhere.")
+                if let hooksError {
+                    Label(hooksError, systemImage: "exclamationmark.circle")
+                        .foregroundStyle(Color(nsColor: .systemRed))
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .help(hooksError)
+                }
+            } header: {
+                sectionHeader("Claude Code Hooks", systemImage: "link")
+            } footer: {
+                Text("Intercept permission requests and notifications from Claude Code.")
+            }
 
-                    HStack {
-                        Text("Current:")
-                            .font(.body)
+            // MARK: Auto Mode
+            Section {
+                Toggle("Auto Mode", isOn: $autoModeEnabled)
+                    .onChange(of: autoModeEnabled) { _, newValue in
+                        do {
+                            if newValue {
+                                try AutoModeInstaller.enable()
+                            } else {
+                                try AutoModeInstaller.disable()
+                            }
+                            autoModeError = nil
+                        } catch {
+                            autoModeEnabled = !newValue
+                            autoModeError = error.localizedDescription
+                        }
+                    }
+                if let autoModeError {
+                    Label(autoModeError, systemImage: "exclamationmark.circle")
+                        .foregroundStyle(Color(nsColor: .systemRed))
+                        .font(.callout)
+                        .help(autoModeError)
+                }
+            } header: {
+                sectionHeader("Auto Mode", systemImage: "wand.and.stars")
+            } footer: {
+                Text("When enabled, Claude Code automatically approves or denies tool use based on an AI classifier instead of prompting you each time. Restart the Claude Code session for changes to take effect.")
+            }
 
+            // MARK: Status Line
+            Section {
+                LabeledContent("Status") {
+                    statusBadge(installed: statuslineInstalled,
+                                installedText: "Active",
+                                missingText: "Not configured")
+                }
+                if statuslineInstalled {
+                    Button(role: .destructive) {
+                        do {
+                            try StatuslineInstaller.uninstall()
+                            statuslineInstalled = false
+                            statuslineError = nil
+                        } catch {
+                            statuslineError = error.localizedDescription
+                        }
+                    } label: {
+                        Label("Remove Status Line", systemImage: "trash")
+                    }
+                } else {
+                    Button { showStatuslineConfirm = true } label: {
+                        Label("Install Status Line…", systemImage: "arrow.down.circle")
+                    }
+                        .buttonStyle(.borderedProminent)
+                        .alert("Install Status Line?", isPresented: $showStatuslineConfirm) {
+                            Button("Install") {
+                                do {
+                                    try StatuslineInstaller.install()
+                                    statuslineInstalled = true
+                                    statuslineError = nil
+                                } catch {
+                                    statuslineError = error.localizedDescription
+                                }
+                            }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("This will modify ~/.claude/settings.json and create a status line script.")
+                        }
+                }
+                if let statuslineError {
+                    Label(statuslineError, systemImage: "exclamationmark.circle")
+                        .foregroundStyle(Color(nsColor: .systemRed))
+                        .font(.callout)
+                        .help(statuslineError)
+                }
+            } header: {
+                sectionHeader("Status Line", systemImage: "text.line.last.and.arrowtriangle.forward")
+            } footer: {
+                Text("Show model, context usage, duration and git branch in Claude Code's status line.")
+            }
+
+            // MARK: Shortcut
+            Section {
+                LabeledContent("Shortcut") {
+                    HStack(spacing: 8) {
                         Text(shortcutLabel)
-                            .font(.system(.body, design: .monospaced).weight(.medium))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
+                            .font(.system(.body, design: .monospaced))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
                             .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(isRecording ? Color.orange.opacity(0.2) : Color.secondary.opacity(0.15))
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(Color(nsColor: .controlBackgroundColor))
                             )
                             .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(isRecording ? Color.orange : Color.clear, lineWidth: 1)
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(isRecordingShortcut ? Color.accentColor : Color.secondary.opacity(0.3),
+                                            lineWidth: 1)
                             )
-
-                        Button(isRecording ? "Press new shortcut..." : "Change") {
-                            isRecording = true
+                        Button(isRecordingShortcut ? "Listening…" : "Change") {
+                            isRecordingShortcut = true
                         }
-                        .disabled(isRecording)
-                    }
-
-                    if isRecording {
-                        Text("Press your desired key combination (must include Cmd or Ctrl)")
-                            .font(.callout)
-                            .foregroundStyle(.orange)
+                        .disabled(isRecordingShortcut)
                     }
                 }
-
-                versionFooter
+            } header: {
+                sectionHeader("Global Shortcut", systemImage: "command")
+            } footer: {
+                if isRecordingShortcut {
+                    Text("Press your desired combination (must include ⌘ or ⌃).")
+                        .foregroundStyle(Color.accentColor)
+                } else {
+                    Text("Press the shortcut from anywhere to toggle the panel.")
+                }
             }
-            .padding()
         }
-        .background(ShortcutRecorder(isRecording: $isRecording, onRecord: { keyCode, modifiers in
+        .formStyle(.grouped)
+        .background(ShortcutRecorder(isRecording: $isRecordingShortcut, onRecord: { keyCode, modifiers in
             GlobalShortcut.shared.keyCode = keyCode
             GlobalShortcut.shared.modifierFlags = modifiers
             GlobalShortcut.shared.restart()
@@ -177,221 +213,161 @@ private struct GeneralSettingsTab: View {
     }
 }
 
-// MARK: - Auto Mode Section
-
-private struct AutoModeSection: View {
-    @State private var enabled = AutoModeInstaller.isEnabled
-    @State private var errorMessage: String?
-
-    var body: some View {
-        settingsSection(title: "Auto Mode", icon: "bolt.fill", iconColor: .orange) {
-            HStack {
-                Image(systemName: enabled ? "checkmark.circle.fill" : "xmark.circle")
-                    .foregroundStyle(enabled ? .green : .red)
-                Text(enabled ? "Auto mode enabled" : "Auto mode disabled")
-                    .font(.body.weight(.medium))
-            }
-
-            Text("When enabled, Claude Code automatically approves or denies tool use based on an AI classifier instead of prompting you each time.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-
-            Toggle("Enable Auto Mode", isOn: $enabled)
-                .onChange(of: enabled) { _, newValue in
-                    do {
-                        if newValue {
-                            try AutoModeInstaller.enable()
-                        } else {
-                            try AutoModeInstaller.disable()
-                        }
-                        errorMessage = nil
-                    } catch {
-                        enabled = !newValue
-                        errorMessage = error.localizedDescription
-                    }
-                }
-
-            Label("Requires restarting the Claude Code session to take effect.", systemImage: "exclamationmark.triangle.fill")
-                .font(.callout)
-                .foregroundStyle(.orange)
-
-            if let error = errorMessage {
-                Text(error).font(.callout).foregroundStyle(.red)
-            }
-        }
-    }
-}
-
-// MARK: - Notifications Tab
+// MARK: - Notifications tab
 
 private struct NotificationsSettingsTab: View {
     @State private var selectedSound = RequestStore.selectedSound
     @State private var macOSNotifications = AppDefaults.shared.bool(forKey: "macOSNotificationsEnabled")
     @State private var toolErrorNotifications = AppDefaults.shared.bool(forKey: "toolErrorNotificationsEnabled")
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // MARK: - Sound
-                settingsSection(title: "Notification Sound", icon: "speaker.wave.2.fill", iconColor: .purple) {
-                    Text("Sound played when a new permission request arrives.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-
-                    Picker("Sound:", selection: $selectedSound) {
-                        ForEach(RequestStore.availableSounds, id: \.self) { sound in
-                            Text(sound).tag(sound)
-                        }
-                    }
-                    .frame(width: 220)
-                    .onChange(of: selectedSound) { _, newValue in
-                        RequestStore.selectedSound = newValue
-                        NSSound(named: newValue)?.play()
-                    }
-                }
-
-                // MARK: - Mute
-                settingsSection(title: "Mute", icon: "bell.slash.fill", iconColor: .gray) {
-                    Text("Temporarily silence all notification sounds.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-
-                    MuteToggle()
-                }
-
-                // MARK: - Tool Error Notifications
-                settingsSection(title: "Tool Errors", icon: "exclamationmark.triangle.fill", iconColor: .orange) {
-                    Text("Show notifications when a tool fails during execution.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-
-                    Toggle("Show tool error notifications", isOn: $toolErrorNotifications)
-                        .onChange(of: toolErrorNotifications) { _, enabled in
-                            AppDefaults.shared.set(enabled, forKey: "toolErrorNotificationsEnabled")
-                        }
-                }
-
-                // MARK: - macOS Notifications
-                settingsSection(title: "macOS Notifications", icon: "bell.badge.fill", iconColor: .green) {
-                    Text("Show native macOS notification banners for events.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-
-                    Toggle("Enable macOS Notifications", isOn: $macOSNotifications)
-                        .onChange(of: macOSNotifications) { _, enabled in
-                            AppDefaults.shared.set(enabled, forKey: "macOSNotificationsEnabled")
-                            if enabled {
-                                NotificationManager.requestPermission()
-                            }
-                        }
-                }
-
-                versionFooter
-            }
-            .padding()
-        }
-    }
-}
-
-private struct MuteToggle: View {
     @ObservedObject private var store = RequestStore.shared
 
     var body: some View {
-        Toggle("Muted", isOn: $store.isMuted)
+        Form {
+            Section {
+                Picker("Sound", selection: $selectedSound) {
+                    ForEach(RequestStore.availableSounds, id: \.self) { sound in
+                        Text(sound).tag(sound)
+                    }
+                }
+                .help("Sound played when a new permission request arrives.")
+                .onChange(of: selectedSound) { _, newValue in
+                    RequestStore.selectedSound = newValue
+                    NSSound(named: newValue)?.play()
+                }
+
+                Toggle("Mute All Notification Sounds", isOn: $store.isMuted)
+            } header: {
+                sectionHeader("Sound", systemImage: "speaker.wave.2")
+            } footer: {
+                Text("Sound played when a new permission request arrives.")
+            }
+
+            Section {
+                Toggle("Tool Error Notifications", isOn: $toolErrorNotifications)
+                    .onChange(of: toolErrorNotifications) { _, enabled in
+                        AppDefaults.shared.set(enabled, forKey: "toolErrorNotificationsEnabled")
+                    }
+
+                Toggle("macOS Notification Banners", isOn: $macOSNotifications)
+                    .onChange(of: macOSNotifications) { _, enabled in
+                        AppDefaults.shared.set(enabled, forKey: "macOSNotificationsEnabled")
+                        if enabled {
+                            NotificationManager.requestPermission()
+                        }
+                    }
+            } header: {
+                sectionHeader("Alerts", systemImage: "bell.badge")
+            } footer: {
+                Text("Show a notification when a tool fails, or surface events through the standard macOS Notification Center.")
+            }
+        }
+        .formStyle(.grouped)
     }
 }
 
-// MARK: - Appearance Tab
+// MARK: - Appearance tab
 
 private struct AppearanceSettingsTab: View {
     @ObservedObject private var bodyStyle = BodyStyleSettings.shared
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // MARK: - Panel Position
-                settingsSection(title: "Panel Position", icon: "macwindow", iconColor: .teal) {
-                    Text("Choose where the panel appears on screen.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-
-                    Picker("Position:", selection: $bodyStyle.panelPosition) {
-                        ForEach(BodyStyleSettings.PanelPosition.allCases, id: \.self) { pos in
-                            Text(pos.label).tag(pos)
-                        }
+        Form {
+            // MARK: Panel
+            Section {
+                Picker("Position", selection: $bodyStyle.panelPosition) {
+                    ForEach(BodyStyleSettings.PanelPosition.allCases, id: \.self) { pos in
+                        Text(pos.label).tag(pos)
                     }
-                    .pickerStyle(.segmented)
+                }
+                .pickerStyle(.segmented)
 
+                LabeledContent("Width") {
                     HStack(spacing: 8) {
-                        Text("Width:")
-                            .frame(width: 45, alignment: .leading)
                         Slider(value: $bodyStyle.panelWidth, in: 500...1400, step: 50)
-                        Text("\(Int(bodyStyle.panelWidth))pt")
-                            .font(.system(.caption, design: .monospaced))
-                            .frame(width: 50, alignment: .trailing)
+                            .help("Width of the menu bar panel, in points. Ignored in Fullscreen mode.")
+                        Text("\(Int(bodyStyle.panelWidth)) pt")
+                            .font(.system(.callout, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                            .frame(width: 60, alignment: .trailing)
                         Button("Reset") { bodyStyle.resetPanelWidth() }
-                            .font(.caption)
+                            .controlSize(.small)
+                            .help("Restore the default width.")
                     }
-                    .disabled(bodyStyle.panelPosition == .fullscreen)
+                }
+                .disabled(bodyStyle.panelPosition == .fullscreen)
+            } header: {
+                sectionHeader("Panel", systemImage: "macwindow")
+            } footer: {
+                Text("Choose where the panel appears on screen. Width is ignored in Fullscreen mode.")
+            }
+
+            // MARK: Appearance mode
+            Section {
+                Picker("Theme", selection: $bodyStyle.appearance) {
+                    ForEach(BodyStyleSettings.Appearance.allCases, id: \.self) { mode in
+                        Text(mode.label).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .help("Force a light or dark interface, or follow the system setting.")
+            } header: {
+                sectionHeader("Appearance", systemImage: "circle.lefthalf.filled")
+            }
+
+            // MARK: Notification body style
+            Section {
+                Picker("Font", selection: Binding(
+                    get: { bodyStyle.fontName ?? "" },
+                    set: { bodyStyle.fontName = $0.isEmpty ? nil : $0 }
+                )) {
+                    ForEach(BodyStyleSettings.availableFonts, id: \.label) { font in
+                        Text(font.label).tag(font.name ?? "")
+                    }
+                }
+                .help("Typeface used for notification body text.")
+
+                ColorPicker("Background",
+                            selection: Binding(
+                                get: { bodyStyle.customBackgroundColor },
+                                set: { bodyStyle.setCustomBackground($0) }
+                            ),
+                            supportsOpacity: true)
+                    .help("Background colour shown behind notification body text.")
+
+                ColorPicker("Font Color",
+                            selection: Binding(
+                                get: { bodyStyle.customFontColor },
+                                set: { bodyStyle.setCustomFontColor($0) }
+                            ),
+                            supportsOpacity: false)
+                    .help("Colour applied to notification body text.")
+
+                HStack {
+                    Spacer()
+                    Button("Reset to defaults") {
+                        bodyStyle.resetBackgroundColor()
+                        bodyStyle.resetFontColor()
+                        bodyStyle.resetFontName()
+                    }
+                    .controlSize(.small)
                 }
 
-                settingsSection(title: "Notification Style", icon: "textformat", iconColor: .cyan) {
-                    Text("Customize the appearance of notification body text.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-
-                    Picker("Appearance:", selection: $bodyStyle.appearance) {
-                        ForEach(BodyStyleSettings.Appearance.allCases, id: \.self) { mode in
-                            Text(mode.label).tag(mode)
-                        }
-                    }
-                    .frame(width: 220)
-
-                    InlineColorPicker(
-                        label: "Background:",
-                        color: $bodyStyle.customBackgroundColor,
-                        isCustom: bodyStyle.hasCustomBackground,
-                        onSelect: { bodyStyle.setCustomBackground($0) },
-                        onReset: { bodyStyle.resetBackgroundColor() }
-                    )
-
-                    InlineColorPicker(
-                        label: "Font Color:",
-                        color: $bodyStyle.customFontColor,
-                        isCustom: bodyStyle.hasCustomFontColor,
-                        onSelect: { bodyStyle.setCustomFontColor($0) },
-                        onReset: { bodyStyle.resetFontColor() }
-                    )
-
-                    HStack {
-                        Picker("Font:", selection: Binding(
-                            get: { bodyStyle.fontName ?? "" },
-                            set: { bodyStyle.fontName = $0.isEmpty ? nil : $0 }
-                        )) {
-                            ForEach(BodyStyleSettings.availableFonts, id: \.label) { font in
-                                Text(font.label)
-                                    .tag(font.name ?? "")
-                            }
-                        }
-                        .frame(width: 260)
-
-                        Button("Reset") { bodyStyle.resetFontName() }
-                            .font(.caption)
-                    }
-
-                    // Preview
+                LabeledContent("Preview") {
                     previewText
                         .font(bodyStyle.bodyFont(size: .body))
-                        .padding(8)
+                        .padding(10)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(bodyStyle.backgroundColor)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
-
-                versionFooter
+            } header: {
+                sectionHeader("Notification Text", systemImage: "textformat")
+            } footer: {
+                Text("Customise how notification body text is rendered in the panel.")
             }
-            .padding()
         }
+        .formStyle(.grouped)
     }
 
     @ViewBuilder
@@ -405,206 +381,46 @@ private struct AppearanceSettingsTab: View {
     }
 }
 
-// MARK: - Miscellaneous Tab
-
-private struct MiscellaneousSettingsTab: View {
-    @State private var statuslineInstalled = StatuslineInstaller.isInstalled
-    @State private var errorMessage: String?
-    @State private var showStatuslineConfirm = false
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // MARK: - Status Line
-                settingsSection(title: "Status Line", icon: "text.line.last.and.arrowtriangle.forward", iconColor: .blue) {
-                    HStack {
-                        Image(systemName: statuslineInstalled ? "checkmark.circle.fill" : "xmark.circle")
-                            .foregroundStyle(statuslineInstalled ? .green : .red)
-                        Text(statuslineInstalled ? "Status line active" : "Status line not configured")
-                            .font(.body.weight(.medium))
-                    }
-
-                    Text("Show model, context usage, duration and git branch in Claude Code's status line.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-
-                    if statuslineInstalled {
-                        Button("Remove Status Line") {
-                            do {
-                                try StatuslineInstaller.uninstall()
-                                statuslineInstalled = false
-                            } catch {
-                                errorMessage = error.localizedDescription
-                            }
-                        }
-                    } else {
-                        Button("Install Status Line") {
-                            showStatuslineConfirm = true
-                        }
-                        .buttonStyle(.orangeProminent)
-                        .alert("Install Status Line?", isPresented: $showStatuslineConfirm) {
-                            Button("Install") {
-                                do {
-                                    try StatuslineInstaller.install()
-                                    statuslineInstalled = true
-                                } catch {
-                                    errorMessage = error.localizedDescription
-                                }
-                            }
-                            Button("Cancel", role: .cancel) {}
-                        } message: {
-                            Text("This will modify ~/.claude/settings.json and create a status line script.")
-                        }
-                    }
-
-                    if let error = errorMessage {
-                        Text(error).font(.callout).foregroundStyle(.red)
-                    }
-                }
-
-                versionFooter
-            }
-            .padding()
-        }
-    }
-}
-
 // MARK: - Shared helpers
 
-private var versionFooter: some View {
-    HStack {
-        Spacer()
-        Text("Claude Bell v\(AppVersion.current) (\(AppVersion.build))")
-            .font(.caption)
-            .foregroundStyle(.tertiary)
-        Spacer()
-    }
-    .padding(.top, 8)
+@ViewBuilder
+private func statusBadge(installed: Bool, installedText: String, missingText: String) -> some View {
+    Label(installed ? installedText : missingText,
+          systemImage: installed ? "checkmark.circle.fill" : "circle.dashed")
+        .labelStyle(.titleAndIcon)
+        .foregroundStyle(installed ? Color.green : Color.secondary)
 }
 
-func settingsSection<Content: View>(
-    title: String,
-    icon: String,
-    iconColor: Color,
-    @ViewBuilder content: () -> Content
-) -> some View {
-    VStack(alignment: .leading, spacing: 10) {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .foregroundStyle(iconColor)
-                .font(.body)
-            Text(title)
-                .font(.headline)
-        }
-
-        VStack(alignment: .leading, spacing: 8) {
-            content()
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.95))
-                .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
-        )
+/// Section header with a leading SF Symbol — gives the grouped form a
+/// scannable visual rhythm without resorting to iOS-style colored tiles.
+@ViewBuilder
+private func sectionHeader(_ title: String, systemImage: String) -> some View {
+    Label {
+        Text(title)
+    } icon: {
+        Image(systemName: systemImage)
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(.secondary)
     }
 }
 
-struct InlineColorPicker: View {
-    let label: String
-    @Binding var color: Color
-    let isCustom: Bool
-    let onSelect: (Color) -> Void
-    let onReset: () -> Void
+// MARK: - Window accessor
 
-    private static let presets: [Color] = [
-        .black, .white,
-        Color(.sRGB, red: 0.5, green: 0.5, blue: 0.5, opacity: 1),
-        .red, .orange, .yellow, .green, .mint, .cyan, .blue, .indigo, .purple, .pink,
-        Color(.sRGB, red: 0.5, green: 0.5, blue: 0.5, opacity: 0.06),
-    ]
-
-    @State private var hexText: String = ""
-    @State private var showHex = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text(label)
-                    .frame(width: 80, alignment: .leading)
-
-                if isCustom {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(color)
-                        .frame(width: 24, height: 24)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 4)
-                                .stroke(Color.secondary.opacity(0.4), lineWidth: 1)
-                        )
-                } else {
-                    Text("Auto")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 24, height: 24)
-                }
-
-                ForEach(Array(Self.presets.enumerated()), id: \.offset) { _, preset in
-                    SwatchButton(color: preset) {
-                        onSelect(preset)
-                        hexText = preset.toHex() ?? ""
-                    }
-                }
-
-                Button {
-                    showHex.toggle()
-                    if showHex { hexText = color.toHex() ?? "" }
-                } label: {
-                    Image(systemName: "number")
-                        .font(.caption)
-                }
-                .buttonStyle(.plain)
-
-                Button("Reset") { onReset() }
-                    .font(.caption)
-            }
-
-            if showHex {
-                HStack(spacing: 6) {
-                    Text("#")
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                    TextField("Hex", text: $hexText)
-                        .font(.system(.caption, design: .monospaced))
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 80)
-                        .onSubmit {
-                            if let c = Color(hex: hexText) { onSelect(c) }
-                        }
-                }
-                .padding(.leading, 80)
-            }
+/// Registers the hosting NSWindow with SettingsWindowController so the
+/// rest of the app can still reference it (e.g. to distinguish it from
+/// the menu bar panel when repositioning).
+private struct SettingsWindowAccessor: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        Task { @MainActor in
+            SettingsWindowController.shared.register(view.window)
         }
+        return view
     }
-}
 
-struct SwatchButton: View {
-    let color: Color
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            RoundedRectangle(cornerRadius: 3)
-                .fill(color)
-                .frame(width: 16, height: 16)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 3)
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 0.5)
-                )
+    func updateNSView(_ nsView: NSView, context: Context) {
+        Task { @MainActor in
+            SettingsWindowController.shared.register(nsView.window)
         }
-        .buttonStyle(.plain)
     }
 }
