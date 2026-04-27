@@ -7,15 +7,17 @@ struct SettingsContainerView: View {
     var body: some View {
         TabView {
             GeneralSettingsTab()
+                .frame(width: 580, height: 620)
                 .tabItem { Label("General", systemImage: "gearshape") }
 
             NotificationsSettingsTab()
+                .frame(width: 580, height: 360)
                 .tabItem { Label("Notifications", systemImage: "bell") }
 
             AppearanceSettingsTab()
+                .frame(width: 580, height: 640)
                 .tabItem { Label("Appearance", systemImage: "paintbrush") }
         }
-        .frame(minWidth: 560, minHeight: 520)
         .background(SettingsWindowAccessor())
     }
 }
