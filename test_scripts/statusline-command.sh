@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 input=$(cat)
 MODEL=$(echo "$input" | jq -r '.model.display_name')
+EFFORT=$(echo "$input" | jq -r '(.effort // .model.effort // .reasoning_effort) | if type == "object" then (.level // .value // "?") else . // "?" end')
 DIR=$(echo "$input" | jq -r '.workspace.current_dir')
 PCT=$(echo "$input" | jq -r '.context_window.used_percentage // 0' | cut -d. -f1)
 DURATION_MS=$(echo "$input" | jq -r '.cost.total_duration_ms // 0')
@@ -25,5 +26,5 @@ BAR=$(printf "%${FILLED}s" | tr ' ' '█')$(printf "%${EMPTY}s" | tr ' ' '░')
 MINS=$((DURATION_MS / 60000)); SECS=$(((DURATION_MS % 60000) / 1000))
 BRANCH=""
 git rev-parse --git-dir > /dev/null 2>&1 && BRANCH=" | 🌿 $(git branch --show-current 2>/dev/null)"
-echo "${CYAN}[${MODEL}]${RESET} 📁 ${DIR##*/}${BRANCH}"
+echo "${CYAN}[${MODEL} · ${EFFORT}]${RESET} 📁 ${DIR##*/}${BRANCH}"
 echo "${BAR_COLOR}${BAR}${RESET} ${PCT}% | ⏱️  ${MINS}m ${SECS}s | Σ ↓${IN_K}k ↑${OUT_K}k | last ↓${LAST_IN_K}k ↑${LAST_OUT_K}k"

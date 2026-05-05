@@ -81,13 +81,19 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        html, body {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
             background: var(--bg);
             color: var(--text);
             line-height: 1.6;
-            overflow-x: hidden;
         }
+
+        img, svg, video { max-width: 100%; }
 
         /* Subtle grid background */
         body::before {
@@ -631,6 +637,8 @@
             font-size: 14px;
             line-height: 1.7;
             overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            white-space: pre;
         }
 
         .code-body .comment { color: #6b7280; }
@@ -651,6 +659,9 @@
         .arch-svg-wrap svg {
             display: block;
             margin: 0 auto;
+            width: 100%;
+            height: auto;
+            max-width: 800px;
         }
 
         /* ─── Tech Stack ─── */
@@ -687,12 +698,17 @@
         }
 
         /* ─── Hooks Table ─── */
-        .hooks-table {
+        .hooks-table-wrap {
             width: 100%;
-            border-collapse: collapse;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
             border: 1px solid var(--border);
             border-radius: 12px;
-            overflow: hidden;
+        }
+        .hooks-table {
+            width: 100%;
+            min-width: 520px;
+            border-collapse: collapse;
         }
 
         .hooks-table th,
@@ -769,11 +785,23 @@
         @media (max-width: 768px) {
             .stats { flex-direction: column; gap: 24px; }
             .features-grid { grid-template-columns: 1fr; }
-            .hero { padding: 60px 24px 40px; }
+            .hero { padding: 90px 20px 40px; }
+            .hero h1 { letter-spacing: -1px; }
+            .hero-sub { font-size: 17px; padding: 0 8px; }
             .arch-diagram { font-size: 11px; padding: 20px; }
+            .arch-svg-wrap { padding: 20px 8px; }
+            .container { padding: 0 20px; }
+            .demo-strip { padding: 0 20px; }
             .top-right-actions { top: 12px; right: 12px; gap: 6px; }
             .top-right-actions a { padding: 8px 12px; font-size: 12px; }
             .top-right-actions .label-full { display: none; }
+            .section { padding: 40px 0; }
+        }
+        @media (max-width: 420px) {
+            .hero { padding: 80px 16px 32px; }
+            .container { padding: 0 16px; }
+            .demo-strip { padding: 0 16px; }
+            .feature-card { padding: 22px; }
         }
 
         /* ─── Top-right floating pills ─── */
@@ -785,6 +813,7 @@
             display: flex;
             gap: 8px;
             align-items: center;
+            max-width: calc(100vw - 40px);
         }
         .top-right-actions a {
             display: inline-flex;
@@ -798,14 +827,16 @@
             transition: all 0.2s;
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
+            white-space: nowrap;
         }
         .top-right-actions .pill-github {
-            background: rgba(18, 18, 26, 0.75);
+            background: rgba(18, 18, 26, 0.85);
             color: var(--text);
-            border: 1px solid var(--border);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
         }
         .top-right-actions .pill-github:hover {
-            background: rgba(26, 26, 38, 0.9);
+            background: rgba(26, 26, 38, 0.95);
             border-color: var(--accent);
             transform: translateY(-1px);
         }
@@ -813,10 +844,11 @@
             background: linear-gradient(135deg, #FFDD00, #FFC800);
             color: #1a1a00;
             border: 1px solid rgba(0,0,0,0.1);
+            box-shadow: 0 4px 16px rgba(255, 221, 0, 0.2);
         }
         .top-right-actions .pill-bmc:hover {
             transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(255, 221, 0, 0.25);
+            box-shadow: 0 6px 20px rgba(255, 221, 0, 0.35);
         }
     </style>
 </head>
@@ -1191,6 +1223,7 @@
         <!-- Hooks table -->
         <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 16px;">Supported Hooks</h3>
 
+        <div class="hooks-table-wrap">
         <table class="hooks-table">
             <thead>
                 <tr>
@@ -1227,6 +1260,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
     </section>
 </div>
 
