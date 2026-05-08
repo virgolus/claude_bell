@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.10.2",
+    "build": 48,
+    "date": "2026-05-07",
+    "highlights": "Custom body font now applies everywhere, plus Monaco support and statusline reasoning effort",
+    "changes": [
+      { "type": "fixed", "text": "Custom body font selected in Settings is now honored across the entire notification body — headings, inline code, and code blocks no longer fall back to the system font" },
+      { "type": "new", "text": "Added Monaco to the body font picker for a classic Terminal look" },
+      { "type": "new", "text": "Statusline now shows the current reasoning effort level alongside the model" },
+      { "type": "changed", "text": "Landing page hardened for mobile — hero, features and download sections now lay out cleanly on narrow screens" }
+    ]
+  },
+  {
     "version": "1.10.1",
     "build": 47,
     "date": "2026-04-27",

@@ -66,6 +66,7 @@ final class BodyStyleSettings: ObservableObject {
     static let availableFonts: [(label: String, name: String?)] = [
         ("System Default", nil),
         ("SF Mono", "SFMono-Regular"),
+        ("Monaco", "Monaco"),
         ("Menlo", "Menlo"),
         ("Courier New", "Courier New"),
         ("Georgia", "Georgia"),

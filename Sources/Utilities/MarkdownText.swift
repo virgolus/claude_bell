@@ -2,6 +2,7 @@ import SwiftUI
 
 /// A view that renders markdown text with proper formatting including headings, lists, code blocks, and tables.
 struct MarkdownText: View {
+    @ObservedObject private var bodyStyle = BodyStyleSettings.shared
     let content: String
     let font: Font
     let textColor: Color?
@@ -10,6 +11,24 @@ struct MarkdownText: View {
         self.content = content
         self.font = font
         self.textColor = textColor
+    }
+
+    /// Font for inline / block code. Honours the user's chosen body font when set,
+    /// otherwise falls back to the system monospaced font at the requested size.
+    private func codeFont(size: Font.TextStyle) -> Font {
+        if bodyStyle.fontName != nil {
+            return bodyStyle.bodyFont(size: size)
+        }
+        return .system(size, design: .monospaced)
+    }
+
+    /// Font for headings — same family as the user's chosen body font (or system),
+    /// scaled to the heading's text style.
+    private func headingBaseFont(size: Font.TextStyle) -> Font {
+        if bodyStyle.fontName != nil {
+            return bodyStyle.bodyFont(size: size)
+        }
+        return .system(size)
     }
 
     var body: some View {
@@ -42,7 +61,7 @@ struct MarkdownText: View {
         case .codeBlock(let code):
             ScrollView(.horizontal, showsIndicators: false) {
                 Text(code)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(codeFont(size: .caption))
                     .textSelection(.enabled)
                     .padding(10)
             }
@@ -73,12 +92,14 @@ struct MarkdownText: View {
     }
 
     private func headingView(level: Int, text: String) -> some View {
-        let headingFont: Font = switch level {
-        case 1: .title.weight(.bold)
-        case 2: .title2.weight(.bold)
-        case 3: .title3.weight(.semibold)
-        default: .headline.weight(.semibold)
+        let style: Font.TextStyle = switch level {
+        case 1: .title
+        case 2: .title2
+        case 3: .title3
+        default: .headline
         }
+        let weight: Font.Weight = level <= 2 ? .bold : .semibold
+        let headingFont = headingBaseFont(size: style).weight(weight)
         return inlineMarkdown(text, font: headingFont)
             .padding(.top, level <= 2 ? 4 : 2)
     }
@@ -87,26 +108,30 @@ struct MarkdownText: View {
     private func inlineMarkdown(_ text: String, font overrideFont: Font? = nil) -> some View {
         let f = overrideFont ?? font
         let spans = parseInlineSpans(text)
+        // NOTE: apply `.font(f)` to every span explicitly. Applying `.font` as a
+        // View modifier to a concatenated `Text` does NOT reliably propagate to
+        // children, so plain/bold/italic spans were silently picking up the
+        // ambient system font instead of the user's chosen body font.
         let rendered = spans.reduce(Text("")) { result, span in
             switch span {
             case .plain(let s):
-                return result + Text(s)
+                return result + Text(s).font(f)
             case .bold(let s):
-                return result + Text(s).bold()
+                return result + Text(s).font(f).bold()
             case .italic(let s):
-                return result + Text(s).italic()
+                return result + Text(s).font(f).italic()
             case .boldItalic(let s):
-                return result + Text(s).bold().italic()
+                return result + Text(s).font(f).bold().italic()
             case .code(let s):
-                return result + Text(s).font(.system(.body, design: .monospaced)).foregroundColor(.accentColor)
+                return result + Text(s).font(codeFont(size: .body)).foregroundColor(.accentColor)
             case .boldCode(let s):
-                return result + Text(s).bold().font(.system(.body, design: .monospaced)).foregroundColor(.accentColor)
+                return result + Text(s).font(codeFont(size: .body)).bold().foregroundColor(.accentColor)
             }
         }
         if let textColor {
-            rendered.font(f).foregroundStyle(textColor).textSelection(.enabled)
+            rendered.foregroundStyle(textColor).textSelection(.enabled)
         } else {
-            rendered.font(f).textSelection(.enabled)
+            rendered.textSelection(.enabled)
         }
     }
 
