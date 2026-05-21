@@ -244,7 +244,7 @@ struct ContentView: View {
 
                     // Message
                     if !notification.message.isEmpty {
-                        MarkdownText(notification.message, font: bodyStyle.bodyFont(), textColor: bodyStyle.fontColor)
+                        MarkdownText(notification.message, font: bodyStyle.bodyFont(size: .body), textColor: bodyStyle.fontColor)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(10)
                             .background(bodyStyle.backgroundColor)
@@ -262,9 +262,9 @@ struct ContentView: View {
                         )
                     }
 
-                    // Transcript context (expanded by default, skip for passive types since message already shown above)
+                    // Transcript context (collapsed by default, skip for passive types since message already shown above)
                     if !notification.transcriptPath.isEmpty && !notification.meta.isPassive {
-                        ConversationContextView(transcriptPath: notification.transcriptPath, startExpanded: true)
+                        ConversationContextView(transcriptPath: notification.transcriptPath)
                     }
 
                     // Question options from transcript (skip for passive types like task completed)

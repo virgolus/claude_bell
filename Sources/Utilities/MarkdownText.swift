@@ -33,7 +33,7 @@ struct MarkdownText: View {
 
     var body: some View {
         let blocks = parseAllBlocks(content)
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 10) {
             ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
                 blockView(block)
             }
@@ -101,7 +101,8 @@ struct MarkdownText: View {
         let weight: Font.Weight = level <= 2 ? .bold : .semibold
         let headingFont = headingBaseFont(size: style).weight(weight)
         return inlineMarkdown(text, font: headingFont)
-            .padding(.top, level <= 2 ? 4 : 2)
+            .padding(.top, level <= 2 ? 12 : 8)
+            .padding(.bottom, level <= 2 ? 4 : 2)
     }
 
     @ViewBuilder
@@ -129,9 +130,9 @@ struct MarkdownText: View {
             }
         }
         if let textColor {
-            rendered.foregroundStyle(textColor).textSelection(.enabled)
+            rendered.foregroundStyle(textColor).textSelection(.enabled).lineSpacing(4)
         } else {
-            rendered.textSelection(.enabled)
+            rendered.textSelection(.enabled).lineSpacing(4)
         }
     }
 

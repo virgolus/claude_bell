@@ -137,7 +137,7 @@ final class BodyStyleSettings: ObservableObject {
     }
 
     /// Returns the body font at the given size style, using the user's chosen font family.
-    func bodyFont(size: Font.TextStyle = .title3) -> Font {
+    func bodyFont(size: Font.TextStyle = .body) -> Font {
         guard let name = fontName else { return Font.system(size) }
         return Font.custom(name, size: NSFont.preferredFont(forTextStyle: nsFontStyle(size)).pointSize)
     }
