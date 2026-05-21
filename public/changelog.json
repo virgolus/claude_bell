@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.10.3",
+    "build": 49,
+    "date": "2026-05-21",
+    "highlights": "Unified diff view for Edit operations and more readable notification text",
+    "changes": [
+      { "type": "new", "text": "Edit tool permission requests now display old and new content as a unified line-by-line diff with red removals and green additions, instead of two separate code blocks" },
+      { "type": "changed", "text": "Notification message body now uses the same font size as the rest of the panel for a consistent look across all notification types" },
+      { "type": "changed", "text": "Markdown text now has more line spacing and breathing room between paragraphs, headings, and lists" },
+      { "type": "changed", "text": "Conversation Context preview is now collapsed by default — click to expand when you need it" }
+    ]
+  },
+  {
     "version": "1.10.2",
     "build": 48,
     "date": "2026-05-07",
