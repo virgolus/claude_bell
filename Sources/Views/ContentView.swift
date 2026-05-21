@@ -3,6 +3,7 @@ import SwiftUI
 enum SidebarItem: Hashable {
     case request(UUID)
     case notification(UUID)
+    case newSession
 }
 
 struct ContentView: View {
@@ -18,7 +19,7 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                HeaderView()
+                HeaderView(onNewSession: { selectedItem = .newSession })
 
                 if let update = store.availableUpdate {
                     UpdateBannerView(update: update)
@@ -27,13 +28,21 @@ struct ContentView: View {
                 Divider()
 
                 if store.pendingRequests.isEmpty && store.notifications.isEmpty {
-                    VStack(spacing: 0) {
-                        EmptyStateView()
-                        if !store.sessions.isEmpty {
-                            sessionsSection
+                    if selectedItem == .newSession {
+                        NewSessionView(
+                            onCancel: { selectedItem = nil },
+                            onOpen: { selectedItem = nil }
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        VStack(spacing: 0) {
+                            EmptyStateView()
+                            if !store.sessions.isEmpty {
+                                sessionsSection
+                            }
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     HStack(spacing: 0) {
                         sidebarList
@@ -208,6 +217,11 @@ struct ContentView: View {
             } else {
                 placeholder
             }
+        case .newSession:
+            NewSessionView(
+                onCancel: { selectedItem = nil },
+                onOpen: { selectedItem = nil }
+            )
         case nil:
             placeholder
         }
@@ -392,6 +406,7 @@ struct ContentView: View {
         switch item {
         case .request(let id): return store.pendingRequests.contains { $0.id == id }
         case .notification(let id): return store.notifications.contains { $0.id == id }
+        case .newSession: return true
         }
     }
 

@@ -39,6 +39,80 @@ enum TerminalBridge {
         }
     }
 
+    /// Opens a new terminal tab/window at `cwd` and launches `claude` (optionally with an initial prompt).
+    /// Picks Terminal.app or iTerm2 based on which is frontmost; falls back to Terminal.app otherwise.
+    static func openNewSession(cwd: String, initialPrompt: String = "") {
+        let trimmedCwd = cwd.trimmingCharacters(in: .whitespaces)
+        guard !trimmedCwd.isEmpty else { return }
+        logToFile("openNewSession: cwd=\(trimmedCwd), prompt=\"\(initialPrompt)\"")
+
+        let cwdLit = shellEscape(trimmedCwd)
+        let promptTrimmed = initialPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let command = promptTrimmed.isEmpty
+            ? "cd \(cwdLit) && claude"
+            : "cd \(cwdLit) && claude \(shellEscape(promptTrimmed))"
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let target = resolveLaunchTarget()
+            switch target {
+            case .iterm2:
+                if openIterm2NewSession(command: command) { return }
+                if openTerminalAppNewSession(command: command) { return }
+            case .terminalApp:
+                if openTerminalAppNewSession(command: command) { return }
+            }
+            DispatchQueue.main.async { activateTerminal() }
+        }
+    }
+
+    private enum LaunchTarget { case terminalApp, iterm2 }
+
+    /// Pick the terminal app to use for a brand-new session. Prefers frontmost,
+    /// otherwise any running supported terminal, otherwise Terminal.app.
+    private static func resolveLaunchTarget() -> LaunchTarget {
+        if let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier {
+            if frontmost == "com.googlecode.iterm2" { return .iterm2 }
+            if frontmost == "com.apple.Terminal" { return .terminalApp }
+        }
+        let running = NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier)
+        if running.contains("com.googlecode.iterm2") { return .iterm2 }
+        return .terminalApp
+    }
+
+    private static func openTerminalAppNewSession(command: String) -> Bool {
+        let escaped = command.replacingOccurrences(of: "\\", with: "\\\\")
+                              .replacingOccurrences(of: "\"", with: "\\\"")
+        let script = """
+        tell application "Terminal"
+            activate
+            do script "\(escaped)"
+            return true
+        end tell
+        """
+        return runAppleScript(script)
+    }
+
+    private static func openIterm2NewSession(command: String) -> Bool {
+        let escaped = command.replacingOccurrences(of: "\\", with: "\\\\")
+                              .replacingOccurrences(of: "\"", with: "\\\"")
+        let script = """
+        tell application "iTerm2"
+            activate
+            if (count of windows) = 0 then
+                set newWindow to (create window with default profile)
+                tell current session of newWindow to write text "\(escaped)"
+            else
+                tell current window
+                    set newTab to (create tab with default profile)
+                    tell current session of newTab to write text "\(escaped)"
+                end tell
+            end if
+            return true
+        end tell
+        """
+        return runAppleScript(script)
+    }
+
     /// Brings the terminal tab running Claude Code to the front.
     /// Runs AppleScript matching off the main thread to avoid blocking the UI.
     static func focusTerminalTab(forCwd cwd: String, transcriptPath: String = "") {

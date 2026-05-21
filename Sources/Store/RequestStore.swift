@@ -120,6 +120,7 @@ final class RequestStore: ObservableObject {
             if let lastPrompt { sessions[id]?.lastPrompt = lastPrompt }
         } else {
             sessions[id] = SessionInfo(id: id, cwd: cwd, lastSeen: Date(), lastPrompt: lastPrompt)
+            RecentProjectsStore.shared.recordUsage(cwd)
         }
     }
 

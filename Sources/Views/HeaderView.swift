@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HeaderView: View {
     @EnvironmentObject var store: RequestStore
+    var onNewSession: (() -> Void)? = nil
 
     var body: some View {
         HStack {
@@ -19,6 +20,17 @@ struct HeaderView: View {
                     .padding(.vertical, 2)
                     .background(.orange.opacity(0.2))
                     .clipShape(Capsule())
+            }
+
+            if let onNewSession {
+                Button {
+                    onNewSession()
+                } label: {
+                    Image(systemName: "plus.circle")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("New Session in a directory")
             }
 
             Button {

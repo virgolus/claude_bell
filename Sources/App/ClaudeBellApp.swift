@@ -226,6 +226,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         muteItem.target = self
         menu.addItem(muteItem)
 
+        let recentEntries = RecentProjectsStore.shared.entries
+        if !recentEntries.isEmpty {
+            let recentsItem = NSMenuItem(title: "Recent Projects", action: nil, keyEquivalent: "")
+            let recentsMenu = NSMenu()
+            for entry in recentEntries {
+                let item = NSMenuItem(
+                    title: (entry.cwd as NSString).lastPathComponent,
+                    action: #selector(openRecentProject(_:)),
+                    keyEquivalent: ""
+                )
+                item.target = self
+                item.representedObject = entry.cwd
+                item.toolTip = entry.cwd
+                recentsMenu.addItem(item)
+            }
+            recentsItem.submenu = recentsMenu
+            menu.addItem(recentsItem)
+        }
+
+        menu.addItem(.separator())
+
         let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
@@ -258,6 +279,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         SettingsWindowController.shared.showSettings()
+    }
+
+    @objc private func openRecentProject(_ sender: NSMenuItem) {
+        guard let cwd = sender.representedObject as? String else { return }
+        TerminalBridge.openNewSession(cwd: cwd, initialPrompt: "")
+        Task { @MainActor in
+            RecentProjectsStore.shared.recordUsage(cwd)
+        }
     }
 
     @objc private func toggleMute() {
