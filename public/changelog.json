@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.11.0",
+    "build": 50,
+    "date": "2026-05-22",
+    "highlights": "Open a new Claude session in any directory, right from the panel",
+    "changes": [
+      { "type": "new", "text": "Brand new \"New Session\" launcher: pick a directory and (optionally) a session name and an initial prompt — ClaudeBell opens a new tab in your terminal, runs `claude`, and tracks the session under the name you gave it" },
+      { "type": "new", "text": "A prominent \"+ New Session\" bar now lives just above the Sessions panel, both in the empty state and the sidebar — always one click away" },
+      { "type": "new", "text": "Recent Projects are remembered automatically: pick one from the form's Recent tab, or right-click the menu bar icon and use the \"Recent Projects ▸\" submenu to jump straight back in" },
+      { "type": "new", "text": "Session name set at launch shows up in the sidebar and the menu, so multiple projects are easier to tell apart at a glance" },
+      { "type": "changed", "text": "Recent and Browse are now mutually exclusive choices in the launcher form so the source of the directory is always unambiguous" },
+      { "type": "changed", "text": "\"Open in Terminal\" moved out of the footer and into a compact ghost-style button right next to the notification title — closer to where the eye already is, no extra footer chrome" },
+      { "type": "changed", "text": "Inline code blocks in notification text use a larger, easier-to-read font size" }
+    ]
+  },
+  {
     "version": "1.10.3",
     "build": 49,
     "date": "2026-05-21",
