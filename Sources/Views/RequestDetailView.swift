@@ -82,12 +82,19 @@ struct RequestDetailView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack {
+                    HStack(alignment: .top, spacing: 10) {
                         Image(systemName: ToolIconMapper.icon(for: request.toolName))
                             .font(.title2)
                             .foregroundStyle(.orange)
                         VStack(alignment: .leading, spacing: 2) {
-                            RenameableTitleView(text: request.projectName, sessionId: request.sessionId)
+                            HStack(spacing: 6) {
+                                RenameableTitleView(text: request.projectName, sessionId: request.sessionId)
+                                OpenInTerminalButton {
+                                    TerminalBridge.focusTerminalTab(forCwd: request.cwd, transcriptPath: request.transcriptPath)
+                                    request.respond(allow: false)
+                                    store.removeRequest(id: request.id)
+                                }
+                            }
                             Text(isAskUserQuestion ? "Question" : isExitPlanMode ? "Plan Review" : request.toolName)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -163,11 +170,7 @@ struct RequestDetailView: View {
                 .padding(.bottom, 4)
             }
 
-            DetailFooterView(cwd: request.cwd, transcriptPath: request.transcriptPath, standalone: false, focusedButton: footerFocused, onOpenInTerminal: {
-                TerminalBridge.focusTerminalTab(forCwd: request.cwd, transcriptPath: request.transcriptPath)
-                request.respond(allow: false)
-                store.removeRequest(id: request.id)
-            }) {
+            DetailFooterView(cwd: request.cwd, transcriptPath: request.transcriptPath, standalone: false, focusedButton: footerFocused) {
                 request.respond(allow: false)
                 store.removeRequest(id: request.id)
             }
@@ -224,7 +227,7 @@ struct RequestDetailView: View {
     private var buttonOrder: [ActionButton] {
         canAlwaysAllow ? [.deny, .allow, .allowAlways] : [.deny, .allow]
     }
-    private static let footerOrder: [DetailFooterView.FooterButton] = [.dismiss, .openInTerminal]
+    private static let footerOrder: [DetailFooterView.FooterButton] = [.dismiss]
 
     private func installKeyMonitor() {
         let buttons = buttonOrder
@@ -241,7 +244,7 @@ struct RequestDetailView: View {
                 return nil
             case 124: // right arrow
                 if isInFooter {
-                    footerFocused = .openInTerminal
+                    footerFocused = .dismiss
                 } else if let current = focused, let idx = buttons.firstIndex(of: current), idx < buttons.count - 1 {
                     focused = buttons[idx + 1]
                 }
@@ -281,10 +284,6 @@ struct RequestDetailView: View {
     private func activateFooter() {
         switch footerFocused {
         case .dismiss:
-            request.respond(allow: false)
-            store.removeRequest(id: request.id)
-        case .openInTerminal:
-            TerminalBridge.focusTerminalTab(forCwd: request.cwd, transcriptPath: request.transcriptPath)
             request.respond(allow: false)
             store.removeRequest(id: request.id)
         case nil:

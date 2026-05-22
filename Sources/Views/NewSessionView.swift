@@ -5,6 +5,7 @@ struct NewSessionView: View {
     @ObservedObject private var bodyStyle = BodyStyleSettings.shared
     @ObservedObject private var recents = RecentProjectsStore.shared
     @State private var directoryURL: URL?
+    @State private var sessionName: String = ""
     @State private var initialPrompt: String = ""
 
     var onCancel: () -> Void
@@ -19,6 +20,8 @@ struct NewSessionView: View {
                     Divider()
 
                     directorySection
+
+                    nameSection
 
                     promptSection
 
@@ -85,6 +88,27 @@ struct NewSessionView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .strokeBorder(Color.secondary.opacity(0.15), lineWidth: 1)
             )
+        }
+    }
+
+    private var nameSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Session name (optional)")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+            TextField(directoryURL?.lastPathComponent ?? "e.g. API refactor", text: $sessionName)
+                .textFieldStyle(.plain)
+                .font(.callout)
+                .padding(10)
+                .background(bodyStyle.backgroundColor)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color.secondary.opacity(0.15), lineWidth: 1)
+                )
+            Text("Shown in the sidebar and the Recent Projects menu.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
         }
     }
 
@@ -167,8 +191,12 @@ struct NewSessionView: View {
     private func open() {
         guard let url = directoryURL else { return }
         let cwd = url.path
+        let trimmedName = sessionName.trimmingCharacters(in: .whitespacesAndNewlines)
         TerminalBridge.openNewSession(cwd: cwd, initialPrompt: initialPrompt)
-        recents.recordUsage(cwd)
+        recents.recordUsage(cwd, name: trimmedName.isEmpty ? nil : trimmedName)
+        if !trimmedName.isEmpty {
+            RequestStore.shared.reserveSessionName(cwd: cwd, name: trimmedName)
+        }
         onOpen()
     }
 }

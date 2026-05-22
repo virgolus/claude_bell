@@ -10,7 +10,14 @@ final class RecentProjectsStore: ObservableObject {
     struct Entry: Identifiable, Codable, Equatable {
         let cwd: String
         let lastUsed: Date
+        var name: String?
         var id: String { cwd }
+
+        /// Label to show in menus: explicit name if any, else the basename.
+        var displayLabel: String {
+            if let name, !name.isEmpty { return name }
+            return (cwd as NSString).lastPathComponent
+        }
     }
 
     @Published private(set) var entries: [Entry] = []
@@ -23,11 +30,15 @@ final class RecentProjectsStore: ObservableObject {
     }
 
     /// Record a usage of `cwd`. Deduplicates by absolute path, prepends, and trims to `maxEntries`.
-    func recordUsage(_ cwd: String) {
+    /// If `name` is non-nil it overrides any previously stored name; if `name` is nil the existing
+    /// name (if any) is preserved.
+    func recordUsage(_ cwd: String, name: String? = nil) {
         let trimmed = cwd.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
+        let previousName = entries.first(where: { $0.cwd == trimmed })?.name
+        let resolvedName = name?.trimmingCharacters(in: .whitespacesAndNewlines).nonEmpty ?? previousName
         var next = entries.filter { $0.cwd != trimmed }
-        next.insert(Entry(cwd: trimmed, lastUsed: Date()), at: 0)
+        next.insert(Entry(cwd: trimmed, lastUsed: Date(), name: resolvedName), at: 0)
         if next.count > maxEntries { next = Array(next.prefix(maxEntries)) }
         entries = next
         save()
@@ -52,4 +63,8 @@ final class RecentProjectsStore: ObservableObject {
         guard let data = try? JSONEncoder().encode(entries) else { return }
         AppDefaults.shared.set(data, forKey: storageKey)
     }
+}
+
+private extension String {
+    var nonEmpty: String? { isEmpty ? nil : self }
 }

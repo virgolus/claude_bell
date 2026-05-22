@@ -114,12 +114,40 @@ final class RequestStore: ObservableObject {
         trackSession(id: id, cwd: cwd, lastPrompt: lastPrompt)
     }
 
+    /// Queue of (cwd, name) waiting to be applied to the next freshly-tracked session.
+    /// Populated when the user launches a session via NewSessionView with a name set.
+    /// Consumed by `trackSession` when a new session arrives for a matching cwd.
+    private var pendingSessionNames: [(cwd: String, name: String, queuedAt: Date)] = []
+
+    /// Reserve a name to be applied to the next new session matching `cwd`. First-come,
+    /// first-served per cwd; expires after 5 minutes to avoid mis-attribution if the
+    /// launched terminal never produced a session.
+    func reserveSessionName(cwd: String, name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !cwd.isEmpty else { return }
+        pendingSessionNames.removeAll { $0.cwd == cwd }
+        pendingSessionNames.append((cwd, trimmed, Date()))
+    }
+
+    private func consumePendingName(for cwd: String) -> String? {
+        let cutoff = Date().addingTimeInterval(-5 * 60)
+        pendingSessionNames.removeAll { $0.queuedAt < cutoff }
+        guard let idx = pendingSessionNames.firstIndex(where: { $0.cwd == cwd }) else { return nil }
+        let name = pendingSessionNames[idx].name
+        pendingSessionNames.remove(at: idx)
+        return name
+    }
+
     private func trackSession(id: String, cwd: String, lastPrompt: String? = nil) {
         if sessions[id] != nil {
             sessions[id]?.lastSeen = Date()
             if let lastPrompt { sessions[id]?.lastPrompt = lastPrompt }
         } else {
-            sessions[id] = SessionInfo(id: id, cwd: cwd, lastSeen: Date(), lastPrompt: lastPrompt)
+            var info = SessionInfo(id: id, cwd: cwd, lastSeen: Date(), lastPrompt: lastPrompt)
+            if let pending = consumePendingName(for: cwd) {
+                info.customName = pending
+            }
+            sessions[id] = info
             RecentProjectsStore.shared.recordUsage(cwd)
         }
     }

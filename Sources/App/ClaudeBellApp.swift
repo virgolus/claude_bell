@@ -232,7 +232,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let recentsMenu = NSMenu()
             for entry in recentEntries {
                 let item = NSMenuItem(
-                    title: (entry.cwd as NSString).lastPathComponent,
+                    title: entry.displayLabel,
                     action: #selector(openRecentProject(_:)),
                     keyEquivalent: ""
                 )

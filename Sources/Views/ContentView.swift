@@ -19,7 +19,7 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                HeaderView(onNewSession: { selectedItem = .newSession })
+                HeaderView()
 
                 if let update = store.availableUpdate {
                     UpdateBannerView(update: update)
@@ -37,6 +37,9 @@ struct ContentView: View {
                     } else {
                         VStack(spacing: 0) {
                             EmptyStateView()
+                            NewSessionBar(isActive: selectedItem == .newSession) {
+                                selectedItem = (selectedItem == .newSession) ? nil : .newSession
+                            }
                             if !store.sessions.isEmpty {
                                 sessionsSection
                             }
@@ -156,6 +159,11 @@ struct ContentView: View {
             }
             .listStyle(.sidebar)
 
+            Divider()
+            NewSessionBar(isActive: selectedItem == .newSession) {
+                selectedItem = (selectedItem == .newSession) ? nil : .newSession
+            }
+
             if !store.sessions.isEmpty {
                 Divider()
                 sessionsSection
@@ -238,12 +246,19 @@ struct ContentView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     // Header
-                    HStack {
+                    HStack(alignment: .top, spacing: 10) {
                         Image(systemName: notification.meta.icon)
                             .font(.title2)
                             .foregroundStyle(notification.meta.iconColor)
                         VStack(alignment: .leading, spacing: 2) {
-                            RenameableTitleView(text: notification.displayProjectName, sessionId: notification.sessionId)
+                            HStack(spacing: 6) {
+                                RenameableTitleView(text: notification.displayProjectName, sessionId: notification.sessionId)
+                                OpenInTerminalButton {
+                                    TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath)
+                                    store.removeNotification(id: notification.id)
+                                    selectedItem = nil
+                                }
+                            }
                             HStack(spacing: 4) {
                                 Text(notification.displayTitle)
                                 Text("·")
@@ -252,6 +267,7 @@ struct ContentView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         }
+                        Spacer()
                     }
 
                     Divider()
