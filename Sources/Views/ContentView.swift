@@ -3,6 +3,7 @@ import SwiftUI
 enum SidebarItem: Hashable {
     case request(UUID)
     case notification(UUID)
+    case newSession
 }
 
 struct ContentView: View {
@@ -27,13 +28,24 @@ struct ContentView: View {
                 Divider()
 
                 if store.pendingRequests.isEmpty && store.notifications.isEmpty {
-                    VStack(spacing: 0) {
-                        EmptyStateView()
-                        if !store.sessions.isEmpty {
-                            sessionsSection
+                    if selectedItem == .newSession {
+                        NewSessionView(
+                            onCancel: { selectedItem = nil },
+                            onOpen: { selectedItem = nil }
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        VStack(spacing: 0) {
+                            EmptyStateView()
+                            NewSessionBar(isActive: selectedItem == .newSession) {
+                                selectedItem = (selectedItem == .newSession) ? nil : .newSession
+                            }
+                            if !store.sessions.isEmpty {
+                                sessionsSection
+                            }
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     HStack(spacing: 0) {
                         sidebarList
@@ -147,6 +159,11 @@ struct ContentView: View {
             }
             .listStyle(.sidebar)
 
+            Divider()
+            NewSessionBar(isActive: selectedItem == .newSession) {
+                selectedItem = (selectedItem == .newSession) ? nil : .newSession
+            }
+
             if !store.sessions.isEmpty {
                 Divider()
                 sessionsSection
@@ -208,6 +225,11 @@ struct ContentView: View {
             } else {
                 placeholder
             }
+        case .newSession:
+            NewSessionView(
+                onCancel: { selectedItem = nil },
+                onOpen: { selectedItem = nil }
+            )
         case nil:
             placeholder
         }
@@ -224,12 +246,19 @@ struct ContentView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     // Header
-                    HStack {
+                    HStack(alignment: .top, spacing: 10) {
                         Image(systemName: notification.meta.icon)
                             .font(.title2)
                             .foregroundStyle(notification.meta.iconColor)
                         VStack(alignment: .leading, spacing: 2) {
-                            RenameableTitleView(text: notification.displayProjectName, sessionId: notification.sessionId)
+                            HStack(spacing: 6) {
+                                RenameableTitleView(text: notification.displayProjectName, sessionId: notification.sessionId)
+                                OpenInTerminalButton {
+                                    TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath)
+                                    store.removeNotification(id: notification.id)
+                                    selectedItem = nil
+                                }
+                            }
                             HStack(spacing: 4) {
                                 Text(notification.displayTitle)
                                 Text("·")
@@ -238,6 +267,7 @@ struct ContentView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         }
+                        Spacer()
                     }
 
                     Divider()
@@ -392,6 +422,7 @@ struct ContentView: View {
         switch item {
         case .request(let id): return store.pendingRequests.contains { $0.id == id }
         case .notification(let id): return store.notifications.contains { $0.id == id }
+        case .newSession: return true
         }
     }
 

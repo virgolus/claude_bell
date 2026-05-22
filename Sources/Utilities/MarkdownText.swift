@@ -61,7 +61,7 @@ struct MarkdownText: View {
         case .codeBlock(let code):
             ScrollView(.horizontal, showsIndicators: false) {
                 Text(code)
-                    .font(codeFont(size: .caption))
+                    .font(codeFont(size: .body))
                     .textSelection(.enabled)
                     .padding(10)
             }
