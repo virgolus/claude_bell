@@ -114,24 +114,20 @@ struct RequestDetailView: View {
                     Divider()
 
                     if let questions = cachedQuestions {
-                        // AskUserQuestion: show interactive question options
+                        // AskUserQuestion: answer through the hook response.
+                        // Claude Code ≥ 2.1.150 no longer shows a TUI picker — answers
+                        // must be injected into the tool input via decision.updatedInput.
                         QuestionOptionsView(
                             questions: questions,
-                            onSend: { text in
-                                request.respond(.allow)
+                            onSend: { _ in },
+                            onAnswers: { answers, annotations in
+                                request.respond(answers: answers, annotations: annotations)
                                 store.removeRequest(id: request.id)
-                                // Delay typing until Claude Code has rendered the prompt
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                                    TerminalBridge.sendText(text, toCwd: request.cwd, transcriptPath: request.transcriptPath)
-                                }
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                    NSApplication.shared.activate()
-                                }
                             },
                             cwd: request.cwd,
                             transcriptPath: request.transcriptPath,
                             onDismiss: {
-                                request.respond(.allow)
+                                request.respond(.deny)
                                 store.removeRequest(id: request.id)
                             }
                         )

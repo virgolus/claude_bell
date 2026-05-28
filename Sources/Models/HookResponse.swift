@@ -35,6 +35,41 @@ struct HookResponse: Sendable {
         permissionDecision(allow ? .allow : .deny)
     }
 
+    /// Allow the tool and inject the user's answers into the tool input.
+    /// Used for AskUserQuestion: Claude Code ≥ 2.1.150 no longer shows a TUI picker,
+    /// so the hook must populate `answers` (and optionally `annotations`) via
+    /// `decision.updatedInput`. Parser in the CLI: `decision.updatedInput` becomes
+    /// the new tool input, and AskUserQuestion.call() echoes it back as the result.
+    static func permissionDecisionAllowWithUpdatedInput(
+        originalInput: [String: AnyCodable],
+        answers: [String: String],
+        annotations: [String: [String: String]]? = nil
+    ) -> HookResponse {
+        var updatedInput: [String: Any] = originalInput.mapValues { $0.value }
+        updatedInput["answers"] = answers
+        if let annotations, !annotations.isEmpty {
+            updatedInput["annotations"] = annotations
+        }
+
+        let payload: [String: Any] = [
+            "hookSpecificOutput": [
+                "hookEventName": "PermissionRequest",
+                "decision": [
+                    "behavior": "allow",
+                    "updatedInput": updatedInput
+                ]
+            ]
+        ]
+
+        guard JSONSerialization.isValidJSONObject(payload),
+              let data = try? JSONSerialization.data(withJSONObject: payload),
+              let json = String(data: data, encoding: .utf8) else {
+            print("[HookResponse] WARNING: updatedInput serialization failed, falling back to plain allow")
+            return permissionDecision(.allow)
+        }
+        return HookResponse(json: json)
+    }
+
     func toHTTPResponse() -> Response {
         Response(
             status: .ok,

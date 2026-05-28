@@ -53,4 +53,19 @@ final class PendingRequest: Identifiable, ObservableObject {
     func respond(allow: Bool) {
         respond(allow ? .allow : .deny)
     }
+
+    /// Allow the tool and provide structured answers (for AskUserQuestion).
+    /// Builds a hook response with `decision.updatedInput` containing the original
+    /// tool input plus the `answers` (and optional `annotations`) dictionaries.
+    func respond(answers: [String: String], annotations: [String: [String: String]]? = nil) {
+        guard !hasResponded else { return }
+        hasResponded = true
+        let response = HookResponse.permissionDecisionAllowWithUpdatedInput(
+            originalInput: toolInput,
+            answers: answers,
+            annotations: annotations
+        )
+        print("[PendingRequest] Responding with answers: \(response.json)")
+        continuation.resume(returning: response)
+    }
 }

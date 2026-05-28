@@ -3,6 +3,10 @@ import SwiftUI
 struct QuestionOptionsView: View {
     let questions: [ParsedQuestion]
     let onSend: (String) -> Void
+    /// Structured-answer callback for the AskUserQuestion permission hook path.
+    /// When set, takes precedence over `onSend` — the answers are returned to
+    /// Claude Code via the hook response instead of being typed into the terminal.
+    var onAnswers: (([String: String], [String: [String: String]]?) -> Void)? = nil
     var cwd: String = ""
     var transcriptPath: String = ""
     var onDismiss: (() -> Void)?
@@ -151,7 +155,11 @@ struct QuestionOptionsView: View {
                 freeTextExpanded = false
                 selections[question.id] = [option.index]
                 if questions.count == 1 {
-                    onSend(option.token ?? "\(option.index)")
+                    if let onAnswers {
+                        onAnswers([question.question: option.label], nil)
+                    } else {
+                        onSend(option.token ?? "\(option.index)")
+                    }
                 }
             }
         }
@@ -168,8 +176,23 @@ struct QuestionOptionsView: View {
     }
 
     private func submitAll() {
-        // Build response: for each question, send the selected option tokens.
-        // Format: "1\n2,3" (one line per question, comma-separated for multiSelect).
+        if let onAnswers {
+            // Structured path (AskUserQuestion permission hook): map each question
+            // to its selected option labels.
+            var answers: [String: String] = [:]
+            for question in questions {
+                let selectedIndices = selections[question.id, default: []].sorted()
+                let labels = selectedIndices.compactMap { idx -> String? in
+                    question.options.first(where: { $0.index == idx })?.label
+                }
+                answers[question.question] = labels.joined(separator: ", ")
+            }
+            onAnswers(answers, nil)
+            return
+        }
+
+        // Legacy path (transcript-parsed notifications): build "1\n2,3" text to
+        // type into the terminal.
         var parts: [String] = []
         for question in questions {
             let selectedIndices = selections[question.id, default: []].sorted()
@@ -182,8 +205,14 @@ struct QuestionOptionsView: View {
         onSend(parts.joined(separator: "\n"))
     }
 
-    /// Send free-text response via two-step (option token + custom text).
+    /// Send free-text response. For the structured (hook) path, pass the typed
+    /// text directly as the answer for the first question. For the legacy
+    /// (terminal-paste) path, use the two-step option-token + text sequence.
     private func sendFreeText(_ text: String) {
+        if let onAnswers, let firstQuestion = questions.first {
+            onAnswers([firstQuestion.question: text], nil)
+            return
+        }
         if let firstQuestion = questions.first,
            let option = Self.freeTextOption(in: firstQuestion),
            !cwd.isEmpty {

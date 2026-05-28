@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.11.1",
+    "build": 51,
+    "date": "2026-05-28",
+    "highlights": "Restore AskUserQuestion answers — Claude Code 2.1.150+ compatibility",
+    "changes": [
+      { "type": "fixed", "text": "AskUserQuestion answers now reach Claude Code again on recent Claude Code versions (2.1.150 and later). The CLI dropped its in-terminal TUI picker for these tool calls, which left every answer empty — the panel selections never made it back. ClaudeBell now returns the selected option labels (and any custom text) directly in the permission hook response, so Claude receives a fully populated answer the moment you submit." }
+    ]
+  },
+  {
     "version": "1.11.0",
     "build": 50,
     "date": "2026-05-22",
