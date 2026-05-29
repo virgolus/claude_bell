@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.12.2",
+    "build": 54,
+    "date": "2026-05-29",
+    "highlights": "More reliable message sending into Terminal.app",
+    "changes": [
+      { "type": "fixed", "text": "Sending a reply or follow-up into Terminal.app no longer occasionally leaves the text sitting in Claude's input without submitting. ClaudeBell now pastes the message and sends the Return as a separate keystroke — the way you would by hand — so it submits every time. Note: this uses a system keystroke, so ClaudeBell needs Accessibility permission (System Settings → Privacy & Security → Accessibility); re-add ClaudeBell there if sending stops working after updating." }
+    ]
+  },
+  {
     "version": "1.12.1",
     "build": 53,
     "date": "2026-05-29",
