@@ -17,3 +17,5 @@ ClaudeBell.zip
 # Local demo recording artifacts
 *.mov
 settings.local.json
+scripts/demo/record-gif.sh
+scripts/demo/replay-hooks.sh
