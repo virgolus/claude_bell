@@ -13,3 +13,7 @@ ClaudeBell.app/Contents/Resources/changelog.json
 # Release artifact — built locally, uploaded to Vercel on deploy, never committed
 public/ClaudeBell.zip
 ClaudeBell.zip
+
+# Local demo recording artifacts
+*.mov
+settings.local.json
