@@ -380,6 +380,16 @@ struct ContentView: View {
                         SessionRowView(session: session)
 
                         Button {
+                            TerminalBridge.focusTerminalTab(forCwd: session.cwd)
+                        } label: {
+                            Image(systemName: "terminal")
+                                .foregroundStyle(.secondary)
+                                .font(.caption2)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Open in Terminal")
+
+                        Button {
                             renameText = session.displayName
                             renamingSessionId = session.id
                         } label: {

@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.12.0",
+    "build": 52,
+    "date": "2026-05-29",
+    "highlights": "Jump to the terminal straight from any session in the list",
+    "changes": [
+      { "type": "new", "text": "Every session in the Sessions list now has its own \"Open in Terminal\" button, right next to the rename and dismiss controls — click it to bring the matching terminal tab to the front without waiting for a notification" }
+    ]
+  },
+  {
     "version": "1.11.1",
     "build": 51,
     "date": "2026-05-28",
