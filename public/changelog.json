@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.12.1",
+    "build": 53,
+    "date": "2026-05-29",
+    "highlights": "Opening the terminal from the Sessions list now closes the panel",
+    "changes": [
+      { "type": "fixed", "text": "Clicking \"Open in Terminal\" next to a session in the Sessions list now dismisses the ClaudeBell panel after bringing the matching terminal tab to the front — matching the behaviour of the same button inside notifications" }
+    ]
+  },
+  {
     "version": "1.12.0",
     "build": 52,
     "date": "2026-05-29",
