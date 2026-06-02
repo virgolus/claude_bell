@@ -126,10 +126,19 @@ final class HookServer: Sendable {
             // Hold the request open: a panel reply resumes it with
             // {"decision":"block","reason":…}; timeout/dismiss/focus/SessionEnd
             // resume it with {} (normal stop). Esc in the terminal aborts the
-            // connection → onCancel releases the hold.
+            // connection → onCancel releases the hold. Both the registration
+            // and the cancellation hop to the MainActor, which serializes
+            // them; the flag closes the cancel-before-register race (without
+            // it, a hold could be registered for a dead connection and would
+            // only be reclaimed by its expiry timer).
+            let cancellationFlag = CancellationFlag()
             let response = await withTaskCancellationHandler {
                 await withCheckedContinuation { (continuation: CheckedContinuation<HookResponse, Never>) in
                     Task { @MainActor in
+                        if cancellationFlag.cancelled {
+                            continuation.resume(returning: HookResponse.stopAllow())
+                            return
+                        }
                         let pending = PendingStop(
                             sessionId: sessionId,
                             cwd: cwd,
@@ -143,11 +152,8 @@ final class HookServer: Sendable {
                     }
                 }
             } onCancel: {
-                // Connection aborted (Esc / Claude exited). If this races the
-                // registration task and finds nothing, the hold timer is the
-                // backstop: it resumes the orphan continuation at expiry and
-                // the response is discarded on the dead connection.
                 Task { @MainActor in
+                    cancellationFlag.markCancelled()
                     store.releaseStopHold(sessionId: sessionId)
                 }
             }
@@ -382,5 +388,20 @@ final class HookServer: Sendable {
         }
 
         return false
+    }
+}
+
+/// Thread-safe one-way flag used to order connection-cancellation against the
+/// @MainActor hold-registration task in the /hooks/stop long-poll.
+private final class CancellationFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _cancelled = false
+
+    var cancelled: Bool {
+        lock.withLock { _cancelled }
+    }
+
+    func markCancelled() {
+        lock.withLock { _cancelled = true }
     }
 }
