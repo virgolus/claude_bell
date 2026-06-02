@@ -32,7 +32,7 @@ See [BUILDING.md](BUILDING.md) for the build workflow.
 
 ## Hooks configuration
 
-Hooks are installed in `~/.claude/settings.json` by `HookInstaller.install()`. All hooks point to `http://localhost:19485/hooks/{endpoint}`. The full list: PermissionRequest, Notification, PreToolUse, PostToolUseFailure, Stop, SessionEnd.
+Hooks are installed in `~/.claude/settings.json` by `HookInstaller.install()`. All hooks point to `http://localhost:19485/hooks/{endpoint}`. The full list: PermissionRequest, Notification, PreToolUse, PostToolUseFailure, Stop, SessionEnd, UserPromptSubmit. The Stop hook is a long-poll: ClaudeBell holds it open (configurable, default 5 min) and answers `{"decision":"block","reason":…}` to deliver panel replies directly — see docs/superpowers/specs/2026-06-02-stop-hook-direct-reply-design.md.
 
 ## Testing changes
 
