@@ -9,6 +9,9 @@ final class RequestStore: ObservableObject {
     @Published var pendingRequests: [PendingRequest] = []
     @Published var notifications: [NotificationEntry] = []
     @Published var sessions: [String: SessionInfo] = [:]
+    /// Held Stop hooks keyed by sessionId. Views observe this to decide
+    /// whether a reply travels through the hook (direct) or TerminalBridge.
+    @Published var pendingStops: [String: PendingStop] = [:]
     @Published var isMuted: Bool = AppDefaults.shared.bool(forKey: "isMuted") {
         didSet { AppDefaults.shared.set(isMuted, forKey: "isMuted") }
     }
@@ -45,6 +48,8 @@ final class RequestStore: ObservableObject {
     }
 
     func addRequest(_ request: PendingRequest) {
+        // A new permission request means Claude is running again — any hold for that session is stale
+        releaseStopHold(sessionId: request.sessionId)
         // A new permission request means the user responded in terminal — deny stale ones
         denyStaleRequests(id: request.sessionId)
         // Also clear stale notifications
@@ -101,11 +106,56 @@ final class RequestStore: ObservableObject {
         }
     }
 
+    /// Register a held Stop hook. Any previous hold for the same session is
+    /// stale (Claude stopped again) — release it first.
+    func registerStopHold(_ stop: PendingStop) {
+        pendingStops[stop.sessionId]?.release()
+        pendingStops[stop.sessionId] = stop
+        startStopHoldTimer(for: stop)
+    }
+
+    /// Deliver a panel reply through the held Stop hook.
+    /// Returns false when no live hold exists (caller falls back to TerminalBridge).
+    func answerStopHold(sessionId: String, text: String) -> Bool {
+        guard let stop = pendingStops.removeValue(forKey: sessionId) else { return false }
+        stop.answer(text)
+        return true
+    }
+
+    /// Release one session's hold: the stop completes normally.
+    /// The notification (if any) stays in the panel.
+    func releaseStopHold(sessionId: String) {
+        pendingStops.removeValue(forKey: sessionId)?.release()
+    }
+
+    /// Focus-release: a terminal app became frontmost — release every hold so
+    /// the console is immediately responsive. Notifications stay.
+    func releaseAllStopHolds() {
+        guard !pendingStops.isEmpty else { return }
+        print("[RequestStore] Focus-release: releasing \(pendingStops.count) held stop(s)")
+        for (_, stop) in pendingStops { stop.release() }
+        pendingStops.removeAll()
+    }
+
+    private func startStopHoldTimer(for stop: PendingStop) {
+        let stopId = stop.id
+        let sessionId = stop.sessionId
+        Task { @MainActor [weak self] in
+            let interval = stop.expiresAt.timeIntervalSinceNow
+            if interval > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+            }
+            guard let self, let current = self.pendingStops[sessionId], current.id == stopId else { return }
+            self.releaseStopHold(sessionId: sessionId)
+        }
+    }
+
     func renameSession(id: String, name: String?) {
         sessions[id]?.customName = name
     }
 
     func removeSession(id: String) {
+        releaseStopHold(sessionId: id)
         denyStaleRequests(id: id)
         sessions.removeValue(forKey: id)
     }
