@@ -186,7 +186,11 @@ enum TerminalBridge {
         let escaped = cwd.replacingOccurrences(of: "\"", with: "\\\"")
         let onMatch = action == "focus"
             ? "set selected tab of w to t\n                                set index of w to 1\n                                return true"
-            : "set selected tab of w to t\n                                set index of w to 1\n                                activate\n                                do script theText in t\n                                return true"
+            // Paste via Cmd+V (bracketed paste = text only, no submit), then send a
+            // SEPARATE Return after a short delay. Bundling the newline with the text
+            // (as `do script` does) makes Claude Code's TUI intermittently treat it as a
+            // literal newline instead of a submit — the "text appears but no Enter" bug.
+            : "set selected tab of w to t\n                                set index of w to 1\n                                activate\n                                delay 0.2\n                                tell application \"System Events\"\n                                    keystroke \"v\" using command down\n                                    delay 0.35\n                                    key code 36\n                                end tell\n                                return true"
         let ttyLiteral = tty ?? ""
         return """
         tell application "Terminal"

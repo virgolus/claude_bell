@@ -381,6 +381,7 @@ struct ContentView: View {
 
                         Button {
                             TerminalBridge.focusTerminalTab(forCwd: session.cwd)
+                            store.onDismissPanel?()
                         } label: {
                             Image(systemName: "terminal")
                                 .foregroundStyle(.secondary)
