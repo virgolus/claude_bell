@@ -931,8 +931,241 @@ git commit -m "Document UserPromptSubmit hook and Stop long-poll in CLAUDE.md"
 
 ---
 
+### Task 11: Exact tty targeting for the terminal fallback
+
+*(Added mid-execution at user request: the fuzzy fallback picks the wrong Terminal.app tab almost every time. Root cause: `resolveTty` via `lsof <transcript>` never finds a PID — Claude Code doesn't keep the transcript open. Fix: capture the claude PID from the hook's TCP connection (peer port → `lsof` → PID → `ps` tty), store `session → tty`, and let `TerminalBridge` use the exact Pass-0 tty match.)*
+
+**Files:**
+- Modify: `Sources/Server/HookServer.swift` (custom request context exposing `remoteAddress`; tty capture on hook arrival)
+- Modify: `Sources/Models/SessionInfo.swift` (add `tty`)
+- Modify: `Sources/Store/RequestStore.swift` (setter)
+- Modify: `Sources/Terminal/TerminalBridge.swift` (accept a known tty)
+- Modify: `Sources/Views/ContentView.swift`, `Sources/Views/QuestionOptionsView.swift` (pass the stored tty)
+
+- [ ] **Step 1: Custom request context with remoteAddress**
+
+In `Sources/Server/HookServer.swift`, add at file scope (above `final class HookServer`):
+
+```swift
+/// Request context that captures the client's socket address, so hook
+/// handlers can resolve which claude process (and tty) sent the request.
+struct HookRequestContext: RequestContext, RemoteAddressRequestContext {
+    var coreContext: CoreRequestContextStorage
+    let remoteAddress: SocketAddress?
+
+    init(source: ApplicationRequestContextSource) {
+        self.coreContext = .init(source: source)
+        self.remoteAddress = source.channel.remoteAddress
+    }
+}
+```
+
+Change the router instantiation in `start()` from `let router = Router()` to:
+
+```swift
+        let router = Router(context: HookRequestContext.self)
+```
+
+(The route closures keep their `request, context` signatures; `context` is now `HookRequestContext`.)
+
+- [ ] **Step 2: Resolve tty from the connection's peer port**
+
+Add to `HookServer` (near the other static helpers):
+
+```swift
+    /// Resolve the controlling tty of the claude process behind a hook
+    /// request: peer port → lsof (both endpoints of the localhost
+    /// connection) → the PID that isn't ours → ps tty.
+    static func resolveTty(fromPeerPort port: Int) -> String? {
+        let myPid = ProcessInfo.processInfo.processIdentifier
+        guard let out = Self.shell("lsof -nP -iTCP:\(port) -sTCP:ESTABLISHED -Fp 2>/dev/null") else { return nil }
+        let pids = out.split(separator: "\n")
+            .filter { $0.hasPrefix("p") }
+            .compactMap { Int($0.dropFirst()) }
+            .filter { $0 != Int(myPid) }
+        guard let pid = pids.first else { return nil }
+        guard let ttyRaw = Self.shell("ps -o tty= -p \(pid)"),
+              !ttyRaw.isEmpty, ttyRaw != "??" else { return nil }
+        return "/dev/" + ttyRaw
+    }
+
+    /// Run a shell command and return trimmed stdout, or nil on failure.
+    private static func shell(_ command: String) -> String? {
+        let process = Process()
+        let pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", command]
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            return nil
+        }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+```
+
+- [ ] **Step 3: Capture the tty once per session on hook arrival**
+
+Add this helper to `HookServer`:
+
+```swift
+    /// Capture the session's tty from the connection once (sessions keep the
+    /// same controlling terminal for their lifetime). Runs the lsof/ps work
+    /// off the main actor; stores the result via RequestStore.
+    func captureTtyIfNeeded(sessionId: String, context: HookRequestContext) {
+        guard let port = context.remoteAddress?.port else { return }
+        let store = self.store
+        Task.detached(priority: .utility) {
+            let alreadyKnown = await MainActor.run { store.sessions[sessionId]?.tty != nil }
+            guard !alreadyKnown else { return }
+            guard let tty = Self.resolveTty(fromPeerPort: port) else { return }
+            await MainActor.run { store.setSessionTty(id: sessionId, tty: tty) }
+        }
+    }
+```
+
+Call it as the first statement after `decodeInput` in the THREE routes whose sessions matter for replies — `/hooks/permission-request` (after `input` is decoded), `/hooks/stop`, and `/hooks/pre-tool-use`:
+
+```swift
+            self.captureTtyIfNeeded(sessionId: input.sessionId, context: context)
+```
+
+(In `/hooks/permission-request` the handler closure must capture `self` — change `let store = self.store` usage accordingly if the closure list requires it; the route closures already capture `store`, adding `self` is fine since `HookServer` is `Sendable`.)
+
+- [ ] **Step 4: Store the tty**
+
+In `Sources/Models/SessionInfo.swift`, add after `var lastPrompt: String?`:
+
+```swift
+    /// Controlling terminal of the claude process (e.g. /dev/ttys003),
+    /// resolved from the hook connection. Used for exact tab targeting.
+    var tty: String?
+```
+
+In `Sources/Store/RequestStore.swift`, add after `renameSession(id:name:)`:
+
+```swift
+    func setSessionTty(id: String, tty: String) {
+        sessions[id]?.tty = tty
+    }
+```
+
+- [ ] **Step 5: Let TerminalBridge use the known tty**
+
+In `Sources/Terminal/TerminalBridge.swift`:
+
+`sendText` signature becomes:
+
+```swift
+    static func sendText(_ text: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil) {
+        logToFile("sendText: \"\(text)\" → cwd: \(cwd), transcript: \(transcriptPath), knownTty: \(knownTty ?? "nil")")
+        let resolvedTty = knownTty ?? resolveTty(fromTranscriptPath: transcriptPath)
+```
+
+(the rest of the body unchanged — it already threads `resolvedTty` through).
+
+`sendTextTwoStep` becomes:
+
+```swift
+    static func sendTextTwoStep(_ first: String, then second: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil) {
+        logToFile("sendTextTwoStep: first=\"\(first)\", then=\"\(second)\" → cwd: \(cwd)")
+        sendText(first, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            sendText(second, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
+        }
+    }
+```
+
+`focusTerminalTab` becomes:
+
+```swift
+    static func focusTerminalTab(forCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil) {
+        let resolvedTty = knownTty ?? resolveTty(fromTranscriptPath: transcriptPath)
+```
+
+(rest unchanged).
+
+- [ ] **Step 6: Pass the stored tty at the reply/focus call sites**
+
+In `Sources/Views/ContentView.swift`:
+
+`sendReply` becomes:
+
+```swift
+    private func sendReply(_ text: String, for notification: NotificationEntry) {
+        if !store.answerStopHold(sessionId: notification.sessionId, text: text) {
+            TerminalBridge.sendText(
+                text,
+                toCwd: notification.cwd,
+                transcriptPath: notification.transcriptPath,
+                knownTty: store.sessions[notification.sessionId]?.tty
+            )
+        }
+        store.removeNotification(id: notification.id)
+        selectedItem = nil
+    }
+```
+
+The two focus call sites inside `notificationDetail` (OpenInTerminalButton and TextInputView's onOpenTerminal) become:
+
+```swift
+TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath, knownTty: store.sessions[notification.sessionId]?.tty)
+```
+
+In `Sources/Views/QuestionOptionsView.swift`: add after `hasDirectChannel`:
+
+```swift
+    /// Exact tty of the session's terminal, when known (used by the
+    /// legacy two-step terminal-paste path).
+    var knownTty: String? = nil
+```
+
+and in `sendFreeText`, the two-step call becomes:
+
+```swift
+            TerminalBridge.sendTextTwoStep(option.token ?? "\(option.index)", then: text, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
+```
+
+In `Sources/Views/ContentView.swift`, the `QuestionOptionsView` call gains (after `hasDirectChannel:` and before `cwd:`):
+
+```swift
+                            knownTty: store.sessions[notification.sessionId]?.tty,
+```
+
+- [ ] **Step 7: Build** — `swift build`, expect `Build complete!`
+
+- [ ] **Step 8: Smoke-test tty capture**
+
+```bash
+swift build -c release
+cp .build/release/ClaudeBell ClaudeBell.app/Contents/MacOS/ClaudeBell
+codesign --force --deep --sign - ClaudeBell.app
+pkill -x ClaudeBell; sleep 1; open ClaudeBell.app; sleep 2
+# Simulate a hook from THIS terminal (curl's tty stands in for claude's):
+curl -s -X POST http://localhost:19485/hooks/pre-tool-use \
+  -H 'Content-Type: application/json' \
+  -d "{\"session_id\":\"tty-smoke\",\"cwd\":\"/tmp\"}"
+sleep 1
+grep "tty" /tmp/claudebell.log | tail -2 || echo "check app stdout for setSessionTty"
+tty   # compare: the captured tty should match this terminal's tty
+```
+
+Expected: the captured tty equals this terminal's `tty` output (curl runs on the same controlling terminal).
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add Sources/Server/HookServer.swift Sources/Models/SessionInfo.swift Sources/Store/RequestStore.swift Sources/Terminal/TerminalBridge.swift Sources/Views/ContentView.swift Sources/Views/QuestionOptionsView.swift
+git commit -m "Capture session tty from hook connection for exact tab targeting"
+```
+
+---
+
 ## Out of scope
 
-- `TerminalBridge` tty targeting improvements (fallback kept as-is by user decision).
 - Replying to idle sessions with no held hook (no Claude Code API exists).
 - Unit tests via `swift test` (no XCTest/Swift Testing in this CLT-only environment — verification is build + curl smoke tests + E2E above).
