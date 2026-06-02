@@ -46,13 +46,15 @@ enum HookInstaller {
         permArray.append(permHook)
         hooks["PermissionRequest"] = permArray
 
-        // Stop hook (agent finished)
+        // Stop hook (agent finished) — long-poll for direct replies.
+        // Timeout = hold duration + 60 s margin so ClaudeBell always
+        // self-releases before Claude Code gives up on the hook.
         let stopHook: [String: Any] = [
             "matcher": "",
             "hooks": [[
                 "type": "http",
                 "url": "http://localhost:19485/hooks/stop",
-                "timeout": 10
+                "timeout": DirectReplySettings.hookTimeoutSeconds
             ] as [String: Any]]
         ]
 
@@ -146,7 +148,37 @@ enum HookInstaller {
         notifArray.append(notifHook)
         hooks["Notification"] = notifArray
 
+        // UserPromptSubmit hook (user replied in terminal → dismiss stale notifications)
+        let promptSubmitHook: [String: Any] = [
+            "matcher": "",
+            "hooks": [[
+                "type": "http",
+                "url": "http://localhost:19485/hooks/user-prompt-submit",
+                "timeout": 10
+            ] as [String: Any]]
+        ]
+
+        var promptSubmitArray = hooks["UserPromptSubmit"] as? [[String: Any]] ?? []
+        promptSubmitArray.removeAll { entry in
+            if let hooksList = entry["hooks"] as? [[String: Any]] {
+                return hooksList.contains { ($0["url"] as? String)?.contains("19485") == true }
+            }
+            return false
+        }
+        promptSubmitArray.append(promptSubmitHook)
+        hooks["UserPromptSubmit"] = promptSubmitArray
+
         settings["hooks"] = hooks
+
+        // Each panel reply is one Stop-hook "block". Claude Code's default cap
+        // of 8 consecutive blocks would kill long question chains (e.g.
+        // superpowers brainstorming). Only set it when the user hasn't.
+        var env = settings["env"] as? [String: Any] ?? [:]
+        if env["CLAUDE_CODE_STOP_HOOK_BLOCK_CAP"] == nil {
+            env["CLAUDE_CODE_STOP_HOOK_BLOCK_CAP"] = "50"
+        }
+        settings["env"] = env
+
         try writeSettings(settings)
     }
 
@@ -246,10 +278,36 @@ enum HookInstaller {
             }
         }
 
+        // Remove Claude Bell entries from UserPromptSubmit
+        if var promptSubmitArray = hooks["UserPromptSubmit"] as? [[String: Any]] {
+            promptSubmitArray.removeAll { entry in
+                if let hooksList = entry["hooks"] as? [[String: Any]] {
+                    return hooksList.contains { ($0["url"] as? String)?.contains("19485") == true }
+                }
+                return false
+            }
+            if promptSubmitArray.isEmpty {
+                hooks.removeValue(forKey: "UserPromptSubmit")
+            } else {
+                hooks["UserPromptSubmit"] = promptSubmitArray
+            }
+        }
+
         if hooks.isEmpty {
             settings.removeValue(forKey: "hooks")
         } else {
             settings["hooks"] = hooks
+        }
+
+        // Remove the block cap only if it is still our value
+        if var env = settings["env"] as? [String: Any],
+           env["CLAUDE_CODE_STOP_HOOK_BLOCK_CAP"] as? String == "50" {
+            env.removeValue(forKey: "CLAUDE_CODE_STOP_HOOK_BLOCK_CAP")
+            if env.isEmpty {
+                settings.removeValue(forKey: "env")
+            } else {
+                settings["env"] = env
+            }
         }
 
         try writeSettings(settings)
