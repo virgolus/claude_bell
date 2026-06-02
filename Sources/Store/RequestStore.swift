@@ -140,8 +140,9 @@ final class RequestStore: ObservableObject {
     private func startStopHoldTimer(for stop: PendingStop) {
         let stopId = stop.id
         let sessionId = stop.sessionId
+        let expiresAt = stop.expiresAt
         Task { @MainActor [weak self] in
-            let interval = stop.expiresAt.timeIntervalSinceNow
+            let interval = expiresAt.timeIntervalSinceNow
             if interval > 0 {
                 try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
             }
@@ -213,7 +214,8 @@ final class RequestStore: ObservableObject {
             // Only remove if no active notifications or requests for this session
             let hasNotifications = notifications.contains { $0.sessionId == id }
             let hasRequests = pendingRequests.contains { $0.sessionId == id }
-            if !hasNotifications && !hasRequests {
+            let hasHold = pendingStops[id] != nil
+            if !hasNotifications && !hasRequests && !hasHold {
                 sessions.removeValue(forKey: id)
             }
         }
