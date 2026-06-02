@@ -112,6 +112,12 @@ private struct GeneralSettingsTab: View {
                         }
                     }
                 }
+                if let hooksError {
+                    Label(hooksError, systemImage: "exclamationmark.circle")
+                        .foregroundStyle(Color(nsColor: .systemRed))
+                        .font(.callout)
+                        .help(hooksError)
+                }
             } header: {
                 sectionHeader("Direct Reply", systemImage: "bolt")
             } footer: {
