@@ -4,9 +4,9 @@ enum TerminalBridge {
 
     /// Sends text to a Terminal.app tab whose process matches Claude Code.
     /// Uses clipboard paste (Cmd+V) + Return for reliability.
-    static func sendText(_ text: String, toCwd cwd: String, transcriptPath: String = "") {
-        logToFile("sendText: \"\(text)\" → cwd: \(cwd), transcript: \(transcriptPath)")
-        let resolvedTty = resolveTty(fromTranscriptPath: transcriptPath)
+    static func sendText(_ text: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil) {
+        logToFile("sendText: \"\(text)\" → cwd: \(cwd), transcript: \(transcriptPath), knownTty: \(knownTty ?? "nil")")
+        let resolvedTty = knownTty ?? resolveTty(fromTranscriptPath: transcriptPath)
 
         // Save clipboard, put text, paste+enter, restore clipboard
         let pasteboard = NSPasteboard.general
@@ -31,11 +31,11 @@ enum TerminalBridge {
     /// Sends two texts sequentially: first text + Enter, then after a delay, second text + Enter.
     /// Used for "type something else" options where Claude Code expects the option number first,
     /// then the actual text after it prompts.
-    static func sendTextTwoStep(_ first: String, then second: String, toCwd cwd: String, transcriptPath: String = "") {
+    static func sendTextTwoStep(_ first: String, then second: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil) {
         logToFile("sendTextTwoStep: first=\"\(first)\", then=\"\(second)\" → cwd: \(cwd)")
-        sendText(first, toCwd: cwd, transcriptPath: transcriptPath)
+        sendText(first, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            sendText(second, toCwd: cwd, transcriptPath: transcriptPath)
+            sendText(second, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
         }
     }
 
@@ -115,8 +115,8 @@ enum TerminalBridge {
 
     /// Brings the terminal tab running Claude Code to the front.
     /// Runs AppleScript matching off the main thread to avoid blocking the UI.
-    static func focusTerminalTab(forCwd cwd: String, transcriptPath: String = "") {
-        let resolvedTty = resolveTty(fromTranscriptPath: transcriptPath)
+    static func focusTerminalTab(forCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil) {
+        let resolvedTty = knownTty ?? resolveTty(fromTranscriptPath: transcriptPath)
         DispatchQueue.global(qos: .userInitiated).async {
             if focusiTerm2(cwd: cwd, tty: resolvedTty) { return }
             if focusTerminal(cwd: cwd, tty: resolvedTty) { return }

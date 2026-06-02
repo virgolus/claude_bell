@@ -155,6 +155,10 @@ final class RequestStore: ObservableObject {
         sessions[id]?.customName = name
     }
 
+    func setSessionTty(id: String, tty: String) {
+        sessions[id]?.tty = tty
+    }
+
     func removeSession(id: String) {
         releaseStopHold(sessionId: id)
         denyStaleRequests(id: id)

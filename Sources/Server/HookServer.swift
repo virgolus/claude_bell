@@ -2,6 +2,18 @@ import Foundation
 import Hummingbird
 import NIOCore
 
+/// Request context that captures the client's socket address, so hook
+/// handlers can resolve which claude process (and tty) sent the request.
+struct HookRequestContext: RequestContext, RemoteAddressRequestContext {
+    var coreContext: CoreRequestContextStorage
+    let remoteAddress: SocketAddress?
+
+    init(source: ApplicationRequestContextSource) {
+        self.coreContext = .init(source: source)
+        self.remoteAddress = source.channel.remoteAddress
+    }
+}
+
 final class HookServer: Sendable {
     let store: RequestStore
     let hostname = "127.0.0.1"
@@ -14,7 +26,7 @@ final class HookServer: Sendable {
     func start() async throws {
         let store = self.store
 
-        let router = Router()
+        let router = Router(context: HookRequestContext.self)
 
         router.post("/hooks/permission-request") { request, context -> Response in
             print("[HookServer] Received permission request")
@@ -24,6 +36,7 @@ final class HookServer: Sendable {
             if let raw = String(buffer: body) as String? {
                 print("[HookServer] PermissionRequest raw body: \(raw)")
             }
+            self.captureTtyIfNeeded(sessionId: input.sessionId, context: context)
 
             let lastPrompt = Self.lastUserPrompt(from: input.transcriptPath ?? "")
 
@@ -102,6 +115,7 @@ final class HookServer: Sendable {
 
         router.post("/hooks/stop") { request, context -> Response in
             let input = try await Self.decodeInput(request, label: "Stop")
+            self.captureTtyIfNeeded(sessionId: input.sessionId, context: context)
 
             // Check if the last assistant message is actually a question —
             // if so, show as interactive idle_prompt instead of passive stop.
@@ -200,6 +214,7 @@ final class HookServer: Sendable {
 
         router.post("/hooks/pre-tool-use") { request, context -> Response in
             let input = try await Self.decodeInput(request, label: "PreToolUse")
+            self.captureTtyIfNeeded(sessionId: input.sessionId, context: context)
             // Check if session already has a prompt before doing I/O
             let needsPrompt = await MainActor.run { store.sessions[input.sessionId]?.lastPrompt == nil }
             let lastPrompt = needsPrompt ? Self.lastUserPrompt(from: input.transcriptPath ?? "") : nil
@@ -239,6 +254,54 @@ final class HookServer: Sendable {
     }
 
     // MARK: - Helpers
+
+    /// Capture the session's tty from the connection once (sessions keep the
+    /// same controlling terminal for their lifetime). Runs the lsof/ps work
+    /// off the main actor; stores the result via RequestStore.
+    func captureTtyIfNeeded(sessionId: String, context: HookRequestContext) {
+        guard let port = context.remoteAddress?.port else { return }
+        let store = self.store
+        Task.detached(priority: .utility) {
+            let alreadyKnown = await MainActor.run { store.sessions[sessionId]?.tty != nil }
+            guard !alreadyKnown else { return }
+            guard let tty = Self.resolveTty(fromPeerPort: port) else { return }
+            await MainActor.run { store.setSessionTty(id: sessionId, tty: tty) }
+        }
+    }
+
+    /// Resolve the controlling tty of the claude process behind a hook
+    /// request: peer port → lsof (both endpoints of the localhost
+    /// connection) → the PID that isn't ours → ps tty.
+    static func resolveTty(fromPeerPort port: Int) -> String? {
+        let myPid = ProcessInfo.processInfo.processIdentifier
+        guard let out = Self.shell("lsof -nP -iTCP:\(port) -sTCP:ESTABLISHED -Fp 2>/dev/null") else { return nil }
+        let pids = out.split(separator: "\n")
+            .filter { $0.hasPrefix("p") }
+            .compactMap { Int($0.dropFirst()) }
+            .filter { $0 != Int(myPid) }
+        guard let pid = pids.first else { return nil }
+        guard let ttyRaw = Self.shell("ps -o tty= -p \(pid)"),
+              !ttyRaw.isEmpty, ttyRaw != "??" else { return nil }
+        return "/dev/" + ttyRaw
+    }
+
+    /// Run a shell command and return trimmed stdout, or nil on failure.
+    private static func shell(_ command: String) -> String? {
+        let process = Process()
+        let pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", command]
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            return nil
+        }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     private static func decodeInput(_ request: Request, label: String) async throws -> HookInput {
         let body = try await request.body.collect(upTo: 1_048_576)

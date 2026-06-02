@@ -6,6 +6,9 @@ struct SessionInfo: Identifiable, Sendable {
     var lastSeen: Date
     var customName: String?
     var lastPrompt: String?
+    /// Controlling terminal of the claude process (e.g. /dev/ttys003),
+    /// resolved from the hook connection. Used for exact tab targeting.
+    var tty: String?
 
     var projectName: String {
         (cwd as NSString).lastPathComponent

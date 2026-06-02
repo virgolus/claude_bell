@@ -254,7 +254,7 @@ struct ContentView: View {
                             HStack(spacing: 6) {
                                 RenameableTitleView(text: notification.displayProjectName, sessionId: notification.sessionId)
                                 OpenInTerminalButton {
-                                    TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath)
+                                    TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath, knownTty: store.sessions[notification.sessionId]?.tty)
                                     store.removeNotification(id: notification.id)
                                     selectedItem = nil
                                 }
@@ -310,6 +310,7 @@ struct ContentView: View {
                                 sendReply(text, for: notification)
                             },
                             hasDirectChannel: store.pendingStops[notification.sessionId] != nil,
+                            knownTty: store.sessions[notification.sessionId]?.tty,
                             cwd: notification.cwd,
                             transcriptPath: notification.transcriptPath,
                             onDismiss: {
@@ -325,7 +326,7 @@ struct ContentView: View {
                                 sendReply(text, for: notification)
                             },
                             onOpenTerminal: {
-                                TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath)
+                                TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath, knownTty: store.sessions[notification.sessionId]?.tty)
                             }
                         )
                     }
@@ -345,7 +346,12 @@ struct ContentView: View {
     /// Stop hook when alive (direct, no keystrokes), else via TerminalBridge.
     private func sendReply(_ text: String, for notification: NotificationEntry) {
         if !store.answerStopHold(sessionId: notification.sessionId, text: text) {
-            TerminalBridge.sendText(text, toCwd: notification.cwd, transcriptPath: notification.transcriptPath)
+            TerminalBridge.sendText(
+                text,
+                toCwd: notification.cwd,
+                transcriptPath: notification.transcriptPath,
+                knownTty: store.sessions[notification.sessionId]?.tty
+            )
         }
         store.removeNotification(id: notification.id)
         selectedItem = nil

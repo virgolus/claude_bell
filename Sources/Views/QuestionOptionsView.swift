@@ -11,6 +11,9 @@ struct QuestionOptionsView: View {
     /// delivered as the hook reason in a single message (no option-token +
     /// text two-step, which only exists for the terminal-typing path).
     var hasDirectChannel: Bool = false
+    /// Exact tty of the session's terminal, when known (used by the
+    /// legacy two-step terminal-paste path).
+    var knownTty: String? = nil
     var cwd: String = ""
     var transcriptPath: String = ""
     var onDismiss: (() -> Void)?
@@ -224,7 +227,7 @@ struct QuestionOptionsView: View {
         if let firstQuestion = questions.first,
            let option = Self.freeTextOption(in: firstQuestion),
            !cwd.isEmpty {
-            TerminalBridge.sendTextTwoStep(option.token ?? "\(option.index)", then: text, toCwd: cwd, transcriptPath: transcriptPath)
+            TerminalBridge.sendTextTwoStep(option.token ?? "\(option.index)", then: text, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
             onDismiss?()
         } else {
             onSend(text)
