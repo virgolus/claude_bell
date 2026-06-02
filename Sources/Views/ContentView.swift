@@ -395,7 +395,7 @@ struct ContentView: View {
                         SessionRowView(session: session)
 
                         Button {
-                            TerminalBridge.focusTerminalTab(forCwd: session.cwd)
+                            TerminalBridge.focusTerminalTab(forCwd: session.cwd, knownTty: session.tty)
                             store.onDismissPanel?()
                         } label: {
                             Image(systemName: "terminal")
