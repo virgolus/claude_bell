@@ -70,6 +70,27 @@ struct HookResponse: Sendable {
         return HookResponse(json: json)
     }
 
+    /// Stop hook: block the stop and deliver the user's panel reply as the
+    /// reason. Claude Code injects it into the conversation as
+    /// "Stop hook feedback: <reason>" and resumes working on it.
+    static func stopBlock(reason userText: String) -> HookResponse {
+        let payload: [String: Any] = [
+            "decision": "block",
+            "reason": "L'utente ha risposto da ClaudeBell: \(userText)"
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let json = String(data: data, encoding: .utf8) else {
+            print("[HookResponse] WARNING: stopBlock serialization failed, falling back")
+            return HookResponse(json: #"{"decision":"block","reason":"L'utente ha risposto da ClaudeBell (testo non serializzabile)."}"#)
+        }
+        return HookResponse(json: json)
+    }
+
+    /// Stop hook: let the stop complete normally (release without blocking).
+    static func stopAllow() -> HookResponse {
+        HookResponse(json: "{}")
+    }
+
     func toHTTPResponse() -> Response {
         Response(
             status: .ok,
