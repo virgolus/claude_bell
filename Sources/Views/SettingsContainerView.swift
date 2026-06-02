@@ -28,6 +28,7 @@ private struct GeneralSettingsTab: View {
     @State private var hooksInstalled = HookInstaller.isInstalled
     @State private var hooksError: String?
     @State private var showHookConfirm = false
+    @State private var holdSeconds = DirectReplySettings.holdSeconds
 
     @State private var autoModeEnabled = AutoModeInstaller.isEnabled
     @State private var autoModeError: String?
@@ -90,6 +91,31 @@ private struct GeneralSettingsTab: View {
                 sectionHeader("Claude Code Hooks", systemImage: "link")
             } footer: {
                 Text("Intercept permission requests and notifications from Claude Code.")
+            }
+
+            // MARK: Direct Reply
+            Section {
+                Picker("Hold duration", selection: $holdSeconds) {
+                    ForEach(DirectReplySettings.presets, id: \.seconds) { preset in
+                        Text(preset.label).tag(preset.seconds)
+                    }
+                }
+                .onChange(of: holdSeconds) { _, newValue in
+                    DirectReplySettings.holdSeconds = newValue
+                    // Rewrite the Stop hook timeout to match
+                    if hooksInstalled {
+                        do {
+                            try HookInstaller.install()
+                            hooksError = nil
+                        } catch {
+                            hooksError = error.localizedDescription
+                        }
+                    }
+                }
+            } header: {
+                sectionHeader("Direct Reply", systemImage: "bolt")
+            } footer: {
+                Text("After Claude finishes a turn, ClaudeBell keeps a direct channel open for this long: panel replies are delivered through the Stop hook instead of typing into the terminal. Pressing Esc in the terminal or focusing a terminal app releases it early.")
             }
 
             // MARK: Auto Mode
