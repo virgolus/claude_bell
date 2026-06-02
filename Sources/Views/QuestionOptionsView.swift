@@ -7,6 +7,10 @@ struct QuestionOptionsView: View {
     /// When set, takes precedence over `onSend` — the answers are returned to
     /// Claude Code via the hook response instead of being typed into the terminal.
     var onAnswers: (([String: String], [String: [String: String]]?) -> Void)? = nil
+    /// True when a live Stop-hook hold exists for this session: free text is
+    /// delivered as the hook reason in a single message (no option-token +
+    /// text two-step, which only exists for the terminal-typing path).
+    var hasDirectChannel: Bool = false
     var cwd: String = ""
     var transcriptPath: String = ""
     var onDismiss: (() -> Void)?
@@ -211,6 +215,10 @@ struct QuestionOptionsView: View {
     private func sendFreeText(_ text: String) {
         if let onAnswers, let firstQuestion = questions.first {
             onAnswers([firstQuestion.question: text], nil)
+            return
+        }
+        if hasDirectChannel {
+            onSend(text)
             return
         }
         if let firstQuestion = questions.first,

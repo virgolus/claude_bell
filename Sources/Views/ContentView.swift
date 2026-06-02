@@ -272,6 +272,10 @@ struct ContentView: View {
 
                     Divider()
 
+                    if let stop = store.pendingStops[notification.sessionId] {
+                        DirectReplyBadge(expiresAt: stop.expiresAt)
+                    }
+
                     // Message
                     if !notification.message.isEmpty {
                         MarkdownText(notification.message, font: bodyStyle.bodyFont(size: .body), textColor: bodyStyle.fontColor)
@@ -285,9 +289,7 @@ struct ContentView: View {
                         FollowUpActionView(
                             notification: notification,
                             onSend: { text in
-                                TerminalBridge.sendText(text, toCwd: notification.cwd, transcriptPath: notification.transcriptPath)
-                                store.removeNotification(id: notification.id)
-                                selectedItem = nil
+                                sendReply(text, for: notification)
                             }
                         )
                     }
@@ -305,10 +307,9 @@ struct ContentView: View {
                         QuestionOptionsView(
                             questions: questions,
                             onSend: { text in
-                                TerminalBridge.sendText(text, toCwd: notification.cwd, transcriptPath: notification.transcriptPath)
-                                store.removeNotification(id: notification.id)
-                                selectedItem = nil
+                                sendReply(text, for: notification)
                             },
+                            hasDirectChannel: store.pendingStops[notification.sessionId] != nil,
                             cwd: notification.cwd,
                             transcriptPath: notification.transcriptPath,
                             onDismiss: {
@@ -321,9 +322,7 @@ struct ContentView: View {
                         TextInputView(
                             notification: notification,
                             onSend: { text in
-                                TerminalBridge.sendText(text, toCwd: notification.cwd, transcriptPath: notification.transcriptPath)
-                                store.removeNotification(id: notification.id)
-                                selectedItem = nil
+                                sendReply(text, for: notification)
                             },
                             onOpenTerminal: {
                                 TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath)
@@ -340,6 +339,16 @@ struct ContentView: View {
             }
         }
         .id(notification.id)
+    }
+
+    /// Send a reply for a stop/idle_prompt notification: through the held
+    /// Stop hook when alive (direct, no keystrokes), else via TerminalBridge.
+    private func sendReply(_ text: String, for notification: NotificationEntry) {
+        if !store.answerStopHold(sessionId: notification.sessionId, text: text) {
+            TerminalBridge.sendText(text, toCwd: notification.cwd, transcriptPath: notification.transcriptPath)
+        }
+        store.removeNotification(id: notification.id)
+        selectedItem = nil
     }
 
     @State private var renamingSessionId: String?
