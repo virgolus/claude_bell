@@ -100,6 +100,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.dismissPanel()
         }
 
+        // Focus-release: terminal frontmost → release all held Stop hooks
+        TerminalFocusObserver.shared.start()
+
         // Periodically clean up stale sessions (every 5 minutes)
         Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { _ in
             Task { @MainActor in
