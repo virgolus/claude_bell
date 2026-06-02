@@ -5,7 +5,7 @@ import Foundation
 /// (timeout, dismiss, terminal focus, Esc, SessionEnd) — in which case the
 /// stop completes normally.
 @MainActor
-final class PendingStop: Identifiable, ObservableObject {
+final class PendingStop: Identifiable {
     let id = UUID()
     let sessionId: String
     let cwd: String
