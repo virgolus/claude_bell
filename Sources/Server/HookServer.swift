@@ -117,12 +117,42 @@ final class HookServer: Sendable {
                 transcriptPath: input.transcriptPath ?? "",
                 createdAt: Date()
             )
-            Task { @MainActor in
-                store.sessionAdvanced(id: input.sessionId)
-                store.addNotification(entry)
+
+            let sessionId = input.sessionId
+            let cwd = input.cwd
+            let transcriptPath = input.transcriptPath ?? ""
+            let holdSeconds = TimeInterval(DirectReplySettings.holdSeconds)
+
+            // Hold the request open: a panel reply resumes it with
+            // {"decision":"block","reason":…}; timeout/dismiss/focus/SessionEnd
+            // resume it with {} (normal stop). Esc in the terminal aborts the
+            // connection → onCancel releases the hold.
+            let response = await withTaskCancellationHandler {
+                await withCheckedContinuation { (continuation: CheckedContinuation<HookResponse, Never>) in
+                    Task { @MainActor in
+                        let pending = PendingStop(
+                            sessionId: sessionId,
+                            cwd: cwd,
+                            transcriptPath: transcriptPath,
+                            holdSeconds: holdSeconds,
+                            continuation: continuation
+                        )
+                        store.registerStopHold(pending)
+                        store.sessionAdvanced(id: sessionId)
+                        store.addNotification(entry)
+                    }
+                }
+            } onCancel: {
+                // Connection aborted (Esc / Claude exited). If this races the
+                // registration task and finds nothing, the hold timer is the
+                // backstop: it resumes the orphan continuation at expiry and
+                // the response is discarded on the dead connection.
+                Task { @MainActor in
+                    store.releaseStopHold(sessionId: sessionId)
+                }
             }
 
-            return Response(status: .ok)
+            return response.toHTTPResponse()
         }
 
         router.post("/hooks/post-tool-use-failure") { request, context -> Response in
@@ -170,6 +200,19 @@ final class HookServer: Sendable {
             Task { @MainActor in
                 store.sessionAdvanced(id: input.sessionId)
                 store.trackSessionPublic(id: input.sessionId, cwd: input.cwd, lastPrompt: lastPrompt)
+            }
+            return Response(status: .ok)
+        }
+
+        router.post("/hooks/user-prompt-submit") { request, context -> Response in
+            let input = try await Self.decodeInput(request, label: "UserPromptSubmit")
+            Task { @MainActor in
+                // The user replied in the terminal: release any hold for the
+                // session (defensive — a live hold can't normally coexist with
+                // a prompt submission) and dismiss its stale notifications.
+                store.releaseStopHold(sessionId: input.sessionId)
+                store.sessionAdvanced(id: input.sessionId)
+                store.trackSessionPublic(id: input.sessionId, cwd: input.cwd)
             }
             return Response(status: .ok)
         }
