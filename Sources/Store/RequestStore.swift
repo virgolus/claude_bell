@@ -100,6 +100,13 @@ final class RequestStore: ObservableObject {
     }
 
     func removeNotification(id: UUID) {
+        // Dismissing the stop/idle notification releases its held Stop hook
+        // (spec: panel dismiss → {}). No-op when the hold was already
+        // answered or released; other notification types never own a hold.
+        if let notification = notifications.first(where: { $0.id == id }),
+           notification.notificationType == "stop" || notification.notificationType == "idle_prompt" {
+            releaseStopHold(sessionId: notification.sessionId)
+        }
         notifications.removeAll { $0.id == id }
         if pendingRequests.isEmpty && notifications.isEmpty {
             DispatchQueue.main.async { self.onDismissPanel?() }

@@ -265,6 +265,9 @@ final class HookServer: Sendable {
             let alreadyKnown = await MainActor.run { store.sessions[sessionId]?.tty != nil }
             guard !alreadyKnown else { return }
             guard let tty = Self.resolveTty(fromPeerPort: port) else { return }
+            // May race trackSession on the session's first-ever hook: if the
+            // session row doesn't exist yet, setSessionTty is a no-op and the
+            // tty is captured again on the next hook (still nil → retry).
             await MainActor.run { store.setSessionTty(id: sessionId, tty: tty) }
         }
     }
