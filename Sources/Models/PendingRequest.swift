@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 final class PendingRequest: Identifiable, ObservableObject {
-    let id = UUID()
+    let id: UUID
     let sessionId: String
     let cwd: String
     let toolName: String
@@ -18,6 +18,7 @@ final class PendingRequest: Identifiable, ObservableObject {
     }
 
     init(
+        id: UUID = UUID(),
         sessionId: String,
         cwd: String,
         toolName: String,
@@ -26,6 +27,7 @@ final class PendingRequest: Identifiable, ObservableObject {
         permissionSuggestions: [AnyCodable]? = nil,
         continuation: CheckedContinuation<HookResponse, Never>
     ) {
+        self.id = id
         self.sessionId = sessionId
         self.cwd = cwd
         self.toolName = toolName

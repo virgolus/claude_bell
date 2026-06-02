@@ -40,19 +40,39 @@ final class HookServer: Sendable {
 
             let lastPrompt = Self.lastUserPrompt(from: input.transcriptPath ?? "")
 
-            let response = await withCheckedContinuation { (continuation: CheckedContinuation<HookResponse, Never>) in
+            let requestId = UUID()
+            let cancellationFlag = CancellationFlag()
+            let response = await withTaskCancellationHandler {
+                await withCheckedContinuation { (continuation: CheckedContinuation<HookResponse, Never>) in
+                    Task { @MainActor in
+                        if cancellationFlag.cancelled {
+                            continuation.resume(returning: HookResponse.permissionDecision(.deny))
+                            return
+                        }
+                        store.trackSessionPublic(id: input.sessionId, cwd: input.cwd, lastPrompt: lastPrompt)
+                        let pending = PendingRequest(
+                            id: requestId,
+                            sessionId: input.sessionId,
+                            cwd: input.cwd,
+                            toolName: input.toolName ?? "Unknown",
+                            toolInput: input.toolInput ?? [:],
+                            transcriptPath: input.transcriptPath ?? "",
+                            permissionSuggestions: input.permissionSuggestions,
+                            continuation: continuation
+                        )
+                        store.addRequest(pending)
+                    }
+                }
+            } onCancel: {
+                // Claude Code abandoned the request (the user answered the
+                // prompt in the terminal, or pressed Esc). Resume the orphan
+                // continuation and drop the stale card immediately.
                 Task { @MainActor in
-                    store.trackSessionPublic(id: input.sessionId, cwd: input.cwd, lastPrompt: lastPrompt)
-                    let pending = PendingRequest(
-                        sessionId: input.sessionId,
-                        cwd: input.cwd,
-                        toolName: input.toolName ?? "Unknown",
-                        toolInput: input.toolInput ?? [:],
-                        transcriptPath: input.transcriptPath ?? "",
-                        permissionSuggestions: input.permissionSuggestions,
-                        continuation: continuation
-                    )
-                    store.addRequest(pending)
+                    cancellationFlag.markCancelled()
+                    if let stale = store.pendingRequests.first(where: { $0.id == requestId }) {
+                        stale.respond(allow: false)
+                        store.removeRequest(id: requestId)
+                    }
                 }
             }
 
@@ -153,6 +173,10 @@ final class HookServer: Sendable {
                             continuation.resume(returning: HookResponse.stopAllow())
                             return
                         }
+                        // A Stop means the turn ended — any still-held
+                        // permission request for this session is stale
+                        // (answered in the terminal or abandoned).
+                        store.denyStaleRequests(id: sessionId)
                         let pending = PendingStop(
                             sessionId: sessionId,
                             cwd: cwd,
@@ -228,6 +252,7 @@ final class HookServer: Sendable {
         router.post("/hooks/user-prompt-submit") { request, context -> Response in
             let input = try await Self.decodeInput(request, label: "UserPromptSubmit")
             Task { @MainActor in
+                store.denyStaleRequests(id: input.sessionId)
                 // The user replied in the terminal: release any hold for the
                 // session (defensive — a live hold can't normally coexist with
                 // a prompt submission) and dismiss its stale notifications.
