@@ -37,7 +37,7 @@ final class HookServer: Sendable {
             if let raw = String(buffer: body) as String? {
                 print("[HookServer] PermissionRequest raw body: \(raw)")
             }
-            await self.captureTtyIfNeeded(sessionId: input.sessionId, context: context)
+            await self.refreshSessionTty(sessionId: input.sessionId, context: context)
 
             let lastPrompt = Self.lastUserPrompt(from: input.transcriptPath ?? "")
 
@@ -136,7 +136,7 @@ final class HookServer: Sendable {
 
         router.post("/hooks/stop") { request, context -> Response in
             let input = try await Self.decodeInput(request, label: "Stop")
-            await self.captureTtyIfNeeded(sessionId: input.sessionId, context: context)
+            await self.refreshSessionTty(sessionId: input.sessionId, context: context)
 
             // Check if the last assistant message is actually a question —
             // if so, show as interactive idle_prompt instead of passive stop.
@@ -253,7 +253,6 @@ final class HookServer: Sendable {
 
         router.post("/hooks/pre-tool-use") { request, context -> Response in
             let input = try await Self.decodeInput(request, label: "PreToolUse")
-            await self.captureTtyIfNeeded(sessionId: input.sessionId, context: context)
             // Check if session already has a prompt before doing I/O
             let needsPrompt = await MainActor.run { store.sessions[input.sessionId]?.lastPrompt == nil }
             let lastPrompt = needsPrompt ? Self.lastUserPrompt(from: input.transcriptPath ?? "") : nil
@@ -296,26 +295,20 @@ final class HookServer: Sendable {
 
     // MARK: - Helpers
 
-    /// Capture the session's tty from the hook connection's peer port, ONCE
-    /// per session. Must be awaited from within a route handler BEFORE it
-    /// returns its response: the TCP connection stays ESTABLISHED until then,
-    /// so lsof can resolve the live claude process. (A fire-and-forget task
-    /// would race the connection close — the ephemeral port gets reused and
-    /// resolves to the wrong/dead tty.)
-    func captureTtyIfNeeded(sessionId: String, context: HookRequestContext) async {
+    /// Re-resolve the session's tty from the hook connection's peer port and
+    /// store it, OVERWRITING any previous value. macOS recycles ttysNNN device
+    /// numbers when tabs close/open, so a once-captured tty goes stale; the
+    /// terminal fallback then targets a dead or wrong tab. Call this on the
+    /// Stop hook (low-frequency, fires right before a possible reply) while the
+    /// connection is still open (await before the handler returns / holds), so
+    /// lsof can resolve the live claude process. Only overwrites on a
+    /// successful resolution — a transient failure keeps the prior value.
+    func refreshSessionTty(sessionId: String, context: HookRequestContext) async {
         guard let port = context.remoteAddress?.port else { return }
-        let alreadyKnown = await MainActor.run { self.store.sessions[sessionId]?.tty != nil }
-        guard !alreadyKnown else { return }
-        // Run the blocking lsof/ps off the event loop, but await it so the
-        // request handler does not return (and the connection does not close)
-        // until resolution completes.
         let resolved = await Task.detached(priority: .userInitiated) {
             Self.resolveTty(fromPeerPort: port)
         }.value
         guard let tty = resolved else { return }
-        // May race trackSession on the session's first-ever hook: if the
-        // session row doesn't exist yet, setSessionTty is a no-op and the
-        // tty is captured again on the next hook (still nil → retry).
         await MainActor.run { self.store.setSessionTty(id: sessionId, tty: tty) }
     }
 
