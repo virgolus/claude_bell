@@ -37,7 +37,7 @@ final class HookServer: Sendable {
             if let raw = String(buffer: body) as String? {
                 print("[HookServer] PermissionRequest raw body: \(raw)")
             }
-            self.captureTtyIfNeeded(sessionId: input.sessionId, context: context)
+            await self.captureTtyIfNeeded(sessionId: input.sessionId, context: context)
 
             let lastPrompt = Self.lastUserPrompt(from: input.transcriptPath ?? "")
 
@@ -136,7 +136,7 @@ final class HookServer: Sendable {
 
         router.post("/hooks/stop") { request, context -> Response in
             let input = try await Self.decodeInput(request, label: "Stop")
-            self.captureTtyIfNeeded(sessionId: input.sessionId, context: context)
+            await self.captureTtyIfNeeded(sessionId: input.sessionId, context: context)
 
             // Check if the last assistant message is actually a question —
             // if so, show as interactive idle_prompt instead of passive stop.
@@ -253,7 +253,7 @@ final class HookServer: Sendable {
 
         router.post("/hooks/pre-tool-use") { request, context -> Response in
             let input = try await Self.decodeInput(request, label: "PreToolUse")
-            self.captureTtyIfNeeded(sessionId: input.sessionId, context: context)
+            await self.captureTtyIfNeeded(sessionId: input.sessionId, context: context)
             // Check if session already has a prompt before doing I/O
             let needsPrompt = await MainActor.run { store.sessions[input.sessionId]?.lastPrompt == nil }
             let lastPrompt = needsPrompt ? Self.lastUserPrompt(from: input.transcriptPath ?? "") : nil
@@ -295,21 +295,27 @@ final class HookServer: Sendable {
 
     // MARK: - Helpers
 
-    /// Capture the session's tty from the connection once (sessions keep the
-    /// same controlling terminal for their lifetime). Runs the lsof/ps work
-    /// off the main actor; stores the result via RequestStore.
-    func captureTtyIfNeeded(sessionId: String, context: HookRequestContext) {
+    /// Capture the session's tty from the hook connection's peer port, ONCE
+    /// per session. Must be awaited from within a route handler BEFORE it
+    /// returns its response: the TCP connection stays ESTABLISHED until then,
+    /// so lsof can resolve the live claude process. (A fire-and-forget task
+    /// would race the connection close — the ephemeral port gets reused and
+    /// resolves to the wrong/dead tty.)
+    func captureTtyIfNeeded(sessionId: String, context: HookRequestContext) async {
         guard let port = context.remoteAddress?.port else { return }
-        let store = self.store
-        Task.detached(priority: .utility) {
-            let alreadyKnown = await MainActor.run { store.sessions[sessionId]?.tty != nil }
-            guard !alreadyKnown else { return }
-            guard let tty = Self.resolveTty(fromPeerPort: port) else { return }
-            // May race trackSession on the session's first-ever hook: if the
-            // session row doesn't exist yet, setSessionTty is a no-op and the
-            // tty is captured again on the next hook (still nil → retry).
-            await MainActor.run { store.setSessionTty(id: sessionId, tty: tty) }
-        }
+        let alreadyKnown = await MainActor.run { self.store.sessions[sessionId]?.tty != nil }
+        guard !alreadyKnown else { return }
+        // Run the blocking lsof/ps off the event loop, but await it so the
+        // request handler does not return (and the connection does not close)
+        // until resolution completes.
+        let resolved = await Task.detached(priority: .userInitiated) {
+            Self.resolveTty(fromPeerPort: port)
+        }.value
+        guard let tty = resolved else { return }
+        // May race trackSession on the session's first-ever hook: if the
+        // session row doesn't exist yet, setSessionTty is a no-op and the
+        // tty is captured again on the next hook (still nil → retry).
+        await MainActor.run { self.store.setSessionTty(id: sessionId, tty: tty) }
     }
 
     /// Resolve the controlling tty of the claude process behind a hook
