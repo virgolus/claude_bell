@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Hummingbird
 import NIOCore
@@ -170,6 +171,20 @@ final class HookServer: Sendable {
                 await withCheckedContinuation { (continuation: CheckedContinuation<HookResponse, Never>) in
                     Task { @MainActor in
                         if cancellationFlag.cancelled {
+                            continuation.resume(returning: HookResponse.stopAllow())
+                            return
+                        }
+                        // If a terminal app is already frontmost, don't hold:
+                        // the user is at the console and a held hook would
+                        // queue whatever they type (focus-release only fires
+                        // on activation transitions, which won't happen if
+                        // they never switch apps). The notification still
+                        // appears; panel replies use the terminal fallback.
+                        let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+                        if let frontmost, TerminalFocusObserver.terminalBundleIds.contains(frontmost) {
+                            store.denyStaleRequests(id: sessionId)
+                            store.sessionAdvanced(id: sessionId)
+                            store.addNotification(entry)
                             continuation.resume(returning: HookResponse.stopAllow())
                             return
                         }
