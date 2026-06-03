@@ -141,7 +141,7 @@ struct ContentView: View {
                             HStack {
                                 NotificationRowView(notification: notification)
                                 Button {
-                                    store.removeNotification(id: notification.id)
+                                    store.userDismissNotification(id: notification.id)
                                     if selectedItem == .notification(notification.id) {
                                         selectedItem = nil
                                     }
@@ -255,7 +255,7 @@ struct ContentView: View {
                                 RenameableTitleView(text: notification.displayProjectName, sessionId: notification.sessionId)
                                 OpenInTerminalButton {
                                     TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath, knownTty: store.sessions[notification.sessionId]?.tty)
-                                    store.removeNotification(id: notification.id)
+                                    store.userDismissNotification(id: notification.id)
                                     selectedItem = nil
                                 }
                             }
@@ -314,7 +314,7 @@ struct ContentView: View {
                             cwd: notification.cwd,
                             transcriptPath: notification.transcriptPath,
                             onDismiss: {
-                                store.removeNotification(id: notification.id)
+                                store.userDismissNotification(id: notification.id)
                                 selectedItem = nil
                             }
                         )
@@ -335,7 +335,7 @@ struct ContentView: View {
             }
 
             DetailFooterView(cwd: notification.cwd, transcriptPath: notification.transcriptPath, isPassive: notification.meta.isPassive) {
-                store.removeNotification(id: notification.id)
+                store.userDismissNotification(id: notification.id)
                 selectedItem = nil
             }
         }

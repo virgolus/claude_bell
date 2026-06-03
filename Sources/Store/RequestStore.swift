@@ -12,6 +12,14 @@ final class RequestStore: ObservableObject {
     /// Held Stop hooks keyed by sessionId. Views observe this to decide
     /// whether a reply travels through the hook (direct) or TerminalBridge.
     @Published var pendingStops: [String: PendingStop] = [:]
+
+    /// Per-session message of a stop/idle_prompt notification the user
+    /// explicitly dismissed. Claude Code re-signals the same wait via both the
+    /// Stop hook and a later idle_prompt Notification (~60s apart); without
+    /// this, dismissing the first lets the second resurrect an identical card.
+    /// Cleared when the user actually responds (UserPromptSubmit) or the
+    /// session ends.
+    private var dismissedWaitMessage: [String: String] = [:]
     @Published var isMuted: Bool = AppDefaults.shared.bool(forKey: "isMuted") {
         didSet { AppDefaults.shared.set(isMuted, forKey: "isMuted") }
     }
@@ -73,6 +81,15 @@ final class RequestStore: ObservableObject {
             && !AppDefaults.shared.bool(forKey: "toolErrorNotificationsEnabled") {
             return
         }
+        // Suppress a stop/idle_prompt the user already dismissed for this exact
+        // wait. Claude Code re-signals one wait via both Stop and a later
+        // idle_prompt Notification; dismissing must be sticky until the user
+        // responds (clearDismissedWait) or Claude produces a different message.
+        if notification.notificationType == "stop" || notification.notificationType == "idle_prompt" {
+            if dismissedWaitMessage[notification.sessionId] == notification.message {
+                return
+            }
+        }
         if !notification.meta.isPassive {
             // Skip if session already has a pending permission request (avoids duplicate)
             let sessionHasRequest = pendingRequests.contains {
@@ -111,6 +128,22 @@ final class RequestStore: ObservableObject {
         if pendingRequests.isEmpty && notifications.isEmpty {
             DispatchQueue.main.async { self.onDismissPanel?() }
         }
+    }
+
+    /// User explicitly dismissed a notification. For stop/idle_prompt, remember
+    /// its message so the same wait, re-signalled later, is not resurrected.
+    func userDismissNotification(id: UUID) {
+        if let n = notifications.first(where: { $0.id == id }),
+           n.notificationType == "stop" || n.notificationType == "idle_prompt" {
+            dismissedWaitMessage[n.sessionId] = n.message
+        }
+        removeNotification(id: id)
+    }
+
+    /// The user responded / the wait is genuinely over — allow future waits for
+    /// this session to notify again.
+    func clearDismissedWait(id: String) {
+        dismissedWaitMessage.removeValue(forKey: id)
     }
 
     /// Register a held Stop hook. Any previous hold for the same session is
@@ -169,6 +202,7 @@ final class RequestStore: ObservableObject {
     func removeSession(id: String) {
         releaseStopHold(sessionId: id)
         denyStaleRequests(id: id)
+        dismissedWaitMessage.removeValue(forKey: id)
         sessions.removeValue(forKey: id)
     }
 

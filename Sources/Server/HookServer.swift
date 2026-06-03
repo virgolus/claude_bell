@@ -267,6 +267,7 @@ final class HookServer: Sendable {
         router.post("/hooks/user-prompt-submit") { request, context -> Response in
             let input = try await Self.decodeInput(request, label: "UserPromptSubmit")
             Task { @MainActor in
+                store.clearDismissedWait(id: input.sessionId)
                 store.denyStaleRequests(id: input.sessionId)
                 // The user replied in the terminal: release any hold for the
                 // session (defensive — a live hold can't normally coexist with
