@@ -82,6 +82,10 @@ final class HookServer: Sendable {
 
         router.post("/hooks/notification") { request, context -> Response in
             let input = try await Self.decodeInput(request, label: "Notification")
+            // idle_prompt / elicitation_dialog notifications originate here (not
+            // from Stop) and can be answered via the terminal fallback — keep
+            // the tty fresh from this still-open connection.
+            await self.refreshSessionTty(sessionId: input.sessionId, context: context)
 
             let notificationType = input.notificationType ?? "unknown"
             let relevantTypes = ["permission_prompt", "idle_prompt", "elicitation_dialog"]
@@ -216,6 +220,9 @@ final class HookServer: Sendable {
 
         router.post("/hooks/post-tool-use-failure") { request, context -> Response in
             let input = try await Self.decodeInput(request, label: "PostToolUseFailure")
+            // tool_error notifications offer an "open in terminal" action that
+            // uses the tty — keep it fresh from this still-open connection.
+            await self.refreshSessionTty(sessionId: input.sessionId, context: context)
 
             let toolName = input.toolName ?? "Unknown"
             let errorMsg = input.error ?? input.toolResult ?? "Unknown error"
