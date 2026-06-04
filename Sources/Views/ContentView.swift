@@ -254,7 +254,7 @@ struct ContentView: View {
                             HStack(spacing: 6) {
                                 RenameableTitleView(text: notification.displayProjectName, sessionId: notification.sessionId)
                                 OpenInTerminalButton {
-                                    TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath, knownTty: store.sessions[notification.sessionId]?.tty)
+                                    TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath, knownTty: store.resolvedTty(for: notification.sessionId))
                                     store.userDismissNotification(id: notification.id)
                                     selectedItem = nil
                                 }
@@ -310,7 +310,7 @@ struct ContentView: View {
                                 sendReply(text, for: notification)
                             },
                             hasDirectChannel: store.pendingStops[notification.sessionId] != nil,
-                            knownTty: store.sessions[notification.sessionId]?.tty,
+                            knownTty: store.resolvedTty(for: notification.sessionId),
                             cwd: notification.cwd,
                             transcriptPath: notification.transcriptPath,
                             onDismiss: {
@@ -326,7 +326,7 @@ struct ContentView: View {
                                 sendReply(text, for: notification)
                             },
                             onOpenTerminal: {
-                                TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath, knownTty: store.sessions[notification.sessionId]?.tty)
+                                TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath, knownTty: store.resolvedTty(for: notification.sessionId))
                             }
                         )
                     }
@@ -350,10 +350,14 @@ struct ContentView: View {
                 text,
                 toCwd: notification.cwd,
                 transcriptPath: notification.transcriptPath,
-                knownTty: store.sessions[notification.sessionId]?.tty
+                knownTty: store.resolvedTty(for: notification.sessionId)
             )
         }
-        store.removeNotification(id: notification.id)
+        // The user answered this wait — record the dismissal so the same wait,
+        // re-signalled by a later Stop/idle_prompt (e.g. when a terminal-paste
+        // fallback didn't land), can't resurrect the answered card. Cleared on
+        // the next UserPromptSubmit or when the session ends.
+        store.userDismissNotification(id: notification.id)
         selectedItem = nil
     }
 
@@ -395,7 +399,7 @@ struct ContentView: View {
                         SessionRowView(session: session)
 
                         Button {
-                            TerminalBridge.focusTerminalTab(forCwd: session.cwd, knownTty: session.tty)
+                            TerminalBridge.focusTerminalTab(forCwd: session.cwd, knownTty: store.resolvedTty(for: session.id))
                             store.onDismissPanel?()
                         } label: {
                             Image(systemName: "terminal")

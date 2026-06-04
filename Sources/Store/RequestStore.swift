@@ -20,6 +20,17 @@ final class RequestStore: ObservableObject {
     /// Cleared when the user actually responds (UserPromptSubmit) or the
     /// session ends.
     private var dismissedWaitMessage: [String: String] = [:]
+
+    /// Per-session terminal tty + cwd, persisted across launches. The in-memory
+    /// `sessions` map is empty on launch until a hook re-arrives, so without
+    /// this the panel's terminal-paste fallback loses the exact-tab handle
+    /// after a ClaudeBell restart and mis-targets a wrong tab (especially when
+    /// several sessions share a cwd). Validated at send time against the live
+    /// process on the tty before it is trusted (macOS recycles ttys numbers).
+    private struct TtyRecord: Codable { let tty: String; let cwd: String; let updatedAt: Date }
+    private var ttyCache: [String: TtyRecord] = [:]
+    private let ttyCacheKey = "sessionTtyCache"
+    private let ttyCacheMax = 50
     @Published var isMuted: Bool = AppDefaults.shared.bool(forKey: "isMuted") {
         didSet { AppDefaults.shared.set(isMuted, forKey: "isMuted") }
     }
@@ -30,6 +41,10 @@ final class RequestStore: ObservableObject {
     var onNewRequest: (() -> Void)?
     /// Set by AppDelegate to dismiss the panel properly
     var onDismissPanel: (() -> Void)?
+
+    private init() {
+        loadTtyCache()
+    }
 
     var badgeCount: Int {
         pendingRequests.count + notifications.count
@@ -197,6 +212,16 @@ final class RequestStore: ObservableObject {
 
     func setSessionTty(id: String, tty: String) {
         sessions[id]?.tty = tty
+        let cwd = sessions[id]?.cwd ?? ttyCache[id]?.cwd ?? ""
+        ttyCache[id] = TtyRecord(tty: tty, cwd: cwd, updatedAt: Date())
+        saveTtyCache()
+    }
+
+    /// Best-known tty for a session's terminal tab: the live value if the
+    /// session is still in memory, else the value persisted from a previous
+    /// launch. Used by the panel's terminal-paste fallback for exact targeting.
+    func resolvedTty(for sessionId: String) -> String? {
+        sessions[sessionId]?.tty ?? ttyCache[sessionId]?.tty
     }
 
     func removeSession(id: String) {
@@ -204,6 +229,25 @@ final class RequestStore: ObservableObject {
         denyStaleRequests(id: id)
         dismissedWaitMessage.removeValue(forKey: id)
         sessions.removeValue(forKey: id)
+        // The session ended — its terminal tab is gone, so drop the cached tty
+        // to avoid resurrecting a stale handle if the number gets recycled.
+        ttyCache.removeValue(forKey: id)
+        saveTtyCache()
+    }
+
+    private func loadTtyCache() {
+        guard let data = AppDefaults.shared.data(forKey: ttyCacheKey),
+              let decoded = try? JSONDecoder().decode([String: TtyRecord].self, from: data) else { return }
+        ttyCache = decoded
+    }
+
+    private func saveTtyCache() {
+        if ttyCache.count > ttyCacheMax {
+            let keep = ttyCache.sorted { $0.value.updatedAt > $1.value.updatedAt }.prefix(ttyCacheMax)
+            ttyCache = Dictionary(uniqueKeysWithValues: keep.map { ($0.key, $0.value) })
+        }
+        guard let data = try? JSONEncoder().encode(ttyCache) else { return }
+        AppDefaults.shared.set(data, forKey: ttyCacheKey)
     }
 
     func trackSessionPublic(id: String, cwd: String, lastPrompt: String? = nil) {

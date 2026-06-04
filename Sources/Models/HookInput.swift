@@ -19,6 +19,7 @@ struct HookInput: Codable, Sendable {
     let toolResult: String?
     // Stop/session fields
     let lastAssistantMessage: String?
+    let stopHookActive: Bool?
     // PermissionRequest fields
     let permissionSuggestions: [AnyCodable]?
 
@@ -38,6 +39,7 @@ struct HookInput: Codable, Sendable {
         case error
         case toolResult = "tool_result"
         case lastAssistantMessage = "last_assistant_message"
+        case stopHookActive = "stop_hook_active"
         case permissionSuggestions = "permission_suggestions"
     }
 }

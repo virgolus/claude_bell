@@ -86,6 +86,7 @@ Releasing a hold never removes a notification. Notifications are removed only by
 - **Multiple concurrent sessions**: holds are per `session_id`; focus-release is the only global action and it only downgrades the channel, never discards notifications.
 - **Reply typed in terminal during a hold**: queued by Claude Code, processed at release; `UserPromptSubmit` then dismisses the notification. Esc releases immediately for that session.
 - **Hold expired, user replies from panel**: falls back to the current `TerminalBridge` path unchanged.
+- **Terminal frontmost at stop time**: still hold. An interim optimization (skip the hold when a terminal app is frontmost, to avoid queueing terminal-typed replies) was tried and **reverted (2026-06-04)**: because the user almost always finishes a turn looking at the terminal, it meant no hold was ever registered, so panel `Send`/option replies fell back to `TerminalBridge` keystroke injection (wrong-tab targeting) — defeating the feature. Always holding keeps the direct channel; Esc / focus-release remain the escape hatches for typing in the terminal. (In practice, current Claude Code also fires `UserPromptSubmit` for a terminal reply even while the hold is alive, so the queueing concern is moot — the handler releases the hold and dismisses the card.)
 
 ## Testing
 

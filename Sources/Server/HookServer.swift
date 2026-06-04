@@ -178,20 +178,16 @@ final class HookServer: Sendable {
                             continuation.resume(returning: HookResponse.stopAllow())
                             return
                         }
-                        // If a terminal app is already frontmost, don't hold:
-                        // the user is at the console and a held hook would
-                        // queue whatever they type (focus-release only fires
-                        // on activation transitions, which won't happen if
-                        // they never switch apps). The notification still
-                        // appears; panel replies use the terminal fallback.
-                        let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-                        if let frontmost, TerminalFocusObserver.terminalBundleIds.contains(frontmost) {
-                            store.denyStaleRequests(id: sessionId)
-                            store.sessionAdvanced(id: sessionId)
-                            store.addNotification(entry)
-                            continuation.resume(returning: HookResponse.stopAllow())
-                            return
-                        }
+                        // Always hold — even when a terminal app is frontmost.
+                        // Holding is what gives panel replies (Send / option
+                        // click) a direct hook channel; without a hold they fall
+                        // back to TerminalBridge keystroke injection, whose tty/
+                        // tab targeting is unreliable (the bug this feature
+                        // exists to fix). The cost: a reply *typed* in the
+                        // terminal during a hold is queued by Claude Code until
+                        // the hold releases — Esc releases it instantly
+                        // (connection abort → onCancel), and switching apps
+                        // triggers focus-release.
                         // A Stop means the turn ended — any still-held
                         // permission request for this session is stale
                         // (answered in the terminal or abandoned).

@@ -6,7 +6,16 @@ enum TerminalBridge {
     /// Uses clipboard paste (Cmd+V) + Return for reliability.
     static func sendText(_ text: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil) {
         logToFile("sendText: \"\(text)\" → cwd: \(cwd), transcript: \(transcriptPath), knownTty: \(knownTty ?? "nil")")
-        let resolvedTty = knownTty ?? resolveTty(fromTranscriptPath: transcriptPath)
+        let candidateTty = knownTty ?? resolveTty(fromTranscriptPath: transcriptPath)
+        // Trust the tty for exact targeting only if a live process on it still
+        // sits in the session's cwd. macOS recycles ttysNNN numbers when tabs
+        // close, so a persisted/stale tty could otherwise point at an unrelated
+        // tab (wrong-session paste). Empty cwd → can't validate → trust it.
+        let trustedTty: String? = {
+            guard let t = candidateTty else { return nil }
+            return ttyBelongsToSession(t, cwd: cwd) ? t : nil
+        }()
+        logToFile("sendText: trustedTty=\(trustedTty ?? "nil")")
 
         // Save clipboard, put text, paste+enter, restore clipboard
         let pasteboard = NSPasteboard.general
@@ -15,7 +24,33 @@ enum TerminalBridge {
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
 
-        let sent = sendiTerm2Paste(cwd: cwd, tty: resolvedTty) || sendTerminalPaste(cwd: cwd, tty: resolvedTty) || sendWarpPaste()
+        var sent = false
+        if let tty = trustedTty {
+            // Route to the terminal app that actually owns this tty and paste
+            // into that exact tab — no fuzzy / cross-app passes, so two sessions
+            // sharing a cwd (or another app's claude tab) can't be mis-hit.
+            switch terminalBundleForTty(tty) {
+            case "com.googlecode.iterm2":
+                sent = sendiTerm2Paste(cwd: cwd, tty: tty, exactTtyOnly: true)
+            case "com.apple.Terminal":
+                sent = sendTerminalPaste(cwd: cwd, tty: tty, exactTtyOnly: true)
+            case "dev.warp.Warp-Stable":
+                // Warp's AppleScript exposes no per-tab/tty handle, so we can't
+                // select the tab — paste into Warp's focused tab. Routing here
+                // (instead of the fuzzy chain) still prevents pasting into a
+                // Terminal.app / iTerm2 tab by mistake.
+                sent = sendWarpPaste()
+            default:
+                // Owner unknown — still safe to try exact-tty in both AppleScript
+                // terminals; the unique tty can only match the right tab.
+                sent = sendiTerm2Paste(cwd: cwd, tty: tty, exactTtyOnly: true)
+                    || sendTerminalPaste(cwd: cwd, tty: tty, exactTtyOnly: true)
+            }
+        }
+        if !sent {
+            // No trusted tty (or its tab is gone): best-effort fuzzy fallback.
+            sent = sendiTerm2Paste(cwd: cwd, tty: trustedTty) || sendTerminalPaste(cwd: cwd, tty: trustedTty) || sendWarpPaste()
+        }
 
         // Restore clipboard after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -149,6 +184,48 @@ enum TerminalBridge {
         return tty
     }
 
+    /// Whether `tty` currently hosts a process whose cwd is `cwd` — i.e. the
+    /// tab still belongs to this session. Guards against trusting a tty number
+    /// that macOS recycled to an unrelated tab after the original closed.
+    private static func ttyBelongsToSession(_ tty: String, cwd: String) -> Bool {
+        let target = cwd.trimmingCharacters(in: .whitespaces)
+        guard !target.isEmpty else { return true } // nothing to validate against
+        let dev = tty.replacingOccurrences(of: "/dev/", with: "")
+        guard let out = shell("ps -t \(dev) -o pid= 2>/dev/null"), !out.isEmpty else { return false }
+        let pids = out.split(whereSeparator: { $0 == "\n" || $0 == " " }).compactMap { Int($0) }
+        for pid in pids {
+            if let c = shell("lsof -a -d cwd -Fn -p \(pid) 2>/dev/null | grep '^n' | cut -c2-"),
+               c == target {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// Resolve which terminal emulator owns a tty by walking the process-parent
+    /// chain from a process on that tty up to a known terminal app. Returns the
+    /// app's bundle id, or nil if none matched.
+    private static func terminalBundleForTty(_ tty: String) -> String? {
+        let dev = tty.replacingOccurrences(of: "/dev/", with: "")
+        guard let out = shell("ps -t \(dev) -o pid= 2>/dev/null"),
+              var pid = out.split(whereSeparator: { $0 == "\n" || $0 == " " }).compactMap({ Int($0) }).first else {
+            return nil
+        }
+        for _ in 0..<16 {
+            guard let line = shell("ps -o ppid=,comm= -p \(pid) 2>/dev/null"), !line.isEmpty else { break }
+            let lower = line.lowercased()
+            if lower.contains("iterm") { return "com.googlecode.iterm2" }
+            if lower.contains("warp") { return "dev.warp.Warp-Stable" }
+            if lower.contains("terminal") { return "com.apple.Terminal" }
+            // First whitespace-delimited token is the ppid.
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard let ppid = trimmed.split(separator: " ", maxSplits: 1).first.flatMap({ Int($0) }),
+                  ppid > 1, ppid != pid else { break }
+            pid = ppid
+        }
+        return nil
+    }
+
     /// Run a shell command and return trimmed stdout, or nil on failure.
     private static func shell(_ command: String) -> String? {
         let process = Process()
@@ -182,7 +259,7 @@ enum TerminalBridge {
     /// Pass 1: tab has "claude" in processes AND tty cwd matches → exact match
     /// Pass 2: tab has "claude" in processes → fallback (any claude tab)
     /// Pass 3: tty cwd matches (claude may have exited) → cwd-only fallback
-    private static func terminalMatchScript(cwd: String, action: String, tty: String? = nil) -> String {
+    private static func terminalMatchScript(cwd: String, action: String, tty: String? = nil, exactTtyOnly: Bool = false) -> String {
         let escaped = cwd.replacingOccurrences(of: "\"", with: "\\\"")
         let onMatch = action == "focus"
             ? "set selected tab of w to t\n                                set index of w to 1\n                                return true"
@@ -192,25 +269,10 @@ enum TerminalBridge {
             // literal newline instead of a submit — the "text appears but no Enter" bug.
             : "set selected tab of w to t\n                                set index of w to 1\n                                activate\n                                delay 0.2\n                                tell application \"System Events\"\n                                    keystroke \"v\" using command down\n                                    delay 0.35\n                                    key code 36\n                                end tell\n                                return true"
         let ttyLiteral = tty ?? ""
-        return """
-        tell application "Terminal"
-            if not running then return false
-            \(action == "focus" ? "activate" : "set theText to the clipboard as text")
-            -- Pass 0: exact tty match (resolved from transcript)
-            if "\(ttyLiteral)" is not "" then
-                repeat with w in windows
-                    try
-                        repeat with i from 1 to count of tabs of w
-                            try
-                                set t to tab i of w
-                                if tty of t is "\(ttyLiteral)" then
-                                    \(onMatch)
-                                end if
-                            end try
-                        end repeat
-                    end try
-                end repeat
-            end if
+        // Fuzzy passes (claude+cwd, any-claude, cwd-only). Skipped when
+        // exactTtyOnly is set — the caller has a validated tty and wants no
+        // chance of matching a sibling tab in the same cwd.
+        let fuzzyPasses = exactTtyOnly ? "" : """
             -- Pass 1: claude process + cwd match via tty lsof
             repeat with w in windows
                 try
@@ -267,13 +329,34 @@ enum TerminalBridge {
                     end repeat
                 end try
             end repeat
+        """
+        return """
+        tell application "Terminal"
+            if not running then return false
+            \(action == "focus" ? "activate" : "set theText to the clipboard as text")
+            -- Pass 0: exact tty match (resolved from transcript)
+            if "\(ttyLiteral)" is not "" then
+                repeat with w in windows
+                    try
+                        repeat with i from 1 to count of tabs of w
+                            try
+                                set t to tab i of w
+                                if tty of t is "\(ttyLiteral)" then
+                                    \(onMatch)
+                                end if
+                            end try
+                        end repeat
+                    end try
+                end repeat
+            end if
+        \(fuzzyPasses)
         end tell
         return false
         """
     }
 
-    private static func sendTerminalPaste(cwd: String, tty: String? = nil) -> Bool {
-        let script = terminalMatchScript(cwd: cwd, action: "paste", tty: tty)
+    private static func sendTerminalPaste(cwd: String, tty: String? = nil, exactTtyOnly: Bool = false) -> Bool {
+        let script = terminalMatchScript(cwd: cwd, action: "paste", tty: tty, exactTtyOnly: exactTtyOnly)
         return runAppleScript(script)
     }
 
@@ -285,31 +368,15 @@ enum TerminalBridge {
     // MARK: - iTerm2
 
     /// Focus the correct iTerm2 session, send text via native `write text`.
-    private static func sendiTerm2Paste(cwd: String, tty: String? = nil) -> Bool {
+    private static func sendiTerm2Paste(cwd: String, tty: String? = nil, exactTtyOnly: Bool = false) -> Bool {
         guard NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == "com.googlecode.iterm2" }) else {
             return false
         }
         let cwdFolder = (cwd as NSString).lastPathComponent
         let ttyLiteral = tty ?? ""
-        let script = """
-        tell application "iTerm2"
-            set theText to the clipboard as text
-            -- Pass 0: exact tty match (resolved from transcript)
-            if "\(ttyLiteral)" is not "" then
-                repeat with w in windows
-                    repeat with t in tabs of w
-                        repeat with s in sessions of t
-                            if tty of s is "\(ttyLiteral)" then
-                                select t
-                                select s
-                                activate
-                                tell s to write text theText
-                                return true
-                            end if
-                        end repeat
-                    end repeat
-                end repeat
-            end if
+        // Fuzzy passes are skipped when the caller has a validated tty
+        // (exactTtyOnly) so a sibling claude session can't be mis-hit.
+        let fuzzyPasses = exactTtyOnly ? "" : """
             -- First pass: match by cwd path in session
             repeat with w in windows
                 repeat with t in tabs of w
@@ -356,6 +423,27 @@ enum TerminalBridge {
                     end repeat
                 end repeat
             end repeat
+        """
+        let script = """
+        tell application "iTerm2"
+            set theText to the clipboard as text
+            -- Pass 0: exact tty match (resolved from transcript)
+            if "\(ttyLiteral)" is not "" then
+                repeat with w in windows
+                    repeat with t in tabs of w
+                        repeat with s in sessions of t
+                            if tty of s is "\(ttyLiteral)" then
+                                select t
+                                select s
+                                activate
+                                tell s to write text theText
+                                return true
+                            end if
+                        end repeat
+                    end repeat
+                end repeat
+            end if
+        \(fuzzyPasses)
         end tell
         return false
         """
