@@ -178,16 +178,28 @@ final class HookServer: Sendable {
                             continuation.resume(returning: HookResponse.stopAllow())
                             return
                         }
-                        // Always hold — even when a terminal app is frontmost.
-                        // Holding is what gives panel replies (Send / option
-                        // click) a direct hook channel; without a hold they fall
-                        // back to TerminalBridge keystroke injection, whose tty/
-                        // tab targeting is unreliable (the bug this feature
-                        // exists to fix). The cost: a reply *typed* in the
-                        // terminal during a hold is queued by Claude Code until
-                        // the hold releases — Esc releases it instantly
-                        // (connection abort → onCancel), and switching apps
-                        // triggers focus-release.
+                        // Don't hold when the user is already at the console (a
+                        // terminal app is frontmost): they will reply by typing,
+                        // and a held hook would queue that reply until the hold
+                        // releases (focus-release only fires on an app-switch,
+                        // which won't happen if they stay in the terminal) —
+                        // leaving the notification stuck and the typed reply
+                        // unprocessed. Returning {} lets the turn end normally
+                        // so UserPromptSubmit fires immediately and clears the
+                        // card. A panel reply in this state still lands in the
+                        // right tab via the now-reliable TerminalBridge fallback
+                        // (persisted tty + owning-app routing). When ClaudeBell
+                        // or another app is frontmost the user will likely use
+                        // the panel, so we DO hold to give them the instant,
+                        // exact hook channel.
+                        let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+                        if let frontmost, TerminalFocusObserver.terminalBundleIds.contains(frontmost) {
+                            store.denyStaleRequests(id: sessionId)
+                            store.sessionAdvanced(id: sessionId)
+                            store.addNotification(entry)
+                            continuation.resume(returning: HookResponse.stopAllow())
+                            return
+                        }
                         // A Stop means the turn ended — any still-held
                         // permission request for this session is stale
                         // (answered in the terminal or abandoned).
