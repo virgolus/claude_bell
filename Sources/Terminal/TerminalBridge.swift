@@ -117,10 +117,21 @@ enum TerminalBridge {
     private static func openTerminalAppNewSession(command: String) -> Bool {
         let escaped = command.replacingOccurrences(of: "\\", with: "\\\\")
                               .replacingOccurrences(of: "\"", with: "\\\"")
+        // Terminal.app's AppleScript has no "make new tab" verb, and a bare
+        // `do script` always spawns a NEW WINDOW. To reuse the already-open
+        // terminal, open a tab with Cmd+T in the front window (via System
+        // Events), then run the command in that now-frontmost tab. Only when
+        // no window exists do we let `do script` create the first window.
         let script = """
         tell application "Terminal"
             activate
-            do script "\(escaped)"
+            if (count of windows) is 0 then
+                do script "\(escaped)"
+            else
+                tell application "System Events" to keystroke "t" using command down
+                delay 0.3
+                do script "\(escaped)" in front window
+            end if
             return true
         end tell
         """
