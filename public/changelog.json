@@ -1,5 +1,45 @@
 [
   {
+    "version": "1.13.0",
+    "build": 55,
+    "date": "2026-06-05",
+    "highlights": "Reply to Claude straight from the panel — delivered through the Stop hook, with reliable terminal-tab targeting as the fallback",
+    "changes": [
+      {
+        "type": "new",
+        "text": "Direct reply: when you answer shortly after Claude finishes a turn (while you're not at the terminal), your reply — a Send or a question option — is delivered to Claude directly through the Stop hook, with no keystrokes typed into the terminal. A countdown badge shows how long the direct channel stays open."
+      },
+      {
+        "type": "new",
+        "text": "New 'Direct Reply' setting to choose how long the direct channel stays open after a turn (5 minutes, 30 minutes, 4 hours, or 24 hours)."
+      },
+      {
+        "type": "new",
+        "text": "'Create new session' now opens a new tab in your existing terminal window instead of spawning a separate window (when a window is already open)."
+      },
+      {
+        "type": "fixed",
+        "text": "Panel replies that fall back to the terminal now land in the exact tab — even after restarting ClaudeBell and with several sessions in the same folder. ClaudeBell remembers each session's terminal across launches, validates it, and routes to the owning terminal app (Terminal.app, iTerm2, Warp). No more cycling through tabs or pasting into the wrong one."
+      },
+      {
+        "type": "fixed",
+        "text": "Notifications now clear right away when you reply in the terminal, instead of lingering until they time out."
+      },
+      {
+        "type": "fixed",
+        "text": "A question card (AskUserQuestion) you already answered in the terminal no longer gets stuck in the panel."
+      },
+      {
+        "type": "fixed",
+        "text": "Notifications you've already answered no longer reappear."
+      },
+      {
+        "type": "changed",
+        "text": "Pressing the 'open in terminal' button now closes the ClaudeBell panel and takes you to the console."
+      }
+    ]
+  },
+  {
     "version": "1.12.2",
     "build": 54,
     "date": "2026-05-29",
