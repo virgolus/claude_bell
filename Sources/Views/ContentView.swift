@@ -257,6 +257,7 @@ struct ContentView: View {
                                     TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath, knownTty: store.resolvedTty(for: notification.sessionId))
                                     store.userDismissNotification(id: notification.id)
                                     selectedItem = nil
+                                    store.onDismissPanel?()
                                 }
                             }
                             HStack(spacing: 4) {
@@ -327,6 +328,7 @@ struct ContentView: View {
                             },
                             onOpenTerminal: {
                                 TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath, knownTty: store.resolvedTty(for: notification.sessionId))
+                                store.onDismissPanel?()
                             }
                         )
                     }

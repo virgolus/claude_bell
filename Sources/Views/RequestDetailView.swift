@@ -93,6 +93,7 @@ struct RequestDetailView: View {
                                     TerminalBridge.focusTerminalTab(forCwd: request.cwd, transcriptPath: request.transcriptPath)
                                     request.respond(allow: false)
                                     store.removeRequest(id: request.id)
+                                    store.onDismissPanel?()
                                 }
                             }
                             Text(isAskUserQuestion ? "Question" : isExitPlanMode ? "Plan Review" : request.toolName)
