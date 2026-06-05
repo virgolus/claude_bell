@@ -103,6 +103,15 @@ final class HookServer: Sendable {
                 if notificationType == "idle_prompt" {
                     let hasQuestion = Self.transcriptHasPendingQuestion(path: input.transcriptPath ?? "")
                     if hasQuestion {
+                        // The card would render the AskUserQuestion options. If
+                        // that question was already answered in the terminal,
+                        // this idle_prompt is stale (answering emits no
+                        // UserPromptSubmit and Claude Code's idle_prompt arrives
+                        // ~60s late, sometimes after the answer) — showing it
+                        // would strand a card nothing clears. Drop it.
+                        if Self.transcriptLastAskUserQuestionAnswered(path: input.transcriptPath ?? "") {
+                            return Response(status: .ok)
+                        }
                         effectiveType = notificationType
                         effectiveMessage = message
                     } else {
@@ -459,6 +468,54 @@ final class HookServer: Sendable {
         }
 
         return ""
+    }
+
+    /// Whether the transcript's most recent AskUserQuestion tool call already
+    /// has a matching `tool_result` — i.e. the user has answered it (in the
+    /// terminal). Used to drop stale, late-arriving idle_prompt notifications
+    /// for a question that is no longer pending.
+    static func transcriptLastAskUserQuestionAnswered(path: String) -> Bool {
+        guard !path.isEmpty,
+              let data = FileManager.default.contents(atPath: path),
+              let content = String(data: data, encoding: .utf8) else {
+            return false
+        }
+        let lines = content.components(separatedBy: "\n").filter { !$0.isEmpty }
+
+        // Most recent AskUserQuestion tool_use id (scan assistant messages back).
+        var questionId: String?
+        for line in lines.reversed() {
+            guard let lineData = line.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
+                  (json["type"] as? String) == "assistant",
+                  let message = json["message"] as? [String: Any],
+                  let contentArray = message["content"] as? [[String: Any]] else {
+                continue
+            }
+            for block in contentArray
+            where (block["type"] as? String) == "tool_use" && (block["name"] as? String) == "AskUserQuestion" {
+                questionId = block["id"] as? String
+                break
+            }
+            if questionId != nil { break }
+        }
+        guard let questionId else { return false }
+
+        // Is there a tool_result answering that tool_use id?
+        for line in lines {
+            guard let lineData = line.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
+                  (json["type"] as? String) == "user",
+                  let message = json["message"] as? [String: Any],
+                  let contentArray = message["content"] as? [[String: Any]] else {
+                continue
+            }
+            for block in contentArray
+            where (block["type"] as? String) == "tool_result" && (block["tool_use_id"] as? String) == questionId {
+                return true
+            }
+        }
+        return false
     }
 
     /// Check if the transcript's last assistant message contains a pending question
