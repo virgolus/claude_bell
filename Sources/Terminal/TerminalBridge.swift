@@ -205,8 +205,15 @@ enum TerminalBridge {
         guard let out = shell("ps -t \(dev) -o pid= 2>/dev/null"), !out.isEmpty else { return false }
         let pids = out.split(whereSeparator: { $0 == "\n" || $0 == " " }).compactMap { Int($0) }
         for pid in pids {
-            if let c = shell("lsof -a -d cwd -Fn -p \(pid) 2>/dev/null | grep '^n' | cut -c2-"),
-               c == target {
+            guard let c = shell("lsof -a -d cwd -Fn -p \(pid) 2>/dev/null | grep '^n' | cut -c2-"),
+                  !c.isEmpty else { continue }
+            // Accept exact match OR a parent/child path relationship: Claude's
+            // hook `cwd` is often a subdirectory of the shell's launch cwd that
+            // `lsof` reports (e.g. hook cwd .../rulemate/packages/ui/src/styles
+            // vs process cwd .../rulemate). A recycled tty pointing at an
+            // unrelated project shares no path prefix, so this still guards
+            // against stale ttys.
+            if c == target || target.hasPrefix(c + "/") || c.hasPrefix(target + "/") {
                 return true
             }
         }
