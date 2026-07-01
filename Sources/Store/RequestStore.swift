@@ -27,7 +27,12 @@ final class RequestStore: ObservableObject {
     /// after a ClaudeBell restart and mis-targets a wrong tab (especially when
     /// several sessions share a cwd). Validated at send time against the live
     /// process on the tty before it is trusted (macOS recycles ttys numbers).
-    private struct TtyRecord: Codable { let tty: String; let cwd: String; let updatedAt: Date }
+    private struct TtyRecord: Codable {
+        let tty: String
+        let cwd: String
+        let iTermSessionId: String?
+        let updatedAt: Date
+    }
     private var ttyCache: [String: TtyRecord] = [:]
     private let ttyCacheKey = "sessionTtyCache"
     private let ttyCacheMax = 50
@@ -213,7 +218,8 @@ final class RequestStore: ObservableObject {
     func setSessionTty(id: String, tty: String) {
         sessions[id]?.tty = tty
         let cwd = sessions[id]?.cwd ?? ttyCache[id]?.cwd ?? ""
-        ttyCache[id] = TtyRecord(tty: tty, cwd: cwd, updatedAt: Date())
+        let existingITerm = sessions[id]?.iTermSessionId ?? ttyCache[id]?.iTermSessionId
+        ttyCache[id] = TtyRecord(tty: tty, cwd: cwd, iTermSessionId: existingITerm, updatedAt: Date())
         saveTtyCache()
     }
 
@@ -222,6 +228,33 @@ final class RequestStore: ObservableObject {
     /// launch. Used by the panel's terminal-paste fallback for exact targeting.
     func resolvedTty(for sessionId: String) -> String? {
         sessions[sessionId]?.tty ?? ttyCache[sessionId]?.tty
+    }
+
+    /// Short, unique-enough code identifying a session's terminal tab. First 8
+    /// characters of the session id (dashes stripped) — the tab marker embeds
+    /// this so replies can target the exact tab. Recomputable from the session
+    /// id, so Terminal.app needs no extra persistence.
+    static func markerCode(from sessionId: String) -> String {
+        String(sessionId.replacingOccurrences(of: "-", with: "").prefix(8))
+    }
+
+    func sessionMarkerCode(for sessionId: String) -> String {
+        Self.markerCode(from: sessionId)
+    }
+
+    /// Best-known iTerm2 session id: live value if the session is in memory,
+    /// else the value persisted from a previous launch.
+    func iTermSessionId(for sessionId: String) -> String? {
+        sessions[sessionId]?.iTermSessionId ?? ttyCache[sessionId]?.iTermSessionId
+    }
+
+    /// Persist the iTerm2 session id captured during a live hook connection.
+    func setITermSessionId(id: String, iTermSessionId: String) {
+        sessions[id]?.iTermSessionId = iTermSessionId
+        let tty = sessions[id]?.tty ?? ttyCache[id]?.tty ?? ""
+        let cwd = sessions[id]?.cwd ?? ttyCache[id]?.cwd ?? ""
+        ttyCache[id] = TtyRecord(tty: tty, cwd: cwd, iTermSessionId: iTermSessionId, updatedAt: Date())
+        saveTtyCache()
     }
 
     func removeSession(id: String) {
