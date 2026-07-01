@@ -90,7 +90,13 @@ struct RequestDetailView: View {
                             HStack(spacing: 6) {
                                 RenameableTitleView(text: request.projectName, sessionId: request.sessionId)
                                 OpenInTerminalButton {
-                                    TerminalBridge.focusTerminalTab(forCwd: request.cwd, transcriptPath: request.transcriptPath)
+                                    TerminalBridge.focusTerminalTab(
+                                        forCwd: request.cwd,
+                                        transcriptPath: request.transcriptPath,
+                                        knownTty: store.resolvedTty(for: request.sessionId),
+                                        marker: TerminalBridge.markerString(code: store.sessionMarkerCode(for: request.sessionId)),
+                                        iTermSessionId: store.iTermSessionId(for: request.sessionId)
+                                    )
                                     request.respond(allow: false)
                                     store.removeRequest(id: request.id)
                                     store.onDismissPanel?()
