@@ -85,7 +85,9 @@ final class HookServer: Sendable {
             // idle_prompt / elicitation_dialog notifications originate here (not
             // from Stop) and can be answered via the terminal fallback — keep
             // the tty fresh from this still-open connection.
-            await self.refreshSessionTty(sessionId: input.sessionId, context: context)
+            if let tty = await self.refreshSessionTty(sessionId: input.sessionId, context: context) {
+                await self.stampMarker(sessionId: input.sessionId, tty: tty)
+            }
 
             let notificationType = input.notificationType ?? "unknown"
             let relevantTypes = ["permission_prompt", "idle_prompt", "elicitation_dialog"]
@@ -149,7 +151,9 @@ final class HookServer: Sendable {
 
         router.post("/hooks/stop") { request, context -> Response in
             let input = try await Self.decodeInput(request, label: "Stop")
-            await self.refreshSessionTty(sessionId: input.sessionId, context: context)
+            if let tty = await self.refreshSessionTty(sessionId: input.sessionId, context: context) {
+                await self.stampMarker(sessionId: input.sessionId, tty: tty)
+            }
 
             // Check if the last assistant message is actually a question —
             // if so, show as interactive idle_prompt instead of passive stop.
@@ -327,13 +331,28 @@ final class HookServer: Sendable {
     /// connection is still open (await before the handler returns / holds), so
     /// lsof can resolve the live claude process. Only overwrites on a
     /// successful resolution — a transient failure keeps the prior value.
-    func refreshSessionTty(sessionId: String, context: HookRequestContext) async {
-        guard let port = context.remoteAddress?.port else { return }
+    @discardableResult
+    func refreshSessionTty(sessionId: String, context: HookRequestContext) async -> String? {
+        guard let port = context.remoteAddress?.port else { return nil }
         let resolved = await Task.detached(priority: .userInitiated) {
             Self.resolveTty(fromPeerPort: port)
         }.value
-        guard let tty = resolved else { return }
+        guard let tty = resolved else { return nil }
         await MainActor.run { self.store.setSessionTty(id: sessionId, tty: tty) }
+        return tty
+    }
+
+    /// Stamp the session's tab marker off the main thread. Best-effort: logs
+    /// and swallows any failure so it can never affect the hook response.
+    /// Persists a captured iTerm2 session id back into the store.
+    func stampMarker(sessionId: String, tty: String) async {
+        let code = await MainActor.run { self.store.sessionMarkerCode(for: sessionId) }
+        let iTermId = await Task.detached(priority: .userInitiated) {
+            TerminalBridge.stampSessionMarker(code: code, tty: tty)
+        }.value
+        if let iTermId {
+            await MainActor.run { self.store.setITermSessionId(id: sessionId, iTermSessionId: iTermId) }
+        }
     }
 
     /// Resolve the controlling tty of the claude process behind a hook
