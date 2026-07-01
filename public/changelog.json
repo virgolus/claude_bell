@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.14.0",
+    "build": 56,
+    "date": "2026-07-01",
+    "highlights": "Panel replies land in the right terminal tab far more reliably — and never vanish silently when they can't",
+    "changes": [
+      {
+        "type": "new",
+        "text": "Each session's terminal tab is now tagged with a hidden marker while ClaudeBell can reliably identify it, so a later reply targets that exact tab directly — no more cycling through tabs or mis-pasting when several sessions share a folder, a tab was reopened, or macOS recycled the terminal's device number. On iTerm2 the tab is matched by its stable session id, so nothing is written to the title."
+      },
+      {
+        "type": "fixed",
+        "text": "A panel reply that can't reach the session's terminal tab is no longer lost silently: your text stays in the field, it's copied to the clipboard, and an inline warning tells you to switch to that session and paste it. Previously the panel closed with no error and the text was dropped."
+      }
+    ]
+  },
+  {
     "version": "1.13.0",
     "build": 55,
     "date": "2026-06-05",
