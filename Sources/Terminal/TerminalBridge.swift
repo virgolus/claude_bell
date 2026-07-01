@@ -12,7 +12,7 @@ enum TerminalBridge {
     /// panel showing an error stays visible instead of being pushed behind a
     /// terminal we couldn't target anyway).
     @discardableResult
-    static func sendText(_ text: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil, activateOnFailure: Bool = true) -> Bool {
+    static func sendText(_ text: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil, activateOnFailure: Bool = true, marker: String? = nil, iTermSessionId: String? = nil) -> Bool {
         logToFile("sendText: \"\(text)\" → cwd: \(cwd), transcript: \(transcriptPath), knownTty: \(knownTty ?? "nil")")
         let candidateTty = knownTty ?? resolveTty(fromTranscriptPath: transcriptPath)
         // Trust the tty for exact targeting only if a live process on it still
@@ -33,7 +33,15 @@ enum TerminalBridge {
         pasteboard.setString(text, forType: .string)
 
         var sent = false
-        if let tty = trustedTty {
+        // Pass −1: exact marker / iTerm-id match (set while the tty was live).
+        // Immune to tty recycling and cwd ambiguity.
+        if let marker, !marker.isEmpty {
+            sent = sendTerminalPaste(cwd: cwd, tty: trustedTty, exactTtyOnly: true, marker: marker)
+        }
+        if !sent, let iTermSessionId, !iTermSessionId.isEmpty {
+            sent = sendiTerm2Paste(cwd: cwd, tty: trustedTty, exactTtyOnly: true, iTermSessionId: iTermSessionId)
+        }
+        if let tty = trustedTty, !sent {
             // Route to the terminal app that actually owns this tty and paste
             // into that exact tab — no fuzzy / cross-app passes, so two sessions
             // sharing a cwd (or another app's claude tab) can't be mis-hit.
@@ -270,11 +278,11 @@ enum TerminalBridge {
 
     /// Brings the terminal tab running Claude Code to the front.
     /// Runs AppleScript matching off the main thread to avoid blocking the UI.
-    static func focusTerminalTab(forCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil) {
+    static func focusTerminalTab(forCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil, marker: String? = nil, iTermSessionId: String? = nil) {
         let resolvedTty = knownTty ?? resolveTty(fromTranscriptPath: transcriptPath)
         DispatchQueue.global(qos: .userInitiated).async {
-            if focusiTerm2(cwd: cwd, tty: resolvedTty) { return }
-            if focusTerminal(cwd: cwd, tty: resolvedTty) { return }
+            if focusiTerm2(cwd: cwd, tty: resolvedTty, iTermSessionId: iTermSessionId) { return }
+            if focusTerminal(cwd: cwd, tty: resolvedTty, marker: marker ?? "") { return }
             DispatchQueue.main.async { activateTerminal() }
         }
     }
@@ -386,7 +394,7 @@ enum TerminalBridge {
     /// Pass 1: tab has "claude" in processes AND tty cwd matches → exact match
     /// Pass 2: tab has "claude" in processes → fallback (any claude tab)
     /// Pass 3: tty cwd matches (claude may have exited) → cwd-only fallback
-    private static func terminalMatchScript(cwd: String, action: String, tty: String? = nil, exactTtyOnly: Bool = false) -> String {
+    private static func terminalMatchScript(cwd: String, action: String, tty: String? = nil, exactTtyOnly: Bool = false, marker: String = "") -> String {
         let escaped = cwd.replacingOccurrences(of: "\"", with: "\\\"")
         let onMatch = action == "focus"
             ? "set selected tab of w to t\n                                set index of w to 1\n                                return true"
@@ -461,6 +469,21 @@ enum TerminalBridge {
         tell application "Terminal"
             if not running then return false
             \(action == "focus" ? "activate" : "set theText to the clipboard as text")
+            -- Pass -1: exact marker match (survives tty recycling)
+            if "\(marker)" is not "" then
+                repeat with w in windows
+                    try
+                        repeat with i from 1 to count of tabs of w
+                            try
+                                set t to tab i of w
+                                if (custom title of t) contains "\(marker)" then
+                                    \(onMatch)
+                                end if
+                            end try
+                        end repeat
+                    end try
+                end repeat
+            end if
             -- Pass 0: exact tty match (resolved from transcript)
             if "\(ttyLiteral)" is not "" then
                 repeat with w in windows
@@ -482,20 +505,20 @@ enum TerminalBridge {
         """
     }
 
-    private static func sendTerminalPaste(cwd: String, tty: String? = nil, exactTtyOnly: Bool = false) -> Bool {
-        let script = terminalMatchScript(cwd: cwd, action: "paste", tty: tty, exactTtyOnly: exactTtyOnly)
+    private static func sendTerminalPaste(cwd: String, tty: String? = nil, exactTtyOnly: Bool = false, marker: String = "") -> Bool {
+        let script = terminalMatchScript(cwd: cwd, action: "paste", tty: tty, exactTtyOnly: exactTtyOnly, marker: marker)
         return runAppleScript(script)
     }
 
-    private static func focusTerminal(cwd: String, tty: String? = nil) -> Bool {
-        let script = terminalMatchScript(cwd: cwd, action: "focus", tty: tty)
+    private static func focusTerminal(cwd: String, tty: String? = nil, marker: String = "") -> Bool {
+        let script = terminalMatchScript(cwd: cwd, action: "focus", tty: tty, marker: marker)
         return runAppleScript(script)
     }
 
     // MARK: - iTerm2
 
     /// Focus the correct iTerm2 session, send text via native `write text`.
-    private static func sendiTerm2Paste(cwd: String, tty: String? = nil, exactTtyOnly: Bool = false) -> Bool {
+    private static func sendiTerm2Paste(cwd: String, tty: String? = nil, exactTtyOnly: Bool = false, iTermSessionId: String? = nil) -> Bool {
         guard NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == "com.googlecode.iterm2" }) else {
             return false
         }
@@ -554,6 +577,22 @@ enum TerminalBridge {
         let script = """
         tell application "iTerm2"
             set theText to the clipboard as text
+            -- Pass -1: exact stable session-id match
+            if "\(iTermSessionId ?? "")" is not "" then
+                repeat with w in windows
+                    repeat with t in tabs of w
+                        repeat with s in sessions of t
+                            if (id of s as text) is "\(iTermSessionId ?? "")" then
+                                select t
+                                select s
+                                activate
+                                tell s to write text theText
+                                return true
+                            end if
+                        end repeat
+                    end repeat
+                end repeat
+            end if
             -- Pass 0: exact tty match (resolved from transcript)
             if "\(ttyLiteral)" is not "" then
                 repeat with w in windows
@@ -577,7 +616,7 @@ enum TerminalBridge {
         return runAppleScript(script)
     }
 
-    private static func focusiTerm2(cwd: String, tty: String? = nil) -> Bool {
+    private static func focusiTerm2(cwd: String, tty: String? = nil, iTermSessionId: String? = nil) -> Bool {
         guard NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == "com.googlecode.iterm2" }) else {
             return false
         }
@@ -586,6 +625,20 @@ enum TerminalBridge {
         let script = """
         tell application "iTerm2"
             activate
+            -- Pass -1: exact stable session-id match
+            if "\(iTermSessionId ?? "")" is not "" then
+                repeat with w in windows
+                    repeat with t in tabs of w
+                        repeat with s in sessions of t
+                            if (id of s as text) is "\(iTermSessionId ?? "")" then
+                                select t
+                                select s
+                                return true
+                            end if
+                        end repeat
+                    end repeat
+                end repeat
+            end if
             -- Pass 0: exact tty match (resolved from transcript)
             if "\(ttyLiteral)" is not "" then
                 repeat with w in windows
