@@ -4,7 +4,15 @@ enum TerminalBridge {
 
     /// Sends text to a Terminal.app tab whose process matches Claude Code.
     /// Uses clipboard paste (Cmd+V) + Return for reliability.
-    static func sendText(_ text: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil) {
+    ///
+    /// Returns `true` when the text was delivered to a tab. On failure the
+    /// caller is responsible for the user-visible recovery; `text` is left on
+    /// the clipboard so the user can paste it manually. Set
+    /// `activateOnFailure` to `false` to keep the current frontmost app (so a
+    /// panel showing an error stays visible instead of being pushed behind a
+    /// terminal we couldn't target anyway).
+    @discardableResult
+    static func sendText(_ text: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil, activateOnFailure: Bool = true) -> Bool {
         logToFile("sendText: \"\(text)\" → cwd: \(cwd), transcript: \(transcriptPath), knownTty: \(knownTty ?? "nil")")
         let candidateTty = knownTty ?? resolveTty(fromTranscriptPath: transcriptPath)
         // Trust the tty for exact targeting only if a live process on it still
@@ -52,26 +60,39 @@ enum TerminalBridge {
             sent = sendiTerm2Paste(cwd: cwd, tty: trustedTty) || sendTerminalPaste(cwd: cwd, tty: trustedTty) || sendWarpPaste()
         }
 
-        // Restore clipboard after a short delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            pasteboard.clearContents()
-            if let old = oldContents {
-                pasteboard.setString(old, forType: .string)
+        logToFile("sendText: delivered=\(sent)")
+
+        if sent {
+            // Restore the prior clipboard after the paste has landed.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                pasteboard.clearContents()
+                if let old = oldContents {
+                    pasteboard.setString(old, forType: .string)
+                }
             }
         }
+        // On failure we deliberately leave `text` on the clipboard so the user
+        // can paste it into the right tab themselves — the caller surfaces this.
 
-        if !sent { activateTerminal() }
+        if !sent && activateOnFailure { activateTerminal() }
+        return sent
     }
 
     /// Sends two texts sequentially: first text + Enter, then after a delay, second text + Enter.
     /// Used for "type something else" options where Claude Code expects the option number first,
     /// then the actual text after it prompts.
-    static func sendTextTwoStep(_ first: String, then second: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil) {
+    @discardableResult
+    static func sendTextTwoStep(_ first: String, then second: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil) -> Bool {
         logToFile("sendTextTwoStep: first=\"\(first)\", then=\"\(second)\" → cwd: \(cwd)")
-        sendText(first, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            sendText(second, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
+        // The first send resolves and targets the tab; if it can't, the second
+        // would mis-fire too, so its success determines delivery.
+        let sent = sendText(first, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
+        if sent {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                sendText(second, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
+            }
         }
+        return sent
     }
 
     /// Opens a new terminal tab/window at `cwd` and launches `claude` (optionally with an initial prompt).

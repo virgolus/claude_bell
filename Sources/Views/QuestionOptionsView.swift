@@ -2,7 +2,10 @@ import SwiftUI
 
 struct QuestionOptionsView: View {
     let questions: [ParsedQuestion]
-    let onSend: (String) -> Void
+    /// Returns whether the reply was delivered (see `SendTextField`). Option
+    /// buttons ignore the result; the free-text field uses it to keep the
+    /// user's text on a failed terminal-paste delivery.
+    let onSend: (String) -> Bool
     /// Structured-answer callback for the AskUserQuestion permission hook path.
     /// When set, takes precedence over `onSend` — the answers are returned to
     /// Claude Code via the hook response instead of being typed into the terminal.
@@ -165,7 +168,7 @@ struct QuestionOptionsView: View {
                     if let onAnswers {
                         onAnswers([question.question: option.label], nil)
                     } else {
-                        onSend(option.token ?? "\(option.index)")
+                        _ = onSend(option.token ?? "\(option.index)")
                     }
                 }
             }
@@ -209,28 +212,30 @@ struct QuestionOptionsView: View {
             }
             parts.append(tokens.joined(separator: ","))
         }
-        onSend(parts.joined(separator: "\n"))
+        _ = onSend(parts.joined(separator: "\n"))
     }
 
     /// Send free-text response. For the structured (hook) path, pass the typed
     /// text directly as the answer for the first question. For the legacy
     /// (terminal-paste) path, use the two-step option-token + text sequence.
-    private func sendFreeText(_ text: String) {
+    @discardableResult
+    private func sendFreeText(_ text: String) -> Bool {
         if let onAnswers, let firstQuestion = questions.first {
             onAnswers([firstQuestion.question: text], nil)
-            return
+            return true
         }
         if hasDirectChannel {
-            onSend(text)
-            return
+            return onSend(text)
         }
         if let firstQuestion = questions.first,
            let option = Self.freeTextOption(in: firstQuestion),
            !cwd.isEmpty {
-            TerminalBridge.sendTextTwoStep(option.token ?? "\(option.index)", then: text, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
-            onDismiss?()
-        } else {
-            onSend(text)
+            let sent = TerminalBridge.sendTextTwoStep(option.token ?? "\(option.index)", then: text, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
+            // Only tear down the card once the text actually reached the tab;
+            // otherwise keep it open so the field can report the failure.
+            if sent { onDismiss?() }
+            return sent
         }
+        return onSend(text)
     }
 }

@@ -87,13 +87,18 @@ struct ExitPlanModeView: View {
         }
     }
 
-    private func send(_ text: String) {
+    @discardableResult
+    private func send(_ text: String) -> Bool {
+        // Approving the plan resumes the hook irreversibly, so we always tear
+        // the card down here. The feedback text rides the terminal-paste path;
+        // if it can't reach the tab it stays on the clipboard for manual paste.
         request.respond(.allow)
-        TerminalBridge.sendText(text, toCwd: request.cwd, transcriptPath: request.transcriptPath)
+        let sent = TerminalBridge.sendText(text, toCwd: request.cwd, transcriptPath: request.transcriptPath)
         store.removeRequest(id: request.id)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             NSApplication.shared.activate()
         }
+        return sent
     }
 
 }

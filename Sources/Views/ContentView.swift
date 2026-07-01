@@ -346,19 +346,38 @@ struct ContentView: View {
 
     /// Send a reply for a stop/idle_prompt notification: through the held
     /// Stop hook when alive (direct, no keystrokes), else via TerminalBridge.
-    private func sendReply(_ text: String, for notification: NotificationEntry) {
-        if !store.answerStopHold(sessionId: notification.sessionId, text: text) {
-            TerminalBridge.sendText(
-                text,
-                toCwd: notification.cwd,
-                transcriptPath: notification.transcriptPath,
-                knownTty: store.resolvedTty(for: notification.sessionId)
-            )
+    /// Returns whether the reply was delivered. On a failed terminal-paste
+    /// fallback the card is kept open and the text is preserved on the
+    /// clipboard, so the user's input is never silently lost.
+    @discardableResult
+    private func sendReply(_ text: String, for notification: NotificationEntry) -> Bool {
+        // Direct hook channel: always reliable when a hold is alive.
+        if store.answerStopHold(sessionId: notification.sessionId, text: text) {
+            dismissAnsweredNotification(notification)
+            return true
         }
-        // The user answered this wait — record the dismissal so the same wait,
-        // re-signalled by a later Stop/idle_prompt (e.g. when a terminal-paste
-        // fallback didn't land), can't resurrect the answered card. Cleared on
-        // the next UserPromptSubmit or when the session ends.
+        // No live hold → best-effort terminal paste.
+        let sent = TerminalBridge.sendText(
+            text,
+            toCwd: notification.cwd,
+            transcriptPath: notification.transcriptPath,
+            knownTty: store.resolvedTty(for: notification.sessionId),
+            activateOnFailure: false
+        )
+        guard sent else {
+            // Couldn't find/target the session's tab. sendText left `text` on
+            // the clipboard; keep the card and surface the failure via the
+            // field rather than dismissing it and dropping the reply.
+            return false
+        }
+        dismissAnsweredNotification(notification)
+        return true
+    }
+
+    /// Record the dismissal so the same wait, re-signalled by a later
+    /// Stop/idle_prompt, can't resurrect the answered card. Cleared on the next
+    /// UserPromptSubmit or when the session ends.
+    private func dismissAnsweredNotification(_ notification: NotificationEntry) {
         store.userDismissNotification(id: notification.id)
         selectedItem = nil
     }

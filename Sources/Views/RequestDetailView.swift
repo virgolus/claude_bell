@@ -120,7 +120,7 @@ struct RequestDetailView: View {
                         // must be injected into the tool input via decision.updatedInput.
                         QuestionOptionsView(
                             questions: questions,
-                            onSend: { _ in },
+                            onSend: { _ in true },
                             onAnswers: { answers, annotations in
                                 request.respond(answers: answers, annotations: annotations)
                                 store.removeRequest(id: request.id)
