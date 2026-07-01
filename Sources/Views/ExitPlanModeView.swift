@@ -93,7 +93,13 @@ struct ExitPlanModeView: View {
         // the card down here. The feedback text rides the terminal-paste path;
         // if it can't reach the tab it stays on the clipboard for manual paste.
         request.respond(.allow)
-        let sent = TerminalBridge.sendText(text, toCwd: request.cwd, transcriptPath: request.transcriptPath)
+        let sent = TerminalBridge.sendText(
+            text,
+            toCwd: request.cwd,
+            transcriptPath: request.transcriptPath,
+            marker: TerminalBridge.markerString(code: RequestStore.markerCode(from: request.sessionId)),
+            iTermSessionId: store.iTermSessionId(for: request.sessionId)
+        )
         store.removeRequest(id: request.id)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             NSApplication.shared.activate()

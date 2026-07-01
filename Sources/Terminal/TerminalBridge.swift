@@ -90,14 +90,14 @@ enum TerminalBridge {
     /// Used for "type something else" options where Claude Code expects the option number first,
     /// then the actual text after it prompts.
     @discardableResult
-    static func sendTextTwoStep(_ first: String, then second: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil) -> Bool {
+    static func sendTextTwoStep(_ first: String, then second: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil, marker: String? = nil, iTermSessionId: String? = nil) -> Bool {
         logToFile("sendTextTwoStep: first=\"\(first)\", then=\"\(second)\" → cwd: \(cwd)")
         // The first send resolves and targets the tab; if it can't, the second
         // would mis-fire too, so its success determines delivery.
-        let sent = sendText(first, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
+        let sent = sendText(first, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty, marker: marker, iTermSessionId: iTermSessionId)
         if sent {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                sendText(second, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
+                sendText(second, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty, marker: marker, iTermSessionId: iTermSessionId)
             }
         }
         return sent

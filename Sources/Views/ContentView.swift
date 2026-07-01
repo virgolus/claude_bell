@@ -254,7 +254,13 @@ struct ContentView: View {
                             HStack(spacing: 6) {
                                 RenameableTitleView(text: notification.displayProjectName, sessionId: notification.sessionId)
                                 OpenInTerminalButton {
-                                    TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath, knownTty: store.resolvedTty(for: notification.sessionId))
+                                    TerminalBridge.focusTerminalTab(
+                                        forCwd: notification.cwd,
+                                        transcriptPath: notification.transcriptPath,
+                                        knownTty: store.resolvedTty(for: notification.sessionId),
+                                        marker: TerminalBridge.markerString(code: store.sessionMarkerCode(for: notification.sessionId)),
+                                        iTermSessionId: store.iTermSessionId(for: notification.sessionId)
+                                    )
                                     store.userDismissNotification(id: notification.id)
                                     selectedItem = nil
                                     store.onDismissPanel?()
@@ -312,6 +318,8 @@ struct ContentView: View {
                             },
                             hasDirectChannel: store.pendingStops[notification.sessionId] != nil,
                             knownTty: store.resolvedTty(for: notification.sessionId),
+                            markerCode: store.sessionMarkerCode(for: notification.sessionId),
+                            iTermSessionId: store.iTermSessionId(for: notification.sessionId),
                             cwd: notification.cwd,
                             transcriptPath: notification.transcriptPath,
                             onDismiss: {
@@ -327,7 +335,13 @@ struct ContentView: View {
                                 sendReply(text, for: notification)
                             },
                             onOpenTerminal: {
-                                TerminalBridge.focusTerminalTab(forCwd: notification.cwd, transcriptPath: notification.transcriptPath, knownTty: store.resolvedTty(for: notification.sessionId))
+                                TerminalBridge.focusTerminalTab(
+                                    forCwd: notification.cwd,
+                                    transcriptPath: notification.transcriptPath,
+                                    knownTty: store.resolvedTty(for: notification.sessionId),
+                                    marker: TerminalBridge.markerString(code: store.sessionMarkerCode(for: notification.sessionId)),
+                                    iTermSessionId: store.iTermSessionId(for: notification.sessionId)
+                                )
                                 store.onDismissPanel?()
                             }
                         )
@@ -357,12 +371,15 @@ struct ContentView: View {
             return true
         }
         // No live hold → best-effort terminal paste.
+        let sid = notification.sessionId
         let sent = TerminalBridge.sendText(
             text,
             toCwd: notification.cwd,
             transcriptPath: notification.transcriptPath,
-            knownTty: store.resolvedTty(for: notification.sessionId),
-            activateOnFailure: false
+            knownTty: store.resolvedTty(for: sid),
+            activateOnFailure: false,
+            marker: TerminalBridge.markerString(code: store.sessionMarkerCode(for: sid)),
+            iTermSessionId: store.iTermSessionId(for: sid)
         )
         guard sent else {
             // Couldn't find/target the session's tab. sendText left `text` on
@@ -420,7 +437,12 @@ struct ContentView: View {
                         SessionRowView(session: session)
 
                         Button {
-                            TerminalBridge.focusTerminalTab(forCwd: session.cwd, knownTty: store.resolvedTty(for: session.id))
+                            TerminalBridge.focusTerminalTab(
+                                forCwd: session.cwd,
+                                knownTty: store.resolvedTty(for: session.id),
+                                marker: TerminalBridge.markerString(code: store.sessionMarkerCode(for: session.id)),
+                                iTermSessionId: store.iTermSessionId(for: session.id)
+                            )
                             store.onDismissPanel?()
                         } label: {
                             Image(systemName: "terminal")

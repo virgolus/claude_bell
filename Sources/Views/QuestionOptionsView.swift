@@ -17,6 +17,8 @@ struct QuestionOptionsView: View {
     /// Exact tty of the session's terminal, when known (used by the
     /// legacy two-step terminal-paste path).
     var knownTty: String? = nil
+    var markerCode: String? = nil
+    var iTermSessionId: String? = nil
     var cwd: String = ""
     var transcriptPath: String = ""
     var onDismiss: (() -> Void)?
@@ -230,7 +232,8 @@ struct QuestionOptionsView: View {
         if let firstQuestion = questions.first,
            let option = Self.freeTextOption(in: firstQuestion),
            !cwd.isEmpty {
-            let sent = TerminalBridge.sendTextTwoStep(option.token ?? "\(option.index)", then: text, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty)
+            let markerStr = markerCode.map { TerminalBridge.markerString(code: $0) }
+            let sent = TerminalBridge.sendTextTwoStep(option.token ?? "\(option.index)", then: text, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty, marker: markerStr, iTermSessionId: iTermSessionId)
             // Only tear down the card once the text actually reached the tab;
             // otherwise keep it open so the field can report the failure.
             if sent { onDismiss?() }
