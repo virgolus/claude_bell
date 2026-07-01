@@ -95,6 +95,94 @@ enum TerminalBridge {
         return sent
     }
 
+    /// The tab-title marker string for a session code. Single source of truth
+    /// for the marker format — matching and stamping both go through here.
+    static func markerString(code: String) -> String { "⟨cb:\(code)⟩" }
+
+    /// Stamp a session marker into its terminal tab so replies can later target
+    /// the exact tab without relying on the (recyclable) tty. Call this while
+    /// the hook connection is live, so `tty` is reliable. Returns the captured
+    /// iTerm2 session id when iTerm2 owns the tty (so the caller can persist
+    /// it); nil otherwise. Best-effort: never throws.
+    @discardableResult
+    static func stampSessionMarker(code: String, tty: String) -> String? {
+        logToFile("stampSessionMarker: code=\(code) tty=\(tty)")
+        switch terminalBundleForTty(tty) {
+        case "com.apple.Terminal":
+            stampTerminalApp(code: code, tty: tty)
+            return nil
+        case "com.googlecode.iterm2":
+            return stampITerm2(code: code, tty: tty)
+        case "dev.warp.Warp-Stable":
+            return nil // Warp exposes no per-tab handle.
+        default:
+            // Owner unknown — try Terminal.app first (title pin is harmless if
+            // the tty isn't a Terminal tab), then iTerm2.
+            stampTerminalApp(code: code, tty: tty)
+            return stampITerm2(code: code, tty: tty)
+        }
+    }
+
+    /// Terminal.app: append the marker to the tab's custom title (idempotent).
+    /// An AppleScript-set custom title pins over the process's OSC title writes.
+    private static func stampTerminalApp(code: String, tty: String) {
+        let marker = markerString(code: code)
+        let script = """
+        tell application "Terminal"
+            if not running then return false
+            repeat with w in windows
+                try
+                    repeat with i from 1 to count of tabs of w
+                        try
+                            set t to tab i of w
+                            if tty of t is "\(tty)" then
+                                set ct to custom title of t
+                                if ct does not contain "\(marker)" then
+                                    set custom title of t to ct & "  \(marker)"
+                                end if
+                                return true
+                            end if
+                        end try
+                    end repeat
+                end try
+            end repeat
+            return false
+        end tell
+        """
+        _ = runAppleScript(script)
+    }
+
+    /// iTerm2: capture the session's stable id for the tty (no title change).
+    /// Returns the id string, or nil if none found. If the id is empty, falls
+    /// back to writing the marker into the session name.
+    private static func stampITerm2(code: String, tty: String) -> String? {
+        guard NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == "com.googlecode.iterm2" }) else {
+            return nil
+        }
+        let marker = markerString(code: code)
+        let script = """
+        tell application "iTerm2"
+            repeat with w in windows
+                repeat with t in tabs of w
+                    repeat with s in sessions of t
+                        if tty of s is "\(tty)" then
+                            set sid to (id of s) as text
+                            if sid is "" then
+                                set name of s to (name of s) & "  \(marker)"
+                            end if
+                            return sid
+                        end if
+                    end repeat
+                end repeat
+            end repeat
+            return ""
+        end tell
+        """
+        let out = runAppleScriptString(script)
+        let trimmed = out?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     /// Opens a new terminal tab/window at `cwd` and launches `claude` (optionally with an initial prompt).
     /// Picks Terminal.app or iTerm2 based on which is frontmost; falls back to Terminal.app otherwise.
     static func openNewSession(cwd: String, initialPrompt: String = "") {
@@ -606,6 +694,18 @@ enum TerminalBridge {
             return false
         }
         return result?.booleanValue ?? false
+    }
+
+    /// Like `runAppleScript` but returns the script's string result (or nil).
+    private static func runAppleScriptString(_ source: String) -> String? {
+        ensureAccessibility()
+        var error: NSDictionary?
+        let result = NSAppleScript(source: source)?.executeAndReturnError(&error)
+        if let error {
+            logToFile("AppleScript error: \(error)")
+            return nil
+        }
+        return result?.stringValue
     }
 
     private static func logToFile(_ message: String) {
