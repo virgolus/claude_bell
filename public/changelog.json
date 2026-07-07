@@ -1,5 +1,29 @@
 [
   {
+    "version": "1.15.0",
+    "build": 57,
+    "date": "2026-07-07",
+    "highlights": "Set the notification text size, a proper SF Mono that matches your terminal, and new sessions always open even without Accessibility",
+    "changes": [
+      {
+        "type": "new",
+        "text": "New 'Size' slider in Appearance → Notification Text to set the point size of notification body text. Headings, tables and code scale along with it, so you can match your terminal's font size exactly."
+      },
+      {
+        "type": "fixed",
+        "text": "Choosing 'SF Mono' now actually uses SF Mono. It was silently falling back to the proportional system font because the font can't be loaded by name; it's now rendered through the system monospaced font and your saved setting is migrated automatically."
+      },
+      {
+        "type": "changed",
+        "text": "Tightened line spacing and widened the gap between paragraphs, lists and code blocks in notification text so it reads closer to a terminal."
+      },
+      {
+        "type": "fixed",
+        "text": "Opening a new session in Terminal.app no longer does nothing when Accessibility permission is missing: instead of failing on the Cmd+T keystroke, it falls back to opening a new window, so the session always launches. Grant Accessibility to get a new tab in the existing window instead."
+      }
+    ]
+  },
+  {
     "version": "1.14.0",
     "build": 56,
     "date": "2026-07-01",
