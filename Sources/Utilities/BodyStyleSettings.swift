@@ -63,9 +63,16 @@ final class BodyStyleSettings: ObservableObject {
         }
     }
 
+    /// Sentinel `fontName` meaning "the system monospaced font" (SF Mono).
+    /// SF Mono is a reserved system font and cannot be loaded via
+    /// `NSFont(name: "SFMono-Regular", …)` — that returns nil and SwiftUI
+    /// silently falls back to the proportional system font. It must be reached
+    /// through `Font.system(…, design: .monospaced)` instead.
+    static let systemMonospacedFontName = "__system_monospaced__"
+
     static let availableFonts: [(label: String, name: String?)] = [
         ("System Default", nil),
-        ("SF Mono", "SFMono-Regular"),
+        ("SF Mono", systemMonospacedFontName),
         ("Monaco", "Monaco"),
         ("Menlo", "Menlo"),
         ("Courier New", "Courier New"),
@@ -97,6 +104,18 @@ final class BodyStyleSettings: ObservableObject {
         didSet { AppDefaults.shared.set(fontName, forKey: "bodyFontName") }
     }
 
+    /// The body text point size for notification markdown. Other text styles
+    /// (headings, tables, code) scale by the same delta relative to this.
+    @Published var bodyFontSize: CGFloat {
+        didSet { AppDefaults.shared.set(Double(bodyFontSize), forKey: "bodyFontSize") }
+    }
+
+    /// The system's default Dynamic Type body point size (typically 13 pt).
+    /// Used as the baseline so a default `bodyFontSize` leaves the UI unchanged.
+    static var systemBodyPointSize: CGFloat {
+        NSFont.preferredFont(forTextStyle: .body).pointSize
+    }
+
     /// The effective background color: custom or system default.
     /// Default is `controlBackgroundColor` — a solid, mode-aware card surface
     /// (white in light, near-black in dark) that gives the notification body
@@ -119,7 +138,16 @@ final class BodyStyleSettings: ObservableObject {
         self.hasCustomFontColor = savedFont != nil
         self.customFontColor = savedFont ?? .white
 
-        self.fontName = AppDefaults.shared.string(forKey: "bodyFontName")
+        var loadedFontName = AppDefaults.shared.string(forKey: "bodyFontName")
+        // Migrate the old, non-loadable SF Mono PostScript name to the sentinel.
+        if loadedFontName == "SFMono-Regular" {
+            loadedFontName = Self.systemMonospacedFontName
+            AppDefaults.shared.set(loadedFontName, forKey: "bodyFontName")
+        }
+        self.fontName = loadedFontName
+
+        let savedFontSize = AppDefaults.shared.object(forKey: "bodyFontSize") as? Double
+        self.bodyFontSize = savedFontSize.map { CGFloat($0) } ?? Self.systemBodyPointSize
 
         let savedWidth = AppDefaults.shared.object(forKey: "panelWidth") as? Double
         self.panelWidth = savedWidth.map { CGFloat($0) } ?? 900
@@ -136,10 +164,19 @@ final class BodyStyleSettings: ObservableObject {
         NSApp.appearance = appearance.nsAppearance
     }
 
-    /// Returns the body font at the given size style, using the user's chosen font family.
-    func bodyFont(size: Font.TextStyle = .body) -> Font {
-        guard let name = fontName else { return Font.system(size) }
-        return Font.custom(name, size: NSFont.preferredFont(forTextStyle: nsFontStyle(size)).pointSize)
+    /// Returns the body font at the given size style, using the user's chosen
+    /// font family and shifting every text style by the user's body-size delta.
+    func bodyFont(size style: Font.TextStyle = .body) -> Font {
+        let base = NSFont.preferredFont(forTextStyle: nsFontStyle(style)).pointSize
+        let delta = bodyFontSize - Self.systemBodyPointSize
+        let pointSize = max(1, base + delta)
+        if let name = fontName {
+            if name == Self.systemMonospacedFontName {
+                return Font.system(size: pointSize, design: .monospaced)
+            }
+            return Font.custom(name, size: pointSize)
+        }
+        return Font.system(size: pointSize)
     }
 
     func setCustomBackground(_ color: Color) {
@@ -167,6 +204,11 @@ final class BodyStyleSettings: ObservableObject {
     func resetFontName() {
         AppDefaults.shared.removeObject(forKey: "bodyFontName")
         fontName = nil
+    }
+
+    func resetFontSize() {
+        AppDefaults.shared.removeObject(forKey: "bodyFontSize")
+        bodyFontSize = Self.systemBodyPointSize
     }
 
     func resetPanelWidth() {

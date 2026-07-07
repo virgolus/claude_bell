@@ -239,7 +239,13 @@ enum TerminalBridge {
         // terminal, open a tab with Cmd+T in the front window (via System
         // Events), then run the command in that now-frontmost tab. Only when
         // no window exists do we let `do script` create the first window.
-        let script = """
+        //
+        // The Cmd+T keystroke needs Accessibility permission. When it's denied
+        // (AppleScript error 1002) the tab script fails before the command
+        // runs, so we fall back to `do script` — a new WINDOW, which needs only
+        // Automation permission. The session still launches instead of the app
+        // silently doing nothing.
+        let tabScript = """
         tell application "Terminal"
             activate
             if (count of windows) is 0 then
@@ -252,7 +258,18 @@ enum TerminalBridge {
             return true
         end tell
         """
-        return runAppleScript(script)
+        if runAppleScript(tabScript) { return true }
+
+        // Fallback: new window (no Accessibility required).
+        logToFile("openTerminalAppNewSession: tab keystroke blocked, falling back to new window")
+        let windowScript = """
+        tell application "Terminal"
+            activate
+            do script "\(escaped)"
+            return true
+        end tell
+        """
+        return runAppleScript(windowScript)
     }
 
     private static func openIterm2NewSession(command: String) -> Bool {

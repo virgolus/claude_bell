@@ -361,6 +361,18 @@ private struct AppearanceSettingsTab: View {
                 }
                 .help("Typeface used for notification body text.")
 
+                LabeledContent("Size") {
+                    HStack(spacing: 8) {
+                        Slider(value: $bodyStyle.bodyFontSize, in: 9...28, step: 1)
+                            .help("Point size of notification body text. Headings, tables and code scale with it.")
+                        Text("\(Int(bodyStyle.bodyFontSize)) pt")
+                            .font(.system(.callout, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                            .frame(width: 60, alignment: .trailing)
+                    }
+                }
+
                 ColorPicker("Background",
                             selection: Binding(
                                 get: { bodyStyle.customBackgroundColor },
@@ -383,6 +395,7 @@ private struct AppearanceSettingsTab: View {
                         bodyStyle.resetBackgroundColor()
                         bodyStyle.resetFontColor()
                         bodyStyle.resetFontName()
+                        bodyStyle.resetFontSize()
                     }
                     .controlSize(.small)
                 }

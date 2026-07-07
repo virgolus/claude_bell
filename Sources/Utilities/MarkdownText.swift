@@ -33,7 +33,7 @@ struct MarkdownText: View {
 
     var body: some View {
         let blocks = parseAllBlocks(content)
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 16) {
             ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
                 blockView(block)
             }
@@ -130,9 +130,9 @@ struct MarkdownText: View {
             }
         }
         if let textColor {
-            rendered.foregroundStyle(textColor).textSelection(.enabled).lineSpacing(4)
+            rendered.foregroundStyle(textColor).textSelection(.enabled).lineSpacing(2)
         } else {
-            rendered.textSelection(.enabled).lineSpacing(4)
+            rendered.textSelection(.enabled).lineSpacing(2)
         }
     }
 
