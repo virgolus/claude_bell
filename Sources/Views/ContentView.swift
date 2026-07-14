@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 enum SidebarItem: Hashable {
     case request(UUID)
@@ -360,9 +361,12 @@ struct ContentView: View {
 
     /// Send a reply for a stop/idle_prompt notification: through the held
     /// Stop hook when alive (direct, no keystrokes), else via TerminalBridge.
-    /// Returns whether the reply was delivered. On a failed terminal-paste
-    /// fallback the card is kept open and the text is preserved on the
-    /// clipboard, so the user's input is never silently lost.
+    ///
+    /// Return value drives the reply field: `true` clears it, `false` keeps the
+    /// text and shows the inline failure. The terminal-paste fallback delivers
+    /// asynchronously (see below), so it returns `true` optimistically after
+    /// closing the panel; a genuine delivery failure leaves the notification
+    /// card in place with the text still on the clipboard, so nothing is lost.
     @discardableResult
     private func sendReply(_ text: String, for notification: NotificationEntry) -> Bool {
         // Direct hook channel: always reliable when a hold is alive.
@@ -370,24 +374,59 @@ struct ContentView: View {
             dismissAnsweredNotification(notification)
             return true
         }
-        // No live hold → best-effort terminal paste.
-        let sid = notification.sessionId
-        let sent = TerminalBridge.sendText(
-            text,
-            toCwd: notification.cwd,
-            transcriptPath: notification.transcriptPath,
-            knownTty: store.resolvedTty(for: sid),
-            activateOnFailure: false,
-            marker: TerminalBridge.markerString(code: store.sessionMarkerCode(for: sid)),
-            iTermSessionId: store.iTermSessionId(for: sid)
-        )
-        guard sent else {
-            // Couldn't find/target the session's tab. sendText left `text` on
-            // the clipboard; keep the card and surface the failure via the
-            // field rather than dismissing it and dropping the reply.
+
+        // No live hold → terminal-paste fallback. This needs an *effective*
+        // Accessibility grant to post the Cmd+V keystroke; without one the
+        // paste silently no-ops. Detect that up front and report it (the field
+        // shows the "grant Accessibility" hint) instead of firing a doomed
+        // paste that just cycles through tabs.
+        guard TerminalBridge.isAccessibilityTrusted else {
+            let pb = NSPasteboard.general
+            pb.clearContents()
+            pb.setString(text, forType: .string)
             return false
         }
-        dismissAnsweredNotification(notification)
+
+        // Capture everything the paste needs on the main actor before hopping
+        // off it (RequestStore is @MainActor).
+        let sid = notification.sessionId
+        let cwd = notification.cwd
+        let transcriptPath = notification.transcriptPath
+        let tty = store.resolvedTty(for: sid)
+        let marker = TerminalBridge.markerString(code: store.sessionMarkerCode(for: sid))
+        let iTermSessionId = store.iTermSessionId(for: sid)
+        let notificationId = notification.id
+
+        // Close our popover FIRST so ClaudeBell (an .accessory app) yields key
+        // focus to the terminal — otherwise the Cmd+V lands in our own popover,
+        // not the tab. Then paste off the main thread after a short beat, so the
+        // window-server focus switch actually settles; a synchronous
+        // main-thread AppleScript would block that and the keystroke would fire
+        // while we still hold focus.
+        store.onDismissPanel?()
+        selectedItem = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            DispatchQueue.global(qos: .userInitiated).async {
+                let sent = TerminalBridge.sendText(
+                    text,
+                    toCwd: cwd,
+                    transcriptPath: transcriptPath,
+                    knownTty: tty,
+                    activateOnFailure: false,
+                    marker: marker,
+                    iTermSessionId: iTermSessionId
+                )
+                Task { @MainActor in
+                    if sent {
+                        // Mark the wait answered so a re-signalled Stop can't
+                        // resurrect this card.
+                        store.userDismissNotification(id: notificationId)
+                    }
+                    // On failure the card stays (we only closed the popover);
+                    // sendText left `text` on the clipboard for a manual paste.
+                }
+            }
+        }
         return true
     }
 

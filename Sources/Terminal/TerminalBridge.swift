@@ -2,6 +2,15 @@ import Foundation
 import AppKit
 enum TerminalBridge {
 
+    /// Whether ClaudeBell currently holds an *effective* Accessibility grant.
+    /// The System-Settings toggle can read "on" while this is false: an ad-hoc
+    /// signed binary rebinds its code identity (cdhash) on every rebuild, so a
+    /// prior grant no longer matches the running binary. Terminal.app text
+    /// injection needs a real keystroke (Cmd+V + Return), which silently no-ops
+    /// without this — so callers check it to explain the failure instead of
+    /// leaving the user staring at an un-delivered reply.
+    static var isAccessibilityTrusted: Bool { AXIsProcessTrusted() }
+
     /// Sends text to a Terminal.app tab whose process matches Claude Code.
     /// Uses clipboard paste (Cmd+V) + Return for reliability.
     ///
@@ -13,7 +22,7 @@ enum TerminalBridge {
     /// terminal we couldn't target anyway).
     @discardableResult
     static func sendText(_ text: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil, activateOnFailure: Bool = true, marker: String? = nil, iTermSessionId: String? = nil) -> Bool {
-        logToFile("sendText: \"\(text)\" → cwd: \(cwd), transcript: \(transcriptPath), knownTty: \(knownTty ?? "nil")")
+        logToFile("sendText: \"\(text)\" → cwd: \(cwd), transcript: \(transcriptPath), knownTty: \(knownTty ?? "nil"), axTrusted: \(AXIsProcessTrusted())")
         let candidateTty = knownTty ?? resolveTty(fromTranscriptPath: transcriptPath)
         // Trust the tty for exact targeting only if a live process on it still
         // sits in the session's cwd. macOS recycles ttysNNN numbers when tabs

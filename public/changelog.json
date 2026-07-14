@@ -1,5 +1,25 @@
 [
   {
+    "version": "1.16.0",
+    "build": 58,
+    "date": "2026-07-14",
+    "highlights": "Typing a reply in a notification now reliably lands in the right terminal tab — and the Accessibility permission finally sticks across updates",
+    "changes": [
+      {
+        "type": "fixed",
+        "text": "Typing a follow-up reply in a notification now actually reaches the session's terminal. Before, the paste could silently fail — cycling through tabs without delivering — because the keystroke fired while ClaudeBell still held keyboard focus. The panel now hands focus to the terminal before pasting."
+      },
+      {
+        "type": "changed",
+        "text": "ClaudeBell is now code-signed with a stable identity, so the Accessibility permission you grant persists across updates instead of silently breaking on every new version. After installing this update you may need to grant Accessibility once more — from then on it sticks."
+      },
+      {
+        "type": "fixed",
+        "text": "When Accessibility isn't active, the reply field now says so directly, with a button to open the setting, instead of looking like it sent while nothing happened."
+      }
+    ]
+  },
+  {
     "version": "1.15.0",
     "build": 57,
     "date": "2026-07-07",

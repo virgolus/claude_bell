@@ -61,18 +61,22 @@ rm -rf ClaudeBell.app/ClaudeBell_ClaudeBell.bundle ClaudeBell.app/Contents/Resou
 cp public/changelog.json ClaudeBell.app/Contents/Resources/changelog.json
 ```
 
-## 6. Re-sign the bundle (ad-hoc)
+## 6. Re-sign the bundle (stable self-signed identity)
 
-`swift build` only signs the binary (linker ad-hoc). The surrounding `.app` has no `CodeResources` file, which makes the whole bundle fail `codesign --verify` — and a quarantined download gets rejected as "damaged". Re-sign the full bundle ad-hoc so `CodeResources` is generated and the seal matches the binary:
+`swift build` only signs the binary (linker ad-hoc). The surrounding `.app` has no `CodeResources` file, which makes the whole bundle fail `codesign --verify` — and a quarantined download gets rejected as "damaged". Re-sign the full bundle so `CodeResources` is generated and the seal matches the binary.
+
+**Sign with the stable identity `ClaudeBell Self-Signed`, NOT ad-hoc (`--sign -`).** This is critical for the panel-reply feature: replies fall back to an AppleScript `Cmd+V` paste that needs an *effective* Accessibility grant. macOS binds that grant to the app's designated requirement. Ad-hoc signing keys it to the binary's cdhash, so *every rebuild invalidates it* — the System-Settings toggle still reads "on" while `AXIsProcessTrusted()` is false, and the paste silently no-ops. A self-signed cert makes the requirement `identifier "com.virgolus.claudebell" and certificate leaf = H"…"`, which is stable across rebuilds, so the grant survives updates for both the dev and end users.
 
 ```bash
-codesign --force --deep --sign - ClaudeBell.app
+codesign --force --deep --sign "ClaudeBell Self-Signed" ClaudeBell.app
 codesign --verify --deep --strict ClaudeBell.app
 ```
 
 The second command MUST exit 0. If it doesn't, stop and investigate — shipping a zip that fails verification means every user sees "damaged".
 
-(Ad-hoc means `spctl -a` will still reject the app — that's expected for an unsigned app and produces the normal "unidentified developer" dialog with an "Open Anyway" option. Getting past that requires a Developer ID certificate + notarization, which this skill does not do.)
+**The `ClaudeBell Self-Signed` identity must exist in the signing machine's login keychain** (Keychain Access → Certificate Assistant → Create a Certificate → Self-Signed Root, type Code Signing). Do NOT regenerate it once created — a new cert changes the leaf hash and forces every user to re-grant Accessibility. If the identity is missing, `codesign` errors; you can fall back to `--sign -` to ship, but AX will break on that build. Verify the identity resolves with `codesign -dvvv ClaudeBell.app | grep Authority=` → `Authority=ClaudeBell Self-Signed`.
+
+(This is still not notarized, so `spctl -a` rejects it and users see the "unidentified developer" dialog with "Open Anyway" — same as before. Getting past that needs a Developer ID certificate + notarization, which this skill does not do.)
 
 ## 7. Create the distribution zip
 
