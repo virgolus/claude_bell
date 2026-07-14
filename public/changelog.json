@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.16.1",
+    "build": 59,
+    "date": "2026-07-14",
+    "highlights": "Markdown tables in notifications now render properly — with lines between every row and bold/code formatting inside cells",
+    "changes": [
+      {
+        "type": "fixed",
+        "text": "Tables in notification text now draw a horizontal line between every row, not just under the header, so multi-row tables are readable again."
+      },
+      {
+        "type": "fixed",
+        "text": "Bold, italic and `code` formatting inside table cells is now rendered instead of showing the raw markdown asterisks and backticks."
+      }
+    ]
+  },
+  {
     "version": "1.16.0",
     "build": 58,
     "date": "2026-07-14",
