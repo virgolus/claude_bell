@@ -14,6 +14,12 @@ ClaudeBell.app/Contents/Resources/changelog.json
 public/ClaudeBell.zip
 ClaudeBell.zip
 
+# Code-signing identity — private key material, NEVER commit (mirror in 1Password)
+*.p12
+*.cer
+certs/*
+!certs/README.md
+
 # Local demo recording artifacts
 *.mov
 settings.local.json
