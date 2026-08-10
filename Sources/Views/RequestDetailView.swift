@@ -78,48 +78,56 @@ struct RequestDetailView: View {
         return parsed.isEmpty ? nil : parsed
     }
 
+    /// Session name + tool type + countdown. Pinned above the scroll view so it
+    /// stays visible while a long tool input or plan scrolls underneath.
+    private var header: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: ToolIconMapper.icon(for: request.toolName))
+                .font(.title2)
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    RenameableTitleView(text: request.projectName, sessionId: request.sessionId)
+                    OpenInTerminalButton {
+                        TerminalBridge.focusTerminalTab(
+                            forCwd: request.cwd,
+                            transcriptPath: request.transcriptPath,
+                            knownTty: store.resolvedTty(for: request.sessionId),
+                            marker: TerminalBridge.markerString(code: store.sessionMarkerCode(for: request.sessionId)),
+                            iTermSessionId: store.iTermSessionId(for: request.sessionId)
+                        )
+                        request.respond(allow: false)
+                        store.removeRequest(id: request.id)
+                        store.onDismissPanel?()
+                    }
+                }
+                Text(isAskUserQuestion ? "Question" : isExitPlanMode ? "Plan Review" : request.toolName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if let lastPrompt = store.sessions[request.sessionId]?.lastPrompt {
+                    Text(lastPrompt)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(2)
+                }
+            }
+            Spacer()
+            Text(formatCountdown(remainingSeconds))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(remainingSeconds < 60 ? .red : .secondary)
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
+            header
+                .padding(.horizontal)
+                .padding(.vertical, 12)
+
+            Divider()
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: ToolIconMapper.icon(for: request.toolName))
-                            .font(.title2)
-                            .foregroundStyle(.orange)
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 6) {
-                                RenameableTitleView(text: request.projectName, sessionId: request.sessionId)
-                                OpenInTerminalButton {
-                                    TerminalBridge.focusTerminalTab(
-                                        forCwd: request.cwd,
-                                        transcriptPath: request.transcriptPath,
-                                        knownTty: store.resolvedTty(for: request.sessionId),
-                                        marker: TerminalBridge.markerString(code: store.sessionMarkerCode(for: request.sessionId)),
-                                        iTermSessionId: store.iTermSessionId(for: request.sessionId)
-                                    )
-                                    request.respond(allow: false)
-                                    store.removeRequest(id: request.id)
-                                    store.onDismissPanel?()
-                                }
-                            }
-                            Text(isAskUserQuestion ? "Question" : isExitPlanMode ? "Plan Review" : request.toolName)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            if let lastPrompt = store.sessions[request.sessionId]?.lastPrompt {
-                                Text(lastPrompt)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                    .lineLimit(2)
-                            }
-                        }
-                        Spacer()
-                        Text(formatCountdown(remainingSeconds))
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(remainingSeconds < 60 ? .red : .secondary)
-                    }
-
-                    Divider()
-
                     if let questions = cachedQuestions {
                         // AskUserQuestion: answer through the hook response.
                         // Claude Code ≥ 2.1.150 no longer shows a TUI picker — answers

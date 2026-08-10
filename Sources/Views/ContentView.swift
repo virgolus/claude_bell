@@ -91,6 +91,11 @@ struct ContentView: View {
             height: NSScreen.main.map { $0.visibleFrame.height } ?? 650
         )
         .onAppear {
+            // Belt and braces with the AppDelegate's didBecomeKey hook: either
+            // signal alone marks the listed notifications as shown, and both are
+            // idempotent. If neither fired, unseen cards would simply persist
+            // until dismissed rather than disappear unseen.
+            store.markNotificationsSeen()
             autoSelectLatest()
             if showSetup && HookInstaller.isInstalled {
                 AppDefaults.shared.set(true, forKey: "hasCompletedSetup")
@@ -242,44 +247,51 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    /// Session name + notification type. Pinned above the scroll view so it stays
+    /// visible while a long message scrolls underneath.
+    private func notificationHeader(_ notification: NotificationEntry) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: notification.meta.icon)
+                .font(.title2)
+                .foregroundStyle(notification.meta.iconColor)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    RenameableTitleView(text: notification.displayProjectName, sessionId: notification.sessionId)
+                    OpenInTerminalButton {
+                        TerminalBridge.focusTerminalTab(
+                            forCwd: notification.cwd,
+                            transcriptPath: notification.transcriptPath,
+                            knownTty: store.resolvedTty(for: notification.sessionId),
+                            marker: TerminalBridge.markerString(code: store.sessionMarkerCode(for: notification.sessionId)),
+                            iTermSessionId: store.iTermSessionId(for: notification.sessionId)
+                        )
+                        store.userDismissNotification(id: notification.id)
+                        selectedItem = nil
+                        store.onDismissPanel?()
+                    }
+                }
+                HStack(spacing: 4) {
+                    Text(notification.displayTitle)
+                    Text("·")
+                    Text(TimeAgoFormatter.format(notification.createdAt))
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+    }
+
     private func notificationDetail(_ notification: NotificationEntry) -> some View {
         VStack(spacing: 0) {
+            notificationHeader(notification)
+                .padding(.horizontal)
+                .padding(.vertical, 12)
+
+            Divider()
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    // Header
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: notification.meta.icon)
-                            .font(.title2)
-                            .foregroundStyle(notification.meta.iconColor)
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 6) {
-                                RenameableTitleView(text: notification.displayProjectName, sessionId: notification.sessionId)
-                                OpenInTerminalButton {
-                                    TerminalBridge.focusTerminalTab(
-                                        forCwd: notification.cwd,
-                                        transcriptPath: notification.transcriptPath,
-                                        knownTty: store.resolvedTty(for: notification.sessionId),
-                                        marker: TerminalBridge.markerString(code: store.sessionMarkerCode(for: notification.sessionId)),
-                                        iTermSessionId: store.iTermSessionId(for: notification.sessionId)
-                                    )
-                                    store.userDismissNotification(id: notification.id)
-                                    selectedItem = nil
-                                    store.onDismissPanel?()
-                                }
-                            }
-                            HStack(spacing: 4) {
-                                Text(notification.displayTitle)
-                                Text("·")
-                                Text(TimeAgoFormatter.format(notification.createdAt))
-                            }
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    }
-
-                    Divider()
-
                     if let stop = store.pendingStops[notification.sessionId] {
                         DirectReplyBadge(expiresAt: stop.expiresAt)
                     }

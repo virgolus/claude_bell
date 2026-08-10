@@ -55,11 +55,34 @@ final class RequestStore: ObservableObject {
         pendingRequests.count + notifications.count
     }
 
+    /// Ids of notifications the user has had a chance to see, i.e. that were
+    /// listed in the panel while it was open. Passive notifications announce
+    /// themselves with a sound but never open the panel, so this is what keeps
+    /// `sessionAdvanced` from wiping one before it was ever on screen.
+    private var seenNotificationIds: Set<UUID> = []
+
+    /// The panel was opened — everything it currently lists has been shown.
+    func markNotificationsSeen() {
+        seenNotificationIds.formUnion(notifications.map(\.id))
+    }
+
+    /// Remove notifications, keeping the seen-ids bookkeeping in step so it can
+    /// never outgrow the list it describes.
+    private func removeNotifications(where shouldRemove: (NotificationEntry) -> Bool) {
+        notifications.removeAll(where: shouldRemove)
+        seenNotificationIds.formIntersection(notifications.map(\.id))
+    }
+
     /// Called when a new hook event arrives for a session — dismiss stale notifications only.
     /// Does NOT auto-deny pending permission requests, since concurrent hook events
     /// (e.g. PreToolUse from subagents) should not cancel a user's pending Allow action.
+    ///
+    /// Notifications the user has never seen survive. PreToolUse fires for every
+    /// tool call — including a concurrent subagent's, which carries the same
+    /// session id — so a "task completed" card would otherwise be wiped seconds
+    /// after playing its sound, leaving the alert with nothing behind it.
     func sessionAdvanced(id: String) {
-        notifications.removeAll { $0.sessionId == id }
+        removeNotifications { $0.sessionId == id && seenNotificationIds.contains($0.id) }
     }
 
     /// Auto-deny pending permission requests for a session.
@@ -81,7 +104,7 @@ final class RequestStore: ObservableObject {
         // A new permission request means the user responded in terminal — deny stale ones
         denyStaleRequests(id: request.sessionId)
         // Also clear stale notifications
-        notifications.removeAll { $0.sessionId == request.sessionId }
+        removeNotifications { $0.sessionId == request.sessionId }
         pendingRequests.append(request)
         trackSession(id: request.sessionId, cwd: request.cwd)
         playRequestSound()
@@ -117,18 +140,43 @@ final class RequestStore: ObservableObject {
             }
             if sessionHasRequest { return }
 
+            // Claude Code signals one wait twice: through the Stop hook, then
+            // through a Notification hook ~60s later. That echo carries no new
+            // text — its generic message is filtered to empty — so the card
+            // already listed covers it, and re-adding would double both the list
+            // and the alert sound.
+            let isEcho = notifications.contains {
+                $0.sessionId == notification.sessionId
+                    && $0.notificationType == notification.notificationType
+                    && (notification.message.isEmpty || $0.message == notification.message)
+            }
+            if isEcho { return }
+            // Different text means Claude is asking something new. Refresh the
+            // card in place instead of stacking a second one, so the message
+            // above the options can never contradict them.
+            removeNotifications {
+                $0.sessionId == notification.sessionId
+                    && $0.notificationType == notification.notificationType
+            }
         }
         // Passive notifications (stop, tool_error, session_end) replace stale
         // interactive notifications. They stay in the panel until the session
         // advances (cleared by PreToolUse/sessionAdvanced) or user dismisses.
         if notification.meta.isPassive {
-            notifications.removeAll {
+            removeNotifications {
                 $0.sessionId == notification.sessionId
             }
             playNotificationSound()
+        } else if notification.notificationType != "permission_prompt" {
+            // An interactive notification waits on the user exactly as a
+            // permission request does, so it gets the same alert sound; passive
+            // ones keep the quieter Glass. Permission prompts are excluded
+            // because `addRequest` already sounds for the PermissionRequest hook
+            // that accompanies them — sounding here too would double it.
+            playRequestSound()
         }
         if notification.meta.deduplicate {
-            notifications.removeAll {
+            removeNotifications {
                 $0.sessionId == notification.sessionId && $0.notificationType == notification.notificationType
             }
         }
@@ -144,10 +192,16 @@ final class RequestStore: ObservableObject {
            notification.notificationType == "stop" || notification.notificationType == "idle_prompt" {
             releaseStopHold(sessionId: notification.sessionId)
         }
-        notifications.removeAll { $0.id == id }
+        removeNotifications { $0.id == id }
         if pendingRequests.isEmpty && notifications.isEmpty {
             DispatchQueue.main.async { self.onDismissPanel?() }
         }
+    }
+
+    /// The session ended: its interactive notifications can no longer be
+    /// answered. Passive ones stay so the user can still read what happened.
+    func removeUnanswerableNotifications(sessionId: String) {
+        removeNotifications { $0.sessionId == sessionId && !$0.meta.isPassive }
     }
 
     /// User explicitly dismissed a notification. For stop/idle_prompt, remember

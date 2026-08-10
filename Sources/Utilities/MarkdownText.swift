@@ -373,27 +373,30 @@ struct MarkdownText: View {
     // MARK: - Table rendering
 
     private func tableView(_ text: String) -> some View {
-        let rows = parseTable(text)
+        // Drop the markdown separator row (`|---|---|`) — it carries no data and
+        // would otherwise be the *only* horizontal rule. We draw our own rule
+        // between every row instead.
+        let rows = parseTable(text).filter { !$0.isSeparator }
         return VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(rows.enumerated()), id: \.offset) { rowIdx, row in
-                if row.isSeparator {
+                if rowIdx > 0 {
                     Divider()
-                } else {
-                    HStack(spacing: 0) {
-                        ForEach(Array(row.cells.enumerated()), id: \.offset) { colIdx, cell in
-                            Text(cell.trimmingCharacters(in: .whitespaces))
-                                .font(rowIdx == 0 ? font.weight(.semibold) : font)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .textSelection(.enabled)
-                            if colIdx < row.cells.count - 1 {
-                                Divider()
-                            }
+                }
+                HStack(spacing: 0) {
+                    ForEach(Array(row.cells.enumerated()), id: \.offset) { colIdx, cell in
+                        inlineMarkdown(
+                            cell.trimmingCharacters(in: .whitespaces),
+                            font: rowIdx == 0 ? font.weight(.semibold) : font
+                        )
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        if colIdx < row.cells.count - 1 {
+                            Divider()
                         }
                     }
-                    .background(rowIdx == 0 ? Color.secondary.opacity(0.08) : Color.clear)
                 }
+                .background(rowIdx == 0 ? Color.secondary.opacity(0.08) : Color.clear)
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 6))

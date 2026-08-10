@@ -149,6 +149,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 guard let self, self.isPanelWindow(window) else { return }
                 self.applyPanelPosition(window)
+                // The panel is on screen: whatever it lists has now been shown,
+                // so those notifications may be reaped when the session advances.
+                RequestStore.shared.markNotificationsSeen()
             }
         }
 

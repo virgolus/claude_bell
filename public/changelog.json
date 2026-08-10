@@ -1,5 +1,37 @@
 [
   {
+    "version": "1.17.0",
+    "build": 60,
+    "date": "2026-08-10",
+    "highlights": "Questions from Claude now make a sound, notifications stop vanishing before you can see them, and a question you already answered is never asked again",
+    "changes": [
+      {
+        "type": "new",
+        "text": "A question from Claude now plays the same alert sound as a permission request. Previously only \"task completed\" made a sound, while a question actually waiting on you arrived silently."
+      },
+      {
+        "type": "fixed",
+        "text": "Notifications no longer disappear before you can see them. A \"task completed\" card played its sound and was then cleared by the session's very next tool call — often within seconds, and the panel never opens by itself, so the sound was all you got. Cards now stay until you have actually seen them in the panel."
+      },
+      {
+        "type": "fixed",
+        "text": "The panel no longer re-asks a question you already answered. Answer options are read only from the current turn, so a question from earlier in the conversation cannot resurface — previously one from hundreds of turns back could reappear."
+      },
+      {
+        "type": "fixed",
+        "text": "A genuine question is no longer suppressed. Any question was silently dropped whenever some older question in the same conversation had already been answered."
+      },
+      {
+        "type": "fixed",
+        "text": "The same wait signalled twice no longer produces two identical cards or two sounds, while a genuinely new question refreshes the card in place instead of stacking underneath the previous one's text."
+      },
+      {
+        "type": "changed",
+        "text": "The session name and notification type now stay pinned at the top of the panel: only the message body scrolls, so you always know which session you are looking at."
+      }
+    ]
+  },
+  {
     "version": "1.16.1",
     "build": 59,
     "date": "2026-07-14",
