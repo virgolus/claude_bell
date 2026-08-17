@@ -289,8 +289,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openRecentProject(_ sender: NSMenuItem) {
         guard let cwd = sender.representedObject as? String else { return }
-        TerminalBridge.openNewSession(cwd: cwd, initialPrompt: "")
         Task { @MainActor in
+            // Same reason as NewSessionView.open(): the panel must not hold key
+            // focus when the new tab's Cmd+T is posted, or the keystroke never
+            // reaches the terminal.
+            RequestStore.shared.onDismissPanel?()
+            TerminalBridge.openNewSession(cwd: cwd, initialPrompt: "")
             RecentProjectsStore.shared.recordUsage(cwd)
         }
     }

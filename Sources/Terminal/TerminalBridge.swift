@@ -22,6 +22,30 @@ enum TerminalBridge {
     /// terminal we couldn't target anyway).
     @discardableResult
     static func sendText(_ text: String, toCwd cwd: String, transcriptPath: String = "", knownTty: String? = nil, activateOnFailure: Bool = true, marker: String? = nil, iTermSessionId: String? = nil) -> Bool {
+        // Serialized: the whole save-clipboard → set → paste → restore sequence
+        // has to be atomic. Callers run this off the main thread, so two sends
+        // in quick succession used to interleave — one send's restore landing
+        // between the other's `setString` and its Cmd+V, which then pasted the
+        // PREVIOUS clipboard instead of the typed text.
+        pasteQueue.sync {
+            sendTextLocked(text, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty, activateOnFailure: activateOnFailure, marker: marker, iTermSessionId: iTermSessionId)
+        }
+    }
+
+    /// Serial queue owning every pasteboard mutation and AppleScript paste.
+    /// (`NSAppleScript` also wants one thread at a time.)
+    private static let pasteQueue = DispatchQueue(label: "com.claudebell.terminal-paste")
+
+    /// The user's clipboard, stashed for the duration of a paste burst. Held
+    /// across back-to-back sends so a superseded restore doesn't leave our
+    /// injected text behind as the "original".
+    private static var stashedClipboard: String?
+    private static var hasStashedClipboard = false
+    /// Pending restore, cancelled when another send supersedes it.
+    private static var pendingRestore: DispatchWorkItem?
+
+    /// Body of `sendText`, always run on `pasteQueue`.
+    private static func sendTextLocked(_ text: String, toCwd cwd: String, transcriptPath: String, knownTty: String?, activateOnFailure: Bool, marker: String?, iTermSessionId: String?) -> Bool {
         logToFile("sendText: \"\(text)\" → cwd: \(cwd), transcript: \(transcriptPath), knownTty: \(knownTty ?? "nil"), axTrusted: \(AXIsProcessTrusted())")
         let candidateTty = knownTty ?? resolveTty(fromTranscriptPath: transcriptPath)
         // Trust the tty for exact targeting only if a live process on it still
@@ -36,7 +60,16 @@ enum TerminalBridge {
 
         // Save clipboard, put text, paste+enter, restore clipboard
         let pasteboard = NSPasteboard.general
-        let oldContents = pasteboard.string(forType: .string)
+
+        // A restore still queued from an earlier send would fire mid-paste and
+        // hand the terminal that older text — drop it and keep the stash we
+        // already hold, so the burst still ends on the user's own clipboard.
+        pendingRestore?.cancel()
+        pendingRestore = nil
+        if !hasStashedClipboard {
+            stashedClipboard = pasteboard.string(forType: .string)
+            hasStashedClipboard = true
+        }
 
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
@@ -80,16 +113,37 @@ enum TerminalBridge {
         logToFile("sendText: delivered=\(sent)")
 
         if sent {
-            // Restore the prior clipboard after the paste has landed.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            // Restore the prior clipboard after the paste has landed. Queued on
+            // `pasteQueue` (not main) so the next send — which also runs there —
+            // can never overlap it, and cancellable so a send that supersedes it
+            // wins the race outright.
+            let restore = DispatchWorkItem {
+                defer {
+                    stashedClipboard = nil
+                    hasStashedClipboard = false
+                    pendingRestore = nil
+                }
+                // Only take back a clipboard that still holds what we put
+                // there. If the user (or a clipboard manager) has copied
+                // something since, that content is theirs to keep.
+                // Compared by value, not changeCount: the paste script itself
+                // re-writes the same text right before Cmd+V.
+                guard pasteboard.string(forType: .string) == text else { return }
                 pasteboard.clearContents()
-                if let old = oldContents {
+                if let old = stashedClipboard {
                     pasteboard.setString(old, forType: .string)
                 }
             }
+            pendingRestore = restore
+            pasteQueue.asyncAfter(deadline: .now() + 0.5, execute: restore)
+        } else {
+            // On failure we deliberately leave `text` on the clipboard so the
+            // user can paste it into the right tab themselves — the caller
+            // surfaces this. Drop the stash: it is never restored now, and
+            // holding it would let a much later send resurrect a stale copy.
+            stashedClipboard = nil
+            hasStashedClipboard = false
         }
-        // On failure we deliberately leave `text` on the clipboard so the user
-        // can paste it into the right tab themselves — the caller surfaces this.
 
         if !sent && activateOnFailure { activateTerminal() }
         return sent
@@ -105,7 +159,11 @@ enum TerminalBridge {
         // would mis-fire too, so its success determines delivery.
         let sent = sendText(first, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty, marker: marker, iTermSessionId: iTermSessionId)
         if sent {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            // Off the main queue: this send blocks on AppleScript for ~a second
+            // (and on `pasteQueue` behind any in-flight paste), which would
+            // freeze the UI — and a blocked main thread is exactly what used to
+            // delay the clipboard restore into the next paste.
+            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 1.5) {
                 sendText(second, toCwd: cwd, transcriptPath: transcriptPath, knownTty: knownTty, marker: marker, iTermSessionId: iTermSessionId)
             }
         }
@@ -243,11 +301,50 @@ enum TerminalBridge {
     private static func openTerminalAppNewSession(command: String) -> Bool {
         let escaped = command.replacingOccurrences(of: "\\", with: "\\\\")
                               .replacingOccurrences(of: "\"", with: "\\\"")
+
+        // Terminal wasn't running: launching it already opens a window with a
+        // fresh shell, so reuse that instead of stacking a second window on top
+        // of it. Nothing can be disturbed — the tab has only just been born.
+        let wasRunning = NSWorkspace.shared.runningApplications
+            .contains { $0.bundleIdentifier == "com.apple.Terminal" }
+        if !wasRunning {
+            let launchScript = """
+            tell application "Terminal"
+                activate
+                repeat 50 times
+                    if (count of windows) > 0 then exit repeat
+                    delay 0.1
+                end repeat
+                if (count of windows) is 0 then
+                    do script "\(escaped)"
+                else
+                    do script "\(escaped)" in front window
+                end if
+                return true
+            end tell
+            """
+            if runAppleScript(launchScript) { return true }
+        }
+
         // Terminal.app's AppleScript has no "make new tab" verb, and a bare
         // `do script` always spawns a NEW WINDOW. To reuse the already-open
-        // terminal, open a tab with Cmd+T in the front window (via System
-        // Events), then run the command in that now-frontmost tab. Only when
-        // no window exists do we let `do script` create the first window.
+        // terminal we press Cmd+T (via System Events) and run the command in
+        // the tab that appeared.
+        //
+        // Two things must hold before `do script` runs, or the command lands in
+        // whatever tab was already selected — typically a live `claude` REPL,
+        // which then swallows the `cd … && claude …` line as a prompt:
+        //
+        //   1. Terminal must actually BE frontmost when Cmd+T is posted.
+        //      `activate` returns before the window server has switched focus,
+        //      so a fixed delay is a guess; poll for frontmost instead. Missing
+        //      this is what sent Cmd+T to ClaudeBell's own panel.
+        //   2. A new tab must really exist. We diff the tab ttys before/after
+        //      and target the one that wasn't there before — never "the
+        //      selected tab", which is still the OLD tab when Cmd+T didn't land.
+        //
+        // If either check fails the script returns false and we fall back to a
+        // new window, which cannot disturb a running session.
         //
         // The Cmd+T keystroke needs Accessibility permission. When it's denied
         // (AppleScript error 1002) the tab script fails before the command
@@ -259,18 +356,67 @@ enum TerminalBridge {
             activate
             if (count of windows) is 0 then
                 do script "\(escaped)"
-            else
-                tell application "System Events" to keystroke "t" using command down
-                delay 0.3
-                do script "\(escaped)" in front window
+                return true
             end if
-            return true
+        end tell
+        tell application "System Events"
+            repeat 30 times
+                if frontmost of process "Terminal" then exit repeat
+                delay 0.1
+            end repeat
+            if not (frontmost of process "Terminal") then return false
+        end tell
+        tell application "Terminal"
+            set oldTtys to {}
+            repeat with w in windows
+                try
+                    repeat with t in tabs of w
+                        try
+                            set end of oldTtys to ((tty of t) as text)
+                        end try
+                    end repeat
+                end try
+            end repeat
+            tell application "System Events" to keystroke "t" using command down
+            set newTty to ""
+            repeat 40 times
+                delay 0.1
+                try
+                    repeat with t in tabs of front window
+                        try
+                            set candidate to ((tty of t) as text)
+                            -- A tab whose shell hasn't started yet has no tty;
+                            -- requiring the /dev/ prefix keeps such a tab from
+                            -- being mistaken for the one Cmd+T just made.
+                            if candidate starts with "/dev/" and oldTtys does not contain candidate then
+                                set newTty to candidate
+                                exit repeat
+                            end if
+                        end try
+                    end repeat
+                end try
+                if newTty is not "" then exit repeat
+            end repeat
+            if newTty is "" then return false
+            repeat with w in windows
+                try
+                    repeat with t in tabs of w
+                        try
+                            if (tty of t) is newTty then
+                                do script "\(escaped)" in t
+                                return true
+                            end if
+                        end try
+                    end repeat
+                end try
+            end repeat
+            return false
         end tell
         """
         if runAppleScript(tabScript) { return true }
 
         // Fallback: new window (no Accessibility required).
-        logToFile("openTerminalAppNewSession: tab keystroke blocked, falling back to new window")
+        logToFile("openTerminalAppNewSession: no new tab appeared (keystroke blocked or focus lost), falling back to new window")
         let windowScript = """
         tell application "Terminal"
             activate
@@ -428,7 +574,13 @@ enum TerminalBridge {
             // SEPARATE Return after a short delay. Bundling the newline with the text
             // (as `do script` does) makes Claude Code's TUI intermittently treat it as a
             // literal newline instead of a submit — the "text appears but no Enter" bug.
-            : "set selected tab of w to t\n                                set index of w to 1\n                                activate\n                                delay 0.2\n                                tell application \"System Events\"\n                                    keystroke \"v\" using command down\n                                    delay 0.35\n                                    key code 36\n                                end tell\n                                return true"
+            // `set the clipboard to theText` re-asserts our text immediately
+            // before Cmd+V. `theText` was read at the top of the script, right
+            // after we put it there; the activate + focus settle in between is
+            // long enough for a clipboard manager (or any other app) to swap
+            // the pasteboard out from under us, which would paste *its* content
+            // into the session. Re-writing it shrinks that window to ~50ms.
+            : "set selected tab of w to t\n                                set index of w to 1\n                                activate\n                                delay 0.2\n                                set the clipboard to theText\n                                delay 0.05\n                                tell application \"System Events\"\n                                    keystroke \"v\" using command down\n                                    delay 0.35\n                                    key code 36\n                                end tell\n                                return true"
         let ttyLiteral = tty ?? ""
         // Fuzzy passes (claude+cwd, any-claude, cwd-only). Skipped when
         // exactTtyOnly is set — the caller has a validated tty and wants no

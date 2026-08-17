@@ -1,5 +1,25 @@
 [
   {
+    "version": "1.17.1",
+    "build": 61,
+    "date": "2026-08-18",
+    "highlights": "New Session opens a real new tab instead of typing into the session you already had running, and panel replies stop pasting an old clipboard entry",
+    "changes": [
+      {
+        "type": "fixed",
+        "text": "New Session now opens a new tab. It used to ask for the tab and then run the command wherever the terminal happened to be pointing — usually a live Claude session, which swallowed the whole \"cd … && claude …\" line as if you had typed it. ClaudeBell now waits until the terminal really has focus before asking for the tab, runs the command in the tab it just created, and opens a new window rather than disturbing an existing one if the tab never appears."
+      },
+      {
+        "type": "fixed",
+        "text": "A reply sent from the panel no longer arrives as an older clipboard entry. Two replies close together could overlap, and the first one putting your clipboard back could land in the middle of the second one being pasted. Replies are now handled one at a time, and the text is written to the clipboard again immediately before the paste, so a clipboard manager can't swap it out in between."
+      },
+      {
+        "type": "changed",
+        "text": "Your clipboard is now left alone when you copy something while a reply is being sent, and starting a session with the terminal closed reuses the window it opens instead of stacking a second one on top."
+      }
+    ]
+  },
+  {
     "version": "1.17.0",
     "build": 60,
     "date": "2026-08-10",

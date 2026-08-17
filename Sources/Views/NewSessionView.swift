@@ -263,6 +263,11 @@ struct NewSessionView: View {
         guard let url = directoryURL else { return }
         let cwd = url.path
         let trimmedName = sessionName.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Close the panel BEFORE launching: opening a tab posts Cmd+T to
+        // whichever app is frontmost, and while our panel holds key focus that
+        // is ClaudeBell — the tab never opens and the command would land in the
+        // terminal's already-selected tab (i.e. a live claude session).
+        RequestStore.shared.onDismissPanel?()
         TerminalBridge.openNewSession(cwd: cwd, initialPrompt: initialPrompt)
         recents.recordUsage(cwd, name: trimmedName.isEmpty ? nil : trimmedName)
         if !trimmedName.isEmpty {
